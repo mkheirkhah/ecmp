@@ -35,7 +35,7 @@
 #ifdef TRACE_SIMU
 #include <iostream>
 # define TRACE(x) \
-std::Cout << "SIMU TRACE " << Simulator::nowS () << " " << x << std::endl;
+std::cout << "SIMU TRACE " << Simulator::Now () << " " << x << std::endl;
 # define TRACE_S(x) \
 std::cout << "SIMU TRACE " << x << std::endl;
 #else /* TRACE_SIMU */
@@ -251,13 +251,18 @@ SimulatorPrivate::Cancel (EventId id)
 bool
 SimulatorPrivate::IsExpired (EventId ev)
 {
-  if (ev.GetEventImpl () != 0 &&
-      ev.GetNs () <= m_currentNs &&
-      ev.GetUid () < m_currentUid) 
+  if (ev.GetEventImpl () == 0 ||
+      ev.GetNs () < m_currentNs ||
+      (ev.GetNs () == m_currentNs &&
+       ev.GetUid () <= m_currentUid) ||
+      ev.GetEventImpl ()->IsCancelled ()) 
+    {
+      return true;
+    }
+  else
     {
       return false;
     }
-  return true;
 }
 
 
@@ -570,7 +575,19 @@ SimulatorTests::RunOneTest (void)
   Simulator::Schedule (MicroSeconds (11), &SimulatorTests::B, this, 2);
   m_idC = Simulator::Schedule (MicroSeconds (12), &SimulatorTests::C, this, 3);
 
+  if (m_idC.IsExpired ()) 
+    {
+      ok = false;
+    }
+  if (a.IsExpired ())
+    {
+      ok = false;
+    }
   Simulator::Cancel (a);
+  if (!a.IsExpired ())
+    {
+      ok = false;
+    }
   Simulator::Run ();
 
   if (!m_a || !m_b || !m_c || !m_d) 

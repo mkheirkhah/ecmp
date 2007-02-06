@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <cassert>
+#include <ostream>
 #include "high-precision.h"
 
 namespace ns3 {
@@ -109,7 +110,8 @@ public:
    * \return the ns3::HighPrecision object which holds the value 
    *         stored in this Time<N> type.
    */
-  HighPrecision GetHighPrecision (void) const;
+  HighPrecision const &GetHighPrecision (void) const;
+  HighPrecision *PeekHighPrecision (void);
 
 private:
   HighPrecision m_data;
@@ -136,10 +138,16 @@ TimeUnit<N>::TimeUnit (HighPrecision data)
 {}
 
 template <int N>
-HighPrecision
+HighPrecision const &
 TimeUnit<N>::GetHighPrecision (void) const
 {
   return m_data;
+}
+template <int N>
+HighPrecision *
+TimeUnit<N>::PeekHighPrecision (void)
+{
+  return &m_data;
 }
 template <int N>
 bool
@@ -177,6 +185,12 @@ bool
 operator == (TimeUnit<N> const &lhs, TimeUnit<N> const &rhs)
 {
   return lhs.GetHighPrecision ().Compare (rhs.GetHighPrecision ()) == 0;
+}
+template <int N>
+bool 
+operator != (TimeUnit<N> const &lhs, TimeUnit<N> const &rhs)
+{
+  return lhs.GetHighPrecision ().Compare (rhs.GetHighPrecision ()) != 0;
 }
 template <int N>
 bool 
@@ -230,6 +244,19 @@ TimeUnit<N1-N2> operator / (TimeUnit<N1> const &lhs, TimeUnit<N2> const &rhs)
   retval.Div (rhs.GetHighPrecision ());
   return TimeUnit<N1-N2> (retval);
 }
+template <int N>
+TimeUnit<N> &operator += (TimeUnit<N> &lhs, TimeUnit<N> const &rhs) {
+  HighPrecision *lhsv = lhs.PeekHighPrecision ();
+  lhsv->Add (rhs.GetHighPrecision ());
+  return lhs;
+}
+template <int N>
+TimeUnit<N> &operator -= (TimeUnit<N> &lhs, TimeUnit<N> const &rhs) {
+  HighPrecision *lhsv = lhs.PeekHighPrecision ();
+  lhsv->Sub (rhs.GetHighPrecision ());
+  return lhs;
+}
+
 
 /**
  * \anchor ns3-Time-Abs
@@ -301,6 +328,7 @@ class Time : public TimeUnit<1>
 public:
   Time ();
   Time (TimeUnit<1> time);
+  Time (HighPrecision const& value);
 
   /**
    * \returns an approximation in seconds of the time stored in this
@@ -324,6 +352,8 @@ public:
   int64_t GetNanoSeconds (void) const;
 };
 
+std::ostream& operator<< (std::ostream& os, Time const& time);
+
 /**
  * \brief create ns3::Time instances in units of seconds.
  *
@@ -333,12 +363,7 @@ public:
  * Simulator::Schedule (NanoSeconds (5.0), ...);
  * \endcode
  */
-class Seconds : public TimeUnit<1>
-{
-public:
-  Seconds ();
-  Seconds (double seconds);
-};
+Time Seconds (double seconds);
 
 /**
  * \brief create ns3::Time instances in units of milliseconds.
@@ -349,12 +374,7 @@ public:
  * Simulator::Schedule (MilliSeconds (5), ...);
  * \endcode
  */
-class MilliSeconds : public TimeUnit<1>
-{
-public:
-  MilliSeconds ();
-  MilliSeconds (uint32_t ms);
-};
+Time MilliSeconds (uint32_t ms);
 /**
  * \brief create ns3::Time instances in units of microseconds.
  *
@@ -364,12 +384,7 @@ public:
  * Simulator::Schedule (MicroSeconds (5), ...);
  * \endcode
  */
-class MicroSeconds : public TimeUnit<1>
-{
-public:
-  MicroSeconds ();
-  MicroSeconds (uint64_t ms);
-};
+Time MicroSeconds (uint64_t us);
 /**
  * \brief create ns3::Time instances in units of nanoseconds.
  *
@@ -379,12 +394,7 @@ public:
  * Simulator::Schedule (NanoSeconds (5), ...);
  * \endcode
  */
-class NanoSeconds : public TimeUnit<1>
-{
-public:
-  NanoSeconds ();
-  NanoSeconds (uint64_t ms);
-};
+Time NanoSeconds (uint64_t ns);
 
 /**
  * \brief create an ns3::Time instance which contains the
@@ -392,16 +402,12 @@ public:
  *
  * This is really a shortcut for the ns3::Simulator::Now method.
  * It is typically used as shown below to schedule an event
- * which expires in 2 seconds from now:
+ * which expires at the absolute time "2 seconds":
  * \code
- * Simulator::Schedule (Seconds (2.0), &my_function);
+ * Simulator::Schedule (Seconds (2.0) - Now (), &my_function);
  * \endcode
  */
-class Now : public Time
-{
-public:
-  Now ();
-};
+Time Now (void);
 
 /**
  * \brief hold scalar values
