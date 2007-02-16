@@ -21,10 +21,11 @@ core.add_sources([
     'debug.cc',
     'assert.cc',
     'ptr.cc',
+    'debug.cc',
     'test.cc'
     ])
 env = Environment()
-if env['PLATFORM'] == 'posix' or env['PLATFORM'] == 'darwin':
+if env['PLATFORM'] == 'posix' or env['PLATFORM'] == 'darwin' or env['PLATFORM'] == 'cygwin':
     core.add_external_dep('pthread')
     core.add_sources([
         'unix-system-wall-clock-ms.cc',
@@ -139,6 +140,7 @@ common.add_sources([
     'packet.cc',
     'tags.cc',
     'pcap-writer.cc',
+    'trace-writer.cc',
     'trace-container.cc',
     'variable-tracer-test.cc',
     'stream-tracer-test.cc',
@@ -154,8 +156,85 @@ common.add_inst_headers([
     'f-variable-tracer.h',
     'callback-tracer.h',
     'stream-tracer.h',
+    'trace-writer.h',
     'trace-container.h',
     'pcap-writer.h',
+    ])
+
+node = build.Ns3Module ('node', 'src/node')
+ns3.add (node)
+node.add_deps (['core', 'common', 'simulator'])
+node.add_sources ([
+    'node.cc',
+    'queue.cc',
+    'drop-tail.cc',
+    'l3-demux.cc',
+    'l3-protocol.cc',
+    'ipv4-l3-protocol.cc',
+    'ipv4-l4-demux.cc',
+    'ipv4-l4-protocol.cc',
+    'udp-ipv4-l4-protocol.cc',
+    'ipv4-address.cc',
+    'internet-node.cc',
+    'net-device.cc',
+    'mac-address.cc',
+    'ipv4-header.cc',
+    'udp-header.cc',
+    'ipv4-checksum.cc',
+    'ipv4-route.cc',
+    'ipv4-interface.cc',
+    'ipv4.cc',
+    'ipv4-end-point.cc',
+    'udp-end-point.cc',
+    'udp-socket.cc',
+    'udp.cc',
+    'arp-header.cc',
+    'arp-l3-protocol.cc',
+    'arp-cache.cc',
+    'arp-ipv4-interface.cc',
+    'arp.cc',
+    'p2p-net-device.cc',
+    'p2p-channel.cc',
+    'ipv4-loopback-interface.cc',
+    'llc-snap-header.cc',
+    'header-utils.cc',
+    'net-device-list.cc'
+    ])
+node.add_headers ([
+    'ipv4-header.h',
+    'udp-header.h',
+    'ipv4-checksum.h',
+    'udp.h',
+    'ipv4-l4-protocol.h',
+    'udp-ipv4-l4-protocol.h',
+    'ipv4-l3-protocol.h',
+    'arp-l3-protocol.h',
+    'arp-header.h',
+    'arp-cache-cache.h',
+    'arp.h',
+    'ipv4-loopback-interface.h',
+    'l3-demux.h',
+    'l3-protocol.h',
+    'ipv4-l4-demux.h',
+    'net-device-list.h',
+    'llc-snap-header.h',
+    'header-utils.h',
+    ])
+node.add_inst_headers ([
+    'node.h',
+    'queue.h',
+    'drop-tail.h',
+    'internet-node.h',
+    'udp-socket.h',
+    'ipv4-address.h',
+    'net-device.h',
+    'p2p-net-device.h',
+    'p2p-channel.h',
+    'arp-ipv4-interface.h',
+    'ipv4-interface.h',
+    'mac-address.h',
+    'ipv4.h',
+    'ipv4-route.h',
     ])
 
 
@@ -229,5 +308,22 @@ ns3.add(sample_test)
 sample_test.add_dep('core')
 sample_test.add_source('main-test.cc')
 
+sample_simple = build.Ns3Module('sample-simple', 'samples')
+sample_simple.set_executable()
+ns3.add(sample_simple)
+sample_simple.add_deps(['core', 'simulator', 'node'])
+sample_simple.add_source('main-simple.cc')
+
+sample_sp2p = build.Ns3Module('sample-simple-p2p', 'samples')
+sample_sp2p.set_executable()
+ns3.add(sample_sp2p)
+sample_sp2p.add_deps(['core', 'simulator', 'node'])
+sample_sp2p.add_source('main-simple-p2p.cc')
+
+sample_tw = build.Ns3Module('sample-tw', 'samples')
+sample_tw.set_executable()
+ns3.add(sample_tw)
+sample_tw.add_deps(['core', 'common'])
+sample_tw.add_source('main-tw.cc')
 
 ns3.generate_dependencies()
