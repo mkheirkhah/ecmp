@@ -23,14 +23,10 @@
 
 #include <iostream>
 #include <string>
-#include <cassert>
 
 #include "ns3/debug.h"
-
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
-#include "ns3/trace-writer.h"
-
 #include "ns3/internet-node.h"
 #include "ns3/serial-channel.h"
 #include "ns3/mac-address.h"
@@ -40,6 +36,11 @@
 #include "ns3/udp-socket.h"
 #include "ns3/ipv4-route.h"
 #include "ns3/drop-tail.h"
+#include "ns3/trace-writer.h"
+#include "ns3/llc-snap-header.h"
+#include "ns3/arp-header.h"
+#include "ns3/ipv4-header.h"
+#include "ns3/udp-header.h"
 
 using namespace ns3;
 
@@ -63,16 +64,62 @@ public:
 
   void LogEnque (std::string const &name, const Packet &p)
   {
-    m_filestr << name << " que " << &p << std::endl;
+    m_filestr << name << " que ";
+    PrintLlcPacket (p, m_filestr);
+    m_filestr << std::endl;
   }
 
   void LogDeque (std::string const &name, const Packet &p)
   {
-    m_filestr << name << " deq " << &p << std::endl;
+    m_filestr << name << " deq ";
+    PrintLlcPacket (p, m_filestr);
+    m_filestr << std::endl;
   }
   void LogDrop (std::string const &name, const Packet &p)
   {
-    m_filestr << name << " dro " << &p << std::endl;
+    m_filestr << name << " dro ";
+    PrintLlcPacket (p, m_filestr);
+    m_filestr << std::endl;
+  }
+
+  void PrintLlcPacket (Packet p, std::ostream &os)
+  {
+    LlcSnapHeader llc;
+    p.Peek (llc);
+    p.Remove (llc);
+    switch (llc.GetType ())
+      {
+      case 0x0800: {
+        Ipv4Header ipv4;
+        p.Peek (ipv4);
+        p.Remove (ipv4);
+        if (ipv4.GetProtocol () == 17)
+          {
+            UdpHeader udp;
+            p.Peek (udp);
+            p.Remove (udp);
+            os << "udp payload=" << p.GetSize () 
+               << " from="<< ipv4.GetSource () << ":" << udp.GetSource ()
+               << " to="<< ipv4.GetDestination () << ":" << udp.GetDestination ();
+          }
+      } break;
+      case 0x0806: {
+        ArpHeader arp;
+        p.Peek (arp);
+        p.Remove (arp);
+        os << "arp ";
+        if (arp.IsRequest ())
+          {
+            os << "request from=" << arp.GetSourceIpv4Address ()
+               << ", for=" << arp.GetDestinationIpv4Address ();
+          }
+        else
+          {
+            os << "reply from=" << arp.GetSourceIpv4Address ()
+               << ", for=" << arp.GetDestinationIpv4Address ();
+          }
+      } break;
+      }
   }
 
 protected:
@@ -139,6 +186,7 @@ AddDuplexLink(
   InternetNode* b, 
   const Ipv4Address& addrb,
   const MacAddress& macaddrb, 
+  const Ipv4Mask& netmask,
   // const Rate& rate, 
   // const Time& delay,
   TraceContainer &traceContainer,
@@ -146,11 +194,6 @@ AddDuplexLink(
 {
   std::string qName;
   SerialChannel* channel = new SerialChannel();
-
-  // Duplex link is assumed to be subnetted as a /30
-  // May run this unnumbered in the future?
-  Ipv4Mask netmask("255.255.255.252");
-  assert(netmask.IsMatch(addra,addrb));
 
   qName = name + "::Queue A";
   DropTailQueue* dtqa = new DropTailQueue(qName);
@@ -250,6 +293,7 @@ int main (int argc, char *argv[])
   SerialChannel* ch1 = AddDuplexLink (
       n0, Ipv4Address("10.1.1.1"), MacAddress("00:00:00:00:00:01"), 
       n2, Ipv4Address("10.1.1.2"), MacAddress("00:00:00:00:00:02"), 
+      Ipv4Mask("255.255.255.0"), 
       traceContainer, channelName);
   SetupTrace (traceContainer, tracer);
 
@@ -257,6 +301,7 @@ int main (int argc, char *argv[])
   SerialChannel* ch2 = AddDuplexLink (
       n1, Ipv4Address("10.1.2.1"), MacAddress("00:00:00:00:00:03"), 
       n2, Ipv4Address("10.1.2.2"), MacAddress("00:00:00:00:00:04"), 
+      Ipv4Mask("255.255.255.0"), 
       traceContainer, channelName);
   SetupTrace (traceContainer, tracer);
 
@@ -264,6 +309,7 @@ int main (int argc, char *argv[])
   SerialChannel* ch3 = AddDuplexLink (
       n2, Ipv4Address("10.1.3.1"), MacAddress("00:00:00:00:00:05"), 
       n3, Ipv4Address("10.1.3.2"), MacAddress("00:00:00:00:00:06"), 
+      Ipv4Mask("255.255.255.0"), 
       traceContainer, channelName);
   SetupTrace (traceContainer, tracer);
   
