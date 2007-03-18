@@ -1,7 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2007 University of Washington
- * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -36,8 +35,10 @@ class SerialPhy;
 class Queue;
 
 class SerialNetDevice : public NetDevice {
-friend class SerialPhy;
 public:
+  enum TraceType {
+    QUEUE,
+  };
   SerialNetDevice(Node* node, const MacAddress& addr);
   virtual ~SerialNetDevice();
 
@@ -49,7 +50,7 @@ private:
 public:
   bool Attach(SerialChannel* ch);
   void AddQueue(Queue *);
-  // called by ChannelSerial
+  // called by SerialPhy
   void Receive (Packet& p);
 
 protected:
@@ -59,6 +60,7 @@ protected:
 private:
   virtual void NotifyDataAvailable (void);
   virtual bool SendTo (Packet& p, const MacAddress& dest);
+  virtual TraceResolver *DoCreateTraceResolver (TraceContext const &context);
 
   SerialPhy* m_phy;
   SerialChannel* m_channel;

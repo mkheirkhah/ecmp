@@ -24,7 +24,7 @@
 #include "assert.h"
 
 /**
- * \defgroup error
+ * \defgroup error Error
  * \brief fatal error handling
  *
  * \param msg message to output when this macro is hit.

@@ -1,7 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2007 University of Washington
- * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,37 +17,43 @@
  *
  * Author: Craig Dowell <craigdo@ee.washingon.edu>
  *
- *      Wed Feb 14 16:05:46 PST 2007 craigdo:  Created
+ *	Thu Feb 15 14:50:46 PST 2007 craigdo: Created.
  */
 
-#include <list>
-#include "ns3/packet.h"
-#include "layer-connector.h"
+#include "ns3/debug.h"
+#include "channel.h"
 
-#ifndef CHANNEL_H
-#define CHANNEL_H
+NS_DEBUG_COMPONENT_DEFINE ("Channel");
 
 namespace ns3 {
 
-class Channel : public LayerConnectorLower
+Channel::Channel ()
+  : m_name("Channel")
 {
-public:
-  Channel ();
-  virtual ~Channel ();
+  NS_DEBUG("Channel::Channel ()");
+}
 
-  // Called by the physical layer to cause bits to propagate along the channel
-  // The channel will call Receive on each of the phys.
-  bool Propagate (Packet &p);
-  bool DoConnectToUpper (LayerConnectorUpper &upper);
-  bool LowerDoNotify (LayerConnectorUpper *upper);
+Channel::Channel (std::string name)
+  : m_name(name)
+{
+  NS_DEBUG("Channel::Channel (" << name << ")");
+}
 
-protected:
-  typedef std::list<LayerConnectorUpper *> ConnectorList;
-  ConnectorList m_connectorList;
+Channel::~Channel ()
+{
+  NS_DEBUG("Channel::~Channel ()");
+}
 
-private:
-};
+  void
+Channel::SetName(std::string name)
+{
+  m_name = name;
+}
 
-}; // namespace ns3
+  std::string
+Channel::GetName(void)
+{
+  return m_name;
+}
 
-#endif /* CHANNEL_H */
+} // namespace ns3
