@@ -187,6 +187,8 @@ common.add_sources([
     'chunk.cc',
     'header.cc',
     'trailer.cc',
+    'packet-printer.cc',
+    'packet-metadata.cc',
     'packet.cc',
     'tags.cc',
     'pcap-writer.cc',
@@ -208,6 +210,8 @@ common.add_inst_headers([
     'trailer.h',
     'tags.h',
     'packet.h',
+    'packet-printer.h',
+    'packet-metadata.h',
     'uv-trace-source.h',
     'sv-trace-source.h',
     'fv-trace-source.h',
@@ -367,9 +371,9 @@ bench_object.add_deps(['core'])
 bench_object.add_source('bench-object.cc')
 
 bench_packets = build.Ns3Module('bench-packets', 'utils')
-#ns3.add(bench_packets)
+ns3.add(bench_packets)
 bench_packets.set_executable()
-bench_packets.add_dep('core')
+bench_packets.add_deps (['core', 'common'])
 bench_packets.add_source('bench-packets.cc')
 
 bench_simu = build.Ns3Module('bench-simulator', 'utils')
