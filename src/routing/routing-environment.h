@@ -13,28 +13,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifndef ROUTING_ENVIRONMENT_H
+#define ROUTING_ENVIRONMENT_H
 
-#include "ns3/debug.h"
-#include "ns3/internet-node.h"
-#include "static-router.h"
-
-NS_DEBUG_COMPONENT_DEFINE ("StaticRouter");
+#include <stdint.h>
+#include "ns3/object.h"
+#include "ns3/ptr.h"
+#include "ns3/ipv4-address.h"
 
 namespace ns3 {
+namespace RoutingEnvironment {
 
-const InterfaceId StaticRouter::iid = 
-  MakeInterfaceId ("StaticRouter", Object::iid);
+bool StaticRoutingEnabled(void);
 
-StaticRouter::StaticRouter (Ptr<Node> node)
-  : m_node(node)
-{
-  SetInterfaceId (StaticRouter::iid);
-  NS_DEBUG("StaticRouter::StaticRouter ()");
-}
-
-StaticRouter::~StaticRouter ()
-{
-  NS_DEBUG("StaticRouter::~StaticRouter ()");
-}
-
+} // namespace RoutingEnvironment
 } // namespace ns3
+
+#endif /* ROUTING_ENVIRONMENT_H */

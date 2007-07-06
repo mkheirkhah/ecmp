@@ -1,5 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
+ * All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -15,26 +17,23 @@
  */
 
 #include "ns3/debug.h"
-#include "ns3/internet-node.h"
-#include "static-router.h"
+#include "ns3/default-value.h"
 
-NS_DEBUG_COMPONENT_DEFINE ("StaticRouter");
+#include "routing-environment.h"
+
+NS_DEBUG_COMPONENT_DEFINE ("RoutingEnvironment");
 
 namespace ns3 {
+namespace RoutingEnvironment {
 
-const InterfaceId StaticRouter::iid = 
-  MakeInterfaceId ("StaticRouter", Object::iid);
+BooleanDefaultValue g_doStaticRoutingDefaultValue ("DoStaticRouting", 
+  "Enable global static routing", false);
 
-StaticRouter::StaticRouter (Ptr<Node> node)
-  : m_node(node)
+    bool
+StaticRoutingEnabled(void)
 {
-  SetInterfaceId (StaticRouter::iid);
-  NS_DEBUG("StaticRouter::StaticRouter ()");
+  return g_doStaticRoutingDefaultValue.GetValue();
 }
 
-StaticRouter::~StaticRouter ()
-{
-  NS_DEBUG("StaticRouter::~StaticRouter ()");
-}
-
+} // namespace RoutingEnvironment
 } // namespace ns3
