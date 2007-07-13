@@ -1,0 +1,9 @@
+.*.orig$
+.*\.o$
+.*~$
+build-dir
+build
+.*\.sconsign
+doc/html.*
+doc/latex.*
+.lock-wscript
