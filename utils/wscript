@@ -1,0 +1,18 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+
+def build(bld):
+    env = bld.env_of_name('default')
+
+    unit_tests = bld.create_ns3_program('run-tests')
+    unit_tests.install_var  = 0 # do not install
+    unit_tests.unit_test    = 1 # runs on 'waf check'
+    unit_tests.source = 'run-tests.cc'
+    ## link unit test program with all ns3 modules
+    unit_tests.uselib_local = 'ns3'
+    
+    obj = bld.create_ns3_program('bench-simulator', ['simulator'])
+    obj.source = 'bench-simulator.cc'
+
+    obj = bld.create_ns3_program('replay-simulation', ['simulator'])
+    obj.source = 'replay-simulation.cc'
