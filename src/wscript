@@ -19,6 +19,7 @@ all_modules = (
     'devices/point-to-point',
     'devices/csma',
     'applications',
+    'routing/olsr',
     'routing/global-routing',
     'mobility',
     )
