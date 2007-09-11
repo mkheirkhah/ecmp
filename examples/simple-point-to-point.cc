@@ -64,7 +64,7 @@
 #include "ns3/ipv4-route.h"
 #include "ns3/point-to-point-topology.h"
 #include "ns3/onoff-application.h"
-#include "ns3/node-list.h"
+#include "ns3/packet-sink.h"
 
 using namespace ns3;
 
@@ -154,6 +154,15 @@ int main (int argc, char *argv[])
   ooff->Start(Seconds(1.0));
   ooff->Stop (Seconds(10.0));
 
+  // Create an optional packet sink to receive these packets
+  Ptr<PacketSink> sink = Create<PacketSink> (
+    n3,
+    InetSocketAddress (Ipv4Address::GetAny (), 80),
+    "Udp");
+  // Start the sink
+  sink->Start (Seconds (1.0));
+  sink->Stop (Seconds (10.0));
+
   // Create a similar flow from n3 to n1, starting at time 1.1 seconds
   ooff = Create<OnOffApplication> (
     n3, 
@@ -164,6 +173,16 @@ int main (int argc, char *argv[])
   // Start the application
   ooff->Start(Seconds(1.1));
   ooff->Stop (Seconds(10.0));
+
+  // Create a packet sink to receive these packets
+  sink = Create<PacketSink> (
+    n1,
+    InetSocketAddress (Ipv4Address::GetAny (), 80),
+    "Udp");
+  // Start the sink
+  sink->Start (Seconds (1.1));
+  sink->Stop (Seconds (10.0));
+  sink->SetQuiet ();  // disable output from the Receive callback
 
   // Here, finish off packet routing configuration
   // This will likely set by some global StaticRouting object in the future
@@ -178,8 +197,6 @@ int main (int argc, char *argv[])
   AsciiTrace asciitrace ("simple-point-to-point.tr");
   asciitrace.TraceAllQueues ();
   asciitrace.TraceAllNetDeviceRx ();
-
-  NodeList::TraceAll (std::cout);
 
   // Also configure some tcpdump traces; each interface will be traced
   // The output files will be named 

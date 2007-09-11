@@ -9,4 +9,3 @@ doc/latex.*
 doc/trace-source-list.h
 .lock-wscript
 .waf*
-waf
