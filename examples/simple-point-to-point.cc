@@ -209,7 +209,6 @@ main (int argc, char *argv[])
   // Start the sink
   sink->Start (Seconds (1.1));
   sink->Stop (Seconds (10.0));
-  sink->SetQuiet ();  // disable output from the Receive callback
 
   // Here, finish off packet routing configuration
   // This will likely set by some global StaticRouting object in the future
