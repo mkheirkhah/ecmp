@@ -21,14 +21,13 @@
 //       =================
 //              LAN
 //
-// - CBR/UDP flows from n0 to n1 and from n3 to n0
+// - UDP flows from n0 to n1 and back
 // - DropTail queues 
-// - Tracing of queues and packet receptions to file "csma-one-subnet.tr"
+// - Tracing of queues and packet receptions to file "udp-echo.tr"
 
 #include "ns3/command-line.h"
 #include "ns3/default-value.h"
 #include "ns3/ptr.h"
-#include "ns3/random-variable.h"
 #include "ns3/debug.h"
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
@@ -40,17 +39,18 @@
 #include "ns3/csma-net-device.h"
 #include "ns3/csma-topology.h"
 #include "ns3/csma-ipv4-topology.h"
-#include "ns3/mac48-address.h"
+#include "ns3/eui48-address.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/inet-socket-address.h"
 #include "ns3/ipv4.h"
 #include "ns3/socket.h"
 #include "ns3/ipv4-route.h"
-#include "ns3/onoff-application.h"
+#include "ns3/udp-echo-client.h"
+#include "ns3/udp-echo-server.h"
 
 using namespace ns3;
 
-NS_DEBUG_COMPONENT_DEFINE ("CsmaOneSubnet");
+NS_DEBUG_COMPONENT_DEFINE ("UdpEcho");
 
 int 
 main (int argc, char *argv[])
@@ -59,8 +59,8 @@ main (int argc, char *argv[])
 // Users may find it convenient to turn on explicit debugging
 // for selected modules; the below lines suggest how to do this
 //
-#if 0 
-  DebugComponentEnable("CsmaOneSubnet");
+#if 0
+  DebugComponentEnable("UdpEcho");
 
   DebugComponentEnable("Object");
   DebugComponentEnable("Queue");
@@ -80,7 +80,13 @@ main (int argc, char *argv[])
   DebugComponentEnable("Ipv4Interface");
   DebugComponentEnable("ArpIpv4Interface");
   DebugComponentEnable("Ipv4LoopbackInterface");
+  DebugComponentEnable("UdpEchoClient");
+  DebugComponentEnable("UdpEchoServer");
 #endif
+
+  DebugComponentEnable("UdpEcho");
+  DebugComponentEnable("UdpEchoClient");
+  DebugComponentEnable("UdpEchoServer");
 //
 // Set up default values for the simulation.  Use the DefaultValue::Bind()
 // technique to tell the system what subclass of Queue to use.  The Bind
@@ -120,21 +126,16 @@ main (int argc, char *argv[])
 // zero.
 //
   uint32_t nd0 = CsmaIpv4Topology::AddIpv4CsmaNetDevice (n0, lan, 
-    Mac48Address("08:00:2e:00:00:00"));
+    Eui48Address("08:00:2e:00:00:00"));
 
   uint32_t nd1 = CsmaIpv4Topology::AddIpv4CsmaNetDevice (n1, lan, 
-    Mac48Address("08:00:2e:00:00:01"));
+    Eui48Address("08:00:2e:00:00:01"));
 
   uint32_t nd2 = CsmaIpv4Topology::AddIpv4CsmaNetDevice (n2, lan, 
-    Mac48Address("08:00:2e:00:00:02"));
+    Eui48Address("08:00:2e:00:00:02"));
 
   uint32_t nd3 = CsmaIpv4Topology::AddIpv4CsmaNetDevice (n3, lan, 
-    Mac48Address("08:00:2e:00:00:03"));
-
-  NS_DEBUG ("nd0 = " << nd0);
-  NS_DEBUG ("nd1 = " << nd1);
-  NS_DEBUG ("nd2 = " << nd2);
-  NS_DEBUG ("nd3 = " << nd3);
+    Eui48Address("08:00:2e:00:00:03"));
 //
 // We've got the "hardware" in place.  Now we need to add IP addresses.
 //
@@ -162,49 +163,48 @@ main (int argc, char *argv[])
   
   CsmaIpv4Topology::AddIpv4Address (n3, nd3, Ipv4Address("10.1.1.4"), 
     Ipv4Mask("255.255.255.0"));
-//
-// Create an OnOff application to send UDP datagrams from node zero to node 1.
-//
-  NS_DEBUG("Create Applications.");
-  Ptr<OnOffApplication> ooff = Create<OnOffApplication> (
-    n0, 
-    InetSocketAddress ("10.1.1.2", 80), 
-    "Udp",
-    ConstantVariable(1), 
-    ConstantVariable(0));
-//
-// Tell the application when to start and stop.
-//
-  ooff->Start(Seconds(1.0));
-  ooff->Stop (Seconds(10.0));
-// 
-// Create a similar flow from n3 to n0, starting at time 1.1 seconds
-//
-  ooff = Create<OnOffApplication> (
-    n3, 
-    InetSocketAddress ("10.1.1.1", 80), 
-    "Udp",
-    ConstantVariable(1), 
-    ConstantVariable(0));
 
-  ooff->Start(Seconds(1.1));
-  ooff->Stop (Seconds(10.0));
+  NS_DEBUG("Create Applications.");
+//
+// Create a UdpEchoServer application on node one.
+//
+  uint16_t port = 80;
+
+  Ptr<UdpEchoServer> server = Create<UdpEchoServer> (n1, port);
+//
+// Create a UdpEchoClient application to send UDP datagrams from node zero to
+// node one.
+//
+  uint32_t packetSize = 1024;
+  uint32_t maxPacketCount = 1;
+  Time interPacketInterval = Seconds (1.);
+
+  Ptr<UdpEchoClient> client = Create<UdpEchoClient> (n0, "10.1.1.2", port, 
+    maxPacketCount, interPacketInterval, packetSize);
+//
+// Tell the applications when to start and stop.
+//
+  server->Start(Seconds(1.));
+  client->Start(Seconds(2.));
+
+  server->Stop (Seconds(10.));
+  client->Stop (Seconds(10.));
 //
 // Configure tracing of all enqueue, dequeue, and NetDevice receive events.
-// Trace output will be sent to the file "csma-one-subnet.tr"
+// Trace output will be sent to the file "udp-echo.tr"
 //
-   NS_DEBUG("Configure Tracing.");
-  AsciiTrace asciitrace ("csma-one-subnet.tr");
+  NS_DEBUG("Configure Tracing.");
+  AsciiTrace asciitrace ("udp-echo.tr");
   asciitrace.TraceAllNetDeviceRx ();
   asciitrace.TraceAllQueues ();
 //
 // Also configure some tcpdump traces; each interface will be traced.
 // The output files will be named:
-//     csma-one-subnet.pcap-<nodeId>-<interfaceId>
+//     udp-echo.pcap-<nodeId>-<interfaceId>
 // and can be read by the "tcpdump -r" command (use "-tt" option to
 // display timestamps correctly)
 //
-  PcapTrace pcaptrace ("csma-one-subnet.pcap");
+  PcapTrace pcaptrace ("udp-echo.pcap");
   pcaptrace.TraceAllIp ();
 //
 // Now, do the actual simulation.
