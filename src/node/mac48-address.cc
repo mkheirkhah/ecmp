@@ -133,6 +133,22 @@ Mac48Address::GetType (void)
   return type;
 }
 
+bool
+Mac48Address::IsBroadcast (void) const
+{
+  return *this == GetBroadcast ();
+}
+bool 
+Mac48Address::IsMulticast (void) const
+{
+  return (m_address[0] & 0x01) == 0x01;
+}
+Mac48Address
+Mac48Address::GetBroadcast (void)
+{
+  static Mac48Address broadcast = Mac48Address ("ff:ff:ff:ff:ff:ff");
+  return broadcast;
+}
 bool operator == (const Mac48Address &a, const Mac48Address &b)
 {
   uint8_t ada[6];
@@ -145,6 +161,27 @@ bool operator != (const Mac48Address &a, const Mac48Address &b)
 {
   return ! (a == b);
 }
+
+bool operator < (const Mac48Address &a, const Mac48Address &b)
+{
+  uint8_t aP[6];
+  uint8_t bP[6];
+  a.CopyTo (aP);
+  b.CopyTo (bP);
+  for (uint8_t i = 0; i < 6; i++) 
+    {
+      if (aP[i] < bP[i]) 
+        {
+          return true;
+        } 
+      else if (aP[i] > bP[i]) 
+        {
+          return false;
+        }
+    }
+  return false;
+}
+
 
 std::ostream& operator<< (std::ostream& os, const Mac48Address & address)
 {

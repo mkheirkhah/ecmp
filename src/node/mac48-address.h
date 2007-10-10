@@ -79,6 +79,20 @@ public:
    * Allocate a new Mac48Address.
    */
   static Mac48Address Allocate (void);
+
+  /**
+   * \returns true if this is a broadcast address, false otherwise.
+   */
+  bool IsBroadcast (void) const;
+  /**
+   * \returns true if this is a multicast address, false otherwise.
+   */
+  bool IsMulticast (void) const;
+
+  /**
+   * \returns the broadcast address
+   */
+  static Mac48Address GetBroadcast (void);
 private:
   /**
    * \returns a new Address instance
@@ -92,6 +106,7 @@ private:
 
 bool operator == (const Mac48Address &a, const Mac48Address &b);
 bool operator != (const Mac48Address &a, const Mac48Address &b);
+bool operator < (const Mac48Address &a, const Mac48Address &b);
 std::ostream& operator<< (std::ostream& os, const Mac48Address & address);
 
 } // namespace ns3

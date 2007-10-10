@@ -23,6 +23,7 @@ all_modules = (
     'applications/udp-echo',
     'routing/global-routing',
     'mobility',
+    'devices/wifi',
     )
 
 def set_options(opt):
