@@ -1,0 +1,22 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj = bld.create_ns3_program('hello-simulator',
+        ['core'])
+    obj.source = 'hello-simulator.cc'
+
+    obj = bld.create_ns3_program('tutorial-csma-echo',
+        ['core'])
+    obj.source = 'tutorial-csma-echo.cc'
+
+    obj = bld.create_ns3_program('tutorial-csma-echo-ascii-trace',
+        ['core'])
+    obj.source = 'tutorial-csma-echo-ascii-trace.cc'
+
+    obj = bld.create_ns3_program('tutorial-csma-echo-pcap-trace',
+        ['core'])
+    obj.source = 'tutorial-csma-echo-pcap-trace.cc'
+
+    obj = bld.create_ns3_program('tutorial-naive-dumbbell',
+        ['core'])
+    obj.source = 'tutorial-naive-dumbbell.cc'
