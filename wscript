@@ -143,6 +143,7 @@ def configure(conf):
             variant_env.append_value("LINKFLAGS", "-Wl,--enable-runtime-pseudo-reloc")
 
     conf.sub_config('src')
+    conf.sub_config('utils')
 
 
 def create_ns3_program(bld, name, dependencies=('simulator',)):
@@ -173,6 +174,10 @@ def build(bld):
 
     check_shell()
 
+    if Params.g_options.doxygen:
+        doxygen()
+        raise SystemExit(0)
+
     # process subfolders from here
     bld.add_subdirs('src')
     bld.add_subdirs('samples utils examples tutorial')
@@ -182,6 +187,7 @@ def build(bld):
     lib.name = 'ns3'
     lib.target = 'ns3'
     lib.add_objects = list(bld.env_of_name('default')['NS3_MODULES'])
+
 
 def shutdown():
     #import UnitTest
@@ -193,7 +199,7 @@ def shutdown():
     #ut.print_results()
 
     if Params.g_commands['check']:
-        run_program('run-tests')
+        _run_waf_check()
 
     if Params.g_options.lcov_report:
         lcov_report()
@@ -204,6 +210,19 @@ def shutdown():
 
     if Params.g_options.command_template:
         Params.fatal("Option --command-template requires the option --run to be given")
+
+def _run_waf_check():
+    ## generate the trace sources list docs
+    env = Params.g_build.env_of_name('default')
+    proc_env = _get_proc_env()
+    prog = _find_program('print-trace-sources', env).m_linktask.m_outputs[0].abspath(env)
+    out = open('doc/trace-source-list.h', 'w')
+    if subprocess.Popen([prog], stdout=out, env=proc_env).wait():
+        raise SystemExit(1)
+    out.close()
+
+    run_program('run-tests')
+
 
 def _find_program(program_name, env):
     launch_dir = os.path.abspath(Params.g_cwd_launch)
@@ -223,7 +242,7 @@ def _find_program(program_name, env):
     raise ValueError("program '%s' not found; available programs are: %r"
                      % (program_name, found_programs))
 
-def _run_argv(argv, os_env=None):
+def _get_proc_env(os_env=None):
     env = Params.g_build.env_of_name('default')
     if sys.platform == 'linux2':
         pathvar = 'LD_LIBRARY_PATH'
@@ -247,7 +266,10 @@ def _run_argv(argv, os_env=None):
             proc_env[pathvar] = os.pathsep.join(list(env['NS3_MODULE_PATH']) + [proc_env[pathvar]])
         else:
             proc_env[pathvar] = os.pathsep.join(list(env['NS3_MODULE_PATH']))
+    return proc_env
 
+def _run_argv(argv, os_env=None):
+    proc_env = _get_proc_env(os_env)
     retval = subprocess.Popen(argv, env=proc_env).wait()
     if retval:
         Params.fatal("Command %s exited with code %i" % (argv, retval))
@@ -332,10 +354,13 @@ def run_shell():
 
 
 def doxygen():
+    if not os.path.exists('doc/trace-source-list.h'):
+        Params.warning("doc/trace-source-list.h does not exist; run waf check to generate it.")
+
+    ## run doxygen
     doxygen_config = os.path.join('doc', 'doxygen.conf')
     if subprocess.Popen(['doxygen', doxygen_config]).wait():
         raise SystemExit(1)
-
 
 def lcov_report():
     env = Params.g_build.env_of_name('default')
