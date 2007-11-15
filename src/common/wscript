@@ -1,0 +1,34 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    common = bld.create_ns3_module('common', ['core', 'simulator'])
+    common.source = [
+        'buffer.cc',
+        'chunk-registry.cc',
+        'packet-printer.cc',
+        'packet-metadata.cc',
+        'packet-metadata-test.cc',
+        'packet.cc',
+        'tags.cc',
+        'tag-registry.cc',
+        'pcap-writer.cc',
+        'data-rate.cc',
+        'error-model.cc',
+        ]
+
+    headers = bld.create_obj('ns3header')
+    headers.source = [
+        'buffer.h',
+        'chunk-registry.h',
+        'header.h',
+        'trailer.h',
+        'tags.h',
+        'tag-registry.h',
+        'tag.h',
+        'packet.h',
+        'packet-printer.h',
+        'packet-metadata.h',
+        'pcap-writer.h',
+        'data-rate.h',
+        'error-model.h',
+        ]
