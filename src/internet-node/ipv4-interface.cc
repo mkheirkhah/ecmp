@@ -42,7 +42,7 @@ Ipv4Interface::Ipv4Interface (Ptr<NetDevice> nd)
     m_metric(1)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << &nd << ")");
+  NS_LOG_PARAMS (this << &nd);
 }
 
 Ipv4Interface::~Ipv4Interface ()
@@ -69,7 +69,7 @@ void
 Ipv4Interface::SetAddress (Ipv4Address a)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << a << ")");
+  NS_LOG_PARAMS (this << a);
   m_address = a;
 }
 
@@ -77,7 +77,7 @@ void
 Ipv4Interface::SetNetworkMask (Ipv4Mask mask)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << mask << ")");
+  NS_LOG_PARAMS (this << mask);
   m_netmask = mask;
 }
 
@@ -102,7 +102,7 @@ void
 Ipv4Interface::SetMetric (uint16_t metric)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << metric << ")");
+  NS_LOG_PARAMS ("(" << metric << ")");
   m_metric = metric;
 }
 

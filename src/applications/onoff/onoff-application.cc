@@ -95,7 +95,7 @@ OnOffApplication::Construct (Ptr<Node> n,
   m_pktSize = size;
   m_residualBits = 0;
   m_lastStartTime = Seconds (0);
-  m_maxBytes = 0xffffffff;
+  m_maxBytes = 0;
   m_totBytes = 0;
   m_iid = iid;
 }
@@ -109,7 +109,7 @@ void
 OnOffApplication::SetMaxBytes(uint32_t maxBytes)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << maxBytes << ")");
+  NS_LOG_PARAMS (this << maxBytes);
   m_maxBytes = maxBytes;
 }
 
@@ -117,7 +117,7 @@ void
 OnOffApplication::SetDefaultRate (const DataRate &rate)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << &rate << ")");
+  NS_LOG_PARAMS (&rate);
   g_defaultRate.SetValue (rate);
 }
 
@@ -125,7 +125,7 @@ void
 OnOffApplication::SetDefaultSize (uint32_t size)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAM ("(" << size << ")");
+  NS_LOG_PARAMS (size);
   g_defaultSize.SetValue (size);
 }
 
@@ -201,7 +201,7 @@ void OnOffApplication::ScheduleNextTx()
 {
   NS_LOG_FUNCTION;
 
-  if (m_totBytes < m_maxBytes)
+  if (m_maxBytes != 0 || m_totBytes < m_maxBytes)
     {
       uint32_t bits = m_pktSize * 8 - m_residualBits;
       NS_LOG_LOGIC ("bits = " << bits);

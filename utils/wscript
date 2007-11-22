@@ -12,7 +12,7 @@ def configure(conf):
 def build(bld):
     env = bld.env_of_name('default')
 
-    unit_tests = bld.create_ns3_program('run-tests')
+    unit_tests = bld.create_ns3_program('run-tests', ['common'])
     unit_tests.install_var  = 0 # do not install
     unit_tests.unit_test    = 1 # runs on 'waf check'
     unit_tests.source = 'run-tests.cc'
@@ -28,9 +28,9 @@ def build(bld):
     obj = bld.create_ns3_program('replay-simulation', ['simulator'])
     obj.source = 'replay-simulation.cc'
 
-    obj = bld.create_ns3_program('print-trace-sources',
+    obj = bld.create_ns3_program('print-introspected-doxygen',
                                  ['internet-node', 'csma-cd', 'point-to-point'])
-    obj.source = 'print-trace-sources.cc'
+    obj.source = 'print-introspected-doxygen.cc'
 
     if env['ENABLE_MOBILITY_VISUALIZER']:
         obj = bld.create_ns3_program('mobility-visualizer',
