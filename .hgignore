@@ -1,0 +1,11 @@
+\.rej$
+\.orig$
+\.o$
+~$
+^build-dir
+^build
+^doc/html
+^doc/latex
+^\.lock-wscript
+^\.waf
+^doc/introspected-doxygen\.h$
