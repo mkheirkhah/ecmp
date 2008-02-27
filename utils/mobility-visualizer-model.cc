@@ -83,7 +83,7 @@ int model_init (int argc, char *argv[], double *x1, double *y1, double *x2, doub
 //   DefaultValue::Bind ("RandomDiscPositionRho", "Uniform:0:30");
 
   DefaultValue::Bind ("RandomTopologyPositionType", "RandomRectanglePosition");
-  DefaultValue::Bind ("RandomTopologyMobilityType", "RandomWalk2dMobilityModel");
+  DefaultValue::Bind ("RandomTopologyMobilityType", "RandomWalkMobilityModel");
 
 //   CommandLine::AddArgValue ("sample-interval","sample interval", g_sampleInterval);
 //   CommandLine::AddArgValue ("num-nodes","number of nodes", g_numNodes);

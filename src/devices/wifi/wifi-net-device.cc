@@ -42,6 +42,7 @@
 #include "cr-mac-stations.h"
 #include "onoe-mac-stations.h"
 #include "amrr-mac-stations.h"
+#include "rraa-mac-stations.h"
 
 namespace ns3 {
 
@@ -215,6 +216,9 @@ WifiNetDevice::Construct (void)
   case WifiDefaultParameters::AMRR: {
     m_stations = new AmrrMacStations (m_phy->GetMode (0));
   } break;
+  case WifiDefaultParameters::RRAA: {
+    m_stations = new RraaMacStations (m_phy->GetMode (0));
+  } break;
   default:
     // NOTREACHED
     NS_ASSERT (false);
@@ -230,9 +234,10 @@ WifiNetDevice::Construct (void)
   Time ackDelay = m_phy->CalculateTxDuration (hdr.GetSize () + 4, m_phy->GetMode (0), WIFI_PREAMBLE_LONG);
   parameters->Initialize (ctsDelay, ackDelay);
   m_parameters = parameters;
+  m_stations->SetParameters (m_parameters);
 
   // the MacLow
-  MacLow *low = new MacLow ();
+  Ptr<MacLow> low = CreateObject<MacLow> ();
   low->SetDevice (this);
   low->SetPhy (m_phy);
   low->SetStations (m_stations);
@@ -261,10 +266,10 @@ WifiNetDevice::Construct (void)
   m_low->RegisterNavListener (m_navListener);
 }
 
-DcaTxop *
+Ptr<DcaTxop>
 WifiNetDevice::CreateDca (uint32_t minCw, uint32_t maxCw, uint32_t aifsn) const
 {
-  DcaTxop *dca = new DcaTxop (minCw, maxCw, aifsn, m_manager);
+  Ptr<DcaTxop> dca = CreateObject<DcaTxop> (minCw, maxCw, aifsn, m_manager);
   dca->SetParameters (m_parameters);
   dca->SetTxMiddle (m_txMiddle);
   dca->SetLow (m_low);
@@ -292,6 +297,7 @@ WifiNetDevice::GetTraceResolver (void) const
                        m_txLogger,
                        WifiNetDeviceTraceType (WifiNetDeviceTraceType::TX));
   resolver->AddComposite ("phy", m_phy);
+  resolver->AddComposite ("maclow", m_low);
   resolver->SetParentResolver (NetDevice::GetTraceResolver ());
   return resolver;
 }
@@ -326,7 +332,6 @@ WifiNetDevice::DoDispose (void)
   m_node = 0;
   m_channel = 0;
   delete m_stations;
-  delete m_low;
   delete m_rxMiddle;
   delete m_txMiddle;
   delete m_parameters;
@@ -533,10 +538,18 @@ AdhocWifiNetDevice::DoDispose (void)
   // chain up.
   WifiNetDevice::DoDispose ();
   // local cleanup
-  delete m_dca;
   delete m_high;
   m_dca = 0;
   m_high = 0;
+}
+Ptr<TraceResolver> 
+AdhocWifiNetDevice::GetTraceResolver (void) const
+{
+  Ptr<CompositeTraceResolver> resolver = 
+    Create<CompositeTraceResolver> ();
+  resolver->AddComposite ("dca", m_dca);
+  resolver->SetParentResolver (WifiNetDevice::GetTraceResolver ());
+  return resolver;
 }
 
 
@@ -617,12 +630,20 @@ NqstaWifiNetDevice::DoDispose (void)
   // chain up.
   WifiNetDevice::DoDispose ();
   // local cleanup
-  delete m_dca;
   delete m_high;
   m_dca = 0;
   m_high = 0;
 }
 
+Ptr<TraceResolver> 
+NqstaWifiNetDevice::GetTraceResolver (void) const
+{
+  Ptr<CompositeTraceResolver> resolver = 
+    Create<CompositeTraceResolver> ();
+  resolver->AddComposite ("dca", m_dca);
+  resolver->SetParentResolver (WifiNetDevice::GetTraceResolver ());
+  return resolver;
+}
 
 /*****************************************************
  *            AP code
@@ -707,14 +728,22 @@ NqapWifiNetDevice::DoDispose (void)
   // chain up.
   WifiNetDevice::DoDispose ();
   // local cleanup
-  delete m_dca;
-  delete m_beaconDca;
   delete m_high;
   m_dca = 0;
   m_high = 0;
   m_beaconDca = 0;
 }
 
+Ptr<TraceResolver> 
+NqapWifiNetDevice::GetTraceResolver (void) const
+{
+  Ptr<CompositeTraceResolver> resolver = 
+    Create<CompositeTraceResolver> ();
+  resolver->AddComposite ("dca", m_dca);
+  resolver->AddComposite ("beaconDca", m_beaconDca);
+  resolver->SetParentResolver (WifiNetDevice::GetTraceResolver ());
+  return resolver;
+}
 
 } // namespace ns3
 

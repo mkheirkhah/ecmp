@@ -98,7 +98,7 @@ TcpSocket::~TcpSocket ()
     }
   m_tcp = 0;
   delete m_pendingData; //prevents leak
-  m_retxEvent.Cancel ();
+  m_pendingData = 0;
 }
 
 enum Socket::SocketErrno
@@ -122,6 +122,7 @@ TcpSocket::Destroy (void)
   m_node = 0;
   m_endPoint = 0;
   m_tcp = 0;
+  m_retxEvent.Cancel ();
 }
 int
 TcpSocket::FinishBind (void)
@@ -155,6 +156,14 @@ TcpSocket::Bind (const Address &address)
   InetSocketAddress transport = InetSocketAddress::ConvertFrom (address);
   Ipv4Address ipv4 = transport.GetIpv4 ();
   uint16_t port = transport.GetPort ();
+  Ipv4Address localInterface = Ipv4Address::GetAny ();
+  if (ipv4 != Ipv4Address::GetAny ())
+    {
+      Ptr<Ipv4> ipv4_api = m_node->GetObject<Ipv4> ();
+      // Assert that the given address matches an existing local interface
+      NS_ASSERT (ipv4_api->FindInterfaceForAddr (ipv4) != 0);
+      localInterface = ipv4;
+    }
   if (ipv4 == Ipv4Address::GetAny () && port == 0)
     {
       m_endPoint = m_tcp->Allocate ();
@@ -167,12 +176,12 @@ TcpSocket::Bind (const Address &address)
     }
   else if (ipv4 != Ipv4Address::GetAny () && port == 0)
     {
-      m_endPoint = m_tcp->Allocate (ipv4);
+      m_endPoint = m_tcp->Allocate (ipv4, localInterface);
       NS_LOG_LOGIC ("TcpSocket "<<this<<" got an endpoint: "<<m_endPoint);
     }
   else if (ipv4 != Ipv4Address::GetAny () && port != 0)
     {
-      m_endPoint = m_tcp->Allocate (ipv4, port);
+      m_endPoint = m_tcp->Allocate (ipv4, port, localInterface);
       NS_LOG_LOGIC ("TcpSocket "<<this<<" got an endpoint: "<<m_endPoint);
     }
 
@@ -463,6 +472,7 @@ void TcpSocket::SendEmptyPacket (uint8_t flags)
   if (flags & TcpHeader::SYN)
     {
       rto = m_cnTimeout;
+      m_cnTimeout = m_cnTimeout + m_cnTimeout;
       m_cnCount--;
     }
   if (m_retxEvent.IsExpired () ) //no outstanding timer
@@ -656,7 +666,7 @@ bool TcpSocket::ProcessPacketAction (Actions_t a, Ptr<Packet> p,
     case SERV_NOTIFY:
       NS_LOG_LOGIC ("TcpSocket " << this <<" Action SERV_NOTIFY");
       NS_LOG_LOGIC ("TcpSocket " << this << " Connected!");
-      NotifyConnectionSucceeded ();
+      NotifyNewConnectionCreated (this, fromAddress);
       m_connected = true; // ! This is bogus; fix when we clone the tcp
       m_endPoint->SetPeer (m_defaultAddress, m_defaultPort);
       //treat the connection orientation final ack as a newack
@@ -696,18 +706,18 @@ bool TcpSocket::SendPendingData (bool withAck)
           break; // No more
         }
       uint32_t s = std::min (w, m_segmentSize);  // Send no more than window
-      PendingData* d = m_pendingData->CopyFromSeq (s, m_firstPendingSequence, 
+      Ptr<Packet> p = m_pendingData->CopyFromSeq (s, m_firstPendingSequence, 
         m_nextTxSequence);
       NS_LOG_LOGIC("TcpSocket " << this << " sendPendingData"
                    << " txseq " << m_nextTxSequence
                    << " s " << s 
-                   << " datasize " << d->Size() );
+                   << " datasize " << p->GetSize() );
       uint8_t flags = 0;
       if (withAck)
         {
           flags |= TcpHeader::ACK;
         }
-      uint32_t sz = d->Size (); // Size of packet
+      uint32_t sz = p->GetSize (); // Size of packet
       uint32_t remainingData = m_pendingData->SizeFromSeq(
           m_firstPendingSequence,
           m_nextTxSequence + SequenceNumber (sz));
@@ -716,9 +726,6 @@ bool TcpSocket::SendPendingData (bool withAck)
           flags = TcpHeader::FIN;
           m_state = FIN_WAIT_1;
         }
-      // Create and send the packet
-
-      Ptr<Packet> p = Create<Packet> (d->data, sz);
 
       TcpHeader header;
       header.SetFlags (flags);
@@ -744,11 +751,13 @@ bool TcpSocket::SendPendingData (bool withAck)
       m_tcp->SendPacket (p, header,
                          m_endPoint->GetLocalAddress (),
                          m_defaultAddress);
-      m_rtt->SentSeq(m_nextTxSequence, sz);           // notify the RTT
-      NotifyDataSent (p->GetSize () );                // notify the application
-      nPacketsSent++;                                 // Count sent this loop
-      m_nextTxSequence += sz;                         // Advance next tx sequence
-      m_highTxMark = std::max (m_nextTxSequence, m_highTxMark);// Note the high water mark
+      m_rtt->SentSeq(m_nextTxSequence, sz);       // notify the RTT
+      // Notify the application
+      Simulator::ScheduleNow(&TcpSocket::NotifyDataSent, this, p->GetSize ());
+      nPacketsSent++;                             // Count sent this loop
+      m_nextTxSequence += sz;                     // Advance next tx sequence
+      // Note the high water mark
+      m_highTxMark = std::max (m_nextTxSequence, m_highTxMark);
     }
   NS_LOG_LOGIC ("Sent "<<nPacketsSent<<" packets");
   NS_LOG_LOGIC("RETURN SendPendingData");
@@ -935,7 +944,7 @@ void TcpSocket::CommonNewAck (SequenceNumber ack, bool skipTimer)
           delete m_pendingData;
           m_pendingData = 0;
           // Insure no re-tx timer
-          m_retxEvent.Cancel();
+          m_retxEvent.Cancel ();
         }
     }
   // Try to send more data
@@ -1048,18 +1057,18 @@ void TcpSocket::Retransmit ()
         }
       return;
     }
-  PendingData* d = m_pendingData->CopyFromSeq (m_segmentSize,
+  Ptr<Packet> p = m_pendingData->CopyFromSeq (m_segmentSize,
                                             m_firstPendingSequence,
                                             m_highestRxAck);
   // Calculate remaining data for COE check
-  uint32_t remainingData =
-      m_pendingData->SizeFromSeq (m_firstPendingSequence,
-                                m_nextTxSequence + SequenceNumber(d->Size ()));
+  uint32_t remainingData = m_pendingData->SizeFromSeq (
+      m_firstPendingSequence,
+      m_nextTxSequence + SequenceNumber(p->GetSize ()));
   if (m_closeOnEmpty && remainingData == 0)
     { // Add the FIN flag
       flags = flags | TcpHeader::FIN;
     }
-  Ptr<Packet> p = Create<Packet> (d->data, d->Size());
+
   NS_LOG_LOGIC ("TcpSocket " << this << " retxing seq " << m_highestRxAck);
   if (m_retxEvent.IsExpired () )
     {
@@ -1069,7 +1078,7 @@ void TcpSocket::Retransmit ()
           << (Simulator::Now () + rto).GetSeconds ());
       m_retxEvent = Simulator::Schedule (rto,&TcpSocket::ReTxTimeout,this);
     }
-  m_rtt->SentSeq (m_highestRxAck,d->Size ());
+  m_rtt->SentSeq (m_highestRxAck,p->GetSize ());
   // And send the packet
   TcpHeader tcpHeader;
   tcpHeader.SetSequenceNumber (m_nextTxSequence);

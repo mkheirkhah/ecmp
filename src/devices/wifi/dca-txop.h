@@ -26,6 +26,7 @@
 #include "ns3/packet.h"
 #include "ns3/callback-trace-source.h"
 #include "ns3/nstime.h"
+#include "ns3/object.h"
 #include "wifi-mac-header.h"
 #include "wifi-mode.h"
 
@@ -38,6 +39,7 @@ class MacLow;
 class MacParameters;
 class MacTxMiddle;
 class RandomStream;
+class MacStation;
 class MacStations;
 
 /**
@@ -60,7 +62,7 @@ class MacStations;
  * The rts/cts policy is similar to the fragmentation policy: when
  * a packet is bigger than a threshold, the rts/cts protocol is used.
  */
-class DcaTxop 
+class DcaTxop : public Object
 {
 public:
   typedef Callback <void, WifiMacHeader const&> TxOk;
@@ -79,7 +81,7 @@ public:
   DcaTxop (uint32_t cwMin, uint32_t cwMax, uint32_t aifsn, DcfManager *manager);
   ~DcaTxop ();
 
-  void SetLow (MacLow *low);
+  void SetLow (Ptr<MacLow> low);
   void SetParameters (MacParameters *parameters);
   void SetStations (MacStations *stations);
   void SetTxMiddle (MacTxMiddle *txMiddle);
@@ -114,7 +116,9 @@ private:
   friend class Dcf;
   friend class TransmissionListener;
 
-  MacLow *Low (void);
+  // Inherited from ns3::Object
+  virtual Ptr<TraceResolver> GetTraceResolver (void) const;  
+  Ptr<MacLow> Low (void);
   MacParameters *Parameters (void);
 
   /* dcf notifications forwarded here */
@@ -135,9 +139,11 @@ private:
   bool NeedRts (void);
   bool NeedFragmentation (void);
   uint32_t GetNFragments (void);
-  uint32_t GetLastFragmentSize (void);
   uint32_t GetNextFragmentSize (void);
   uint32_t GetFragmentSize (void);
+  MacStation *GetStation (Mac48Address to) const;
+  uint32_t GetMaxSsrc (void) const;
+  uint32_t GetMaxSlrc (void) const;
   bool IsLastFragment (void);
   void NextFragment (void);
   Ptr<Packet> GetFragmentPacket (WifiMacHeader *hdr);
@@ -148,7 +154,7 @@ private:
   TxFailed m_txFailedCallback;
   WifiMacQueue *m_queue;
   MacTxMiddle *m_txMiddle;
-  MacLow *m_low;
+  Ptr <MacLow> m_low;
   MacStations *m_stations;
   MacParameters *m_parameters;
   TransmissionListener *m_transmissionListener;

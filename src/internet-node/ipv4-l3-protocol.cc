@@ -384,8 +384,8 @@ Ipv4L3Protocol::FindInterfaceForAddr (Ipv4Address addr) const
         }
     }
 
-  NS_ASSERT_MSG(false, "Ipv4L3Protocol::FindInterfaceForAddr (): "
-    "Interface not found for IP address");
+  NS_FATAL_ERROR ("Ipv4L3Protocol::FindInterfaceForAddr (): "
+                  "Interface not found for IP address " << addr);
   return 0;
 }
 
@@ -526,6 +526,7 @@ Ipv4L3Protocol::SendRealOut (bool found,
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << found << &route << packet << &ipHeader);
 
+  packet->AddHeader (ipHeader);
   if (!found)
     {
       NS_LOG_WARN ("No route to host.  Drop.");
@@ -535,7 +536,6 @@ Ipv4L3Protocol::SendRealOut (bool found,
 
   NS_LOG_LOGIC ("Send via interface " << route.GetInterface ());
 
-  packet->AddHeader (ipHeader);
   Ptr<Ipv4Interface> outInterface = GetInterface (route.GetInterface ());
   NS_ASSERT (packet->GetSize () <= outInterface->GetMtu ());
   m_txTrace (packet, route.GetInterface ());
@@ -782,9 +782,12 @@ Ipv4L3Protocol::GetIfIndexForDestination (
   NS_LOG_LOGIC ("Using default unicast route");
   Ipv4Route *route = m_staticRouting->GetDefaultRoute ();
 
-  NS_ASSERT_MSG(route, 
-    "Ipv4L3Protocol::GetIfIndexForDestination (): "
-    "Unable to determine outbound interface.  No default route set");
+  if (route == NULL)
+    {
+      NS_LOG_LOGIC ("Ipv4L3Protocol::GetIfIndexForDestination (): "
+                    "Unable to determine outbound interface.  No default route set");
+      return false;
+    }
 
   ifIndex = route->GetInterface ();
 

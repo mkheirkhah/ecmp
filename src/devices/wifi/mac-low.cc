@@ -31,6 +31,7 @@
 #include "wifi-net-device.h"
 #include "mac-stations.h"
 #include "mac-parameters.h"
+#include "ns3/composite-trace-resolver.h"
 
 NS_LOG_COMPONENT_DEFINE ("MacLow");
 
@@ -687,7 +688,7 @@ MacLow::NotifyNav (const WifiMacHeader &hdr, WifiMode txMode, WifiPreamble pream
     }
   // XXX Note that we should also handle CF_END specially here
   // but we don't for now because we do not generate them.
-  else if (hdr.GetAddr1 () == m_device->GetSelfAddress ())
+  else if (hdr.GetAddr1 () != m_device->GetSelfAddress ())
     {
       // see section 9.2.5.4 802.11-1999
       bool navUpdated = DoNavStartNow (duration);
@@ -1074,6 +1075,19 @@ MacLow::SendAckAfterData (Mac48Address source, Time duration, WifiMode dataTxMod
   packet->AddTag (tag);
 
   ForwardDown (packet, &ack, ackTxMode);
+}
+
+Ptr<TraceResolver> 
+MacLow::GetTraceResolver (void) const
+{
+  Ptr<CompositeTraceResolver> resolver =
+    Create<CompositeTraceResolver> ();
+  resolver->AddSource ("error",
+                       TraceDoc ("Receive a packet with errors",
+                                 "Packet", "the packet received"),
+                       m_dropError);
+  resolver->SetParentResolver (Object::GetTraceResolver ());
+  return resolver;
 }
 
 } // namespace ns3

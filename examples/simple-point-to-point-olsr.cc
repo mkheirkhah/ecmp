@@ -24,7 +24,7 @@
 //   n0
 //     \ 5 Mb/s, 2ms
 //      \          1.5Mb/s, 10ms
-//       n2 -------------------------n3
+//       n2 -------------------------n3---------n4
 //      /
 //     / 5 Mb/s, 2ms
 //   n1
@@ -118,6 +118,7 @@ main (int argc, char *argv[])
   Ptr<Node> n1 = CreateObject<InternetNode> (); 
   Ptr<Node> n2 = CreateObject<InternetNode> (); 
   Ptr<Node> n3 = CreateObject<InternetNode> ();
+  Ptr<Node> n4 = CreateObject<InternetNode> ();
 
   // We create the channels first without any IP addressing information
   NS_LOG_INFO ("Create channels.");
@@ -132,6 +133,10 @@ main (int argc, char *argv[])
   Ptr<PointToPointChannel> channel2 = 
     PointToPointTopology::AddPointToPointLink (
       n2, n3, DataRate(1500000), MilliSeconds(10));
+
+  Ptr<PointToPointChannel> channel3 = 
+    PointToPointTopology::AddPointToPointLink (
+      n3, n4, DataRate(1500000), MilliSeconds(10));
   
   // Later, we add IP addresses.  
   NS_LOG_INFO ("Assign IP Addresses.");
@@ -147,6 +152,9 @@ main (int argc, char *argv[])
       channel2, n2, Ipv4Address("10.1.3.1"),
       n3, Ipv4Address("10.1.3.2"));
 
+  PointToPointTopology::AddIpv4Addresses (
+      channel3, n3, Ipv4Address("10.1.4.1"),
+      n4, Ipv4Address("10.1.4.2"));
 
   // Enable OLSR
   NS_LOG_INFO ("Enabling OLSR Routing.");
@@ -161,7 +169,7 @@ main (int argc, char *argv[])
   Ptr<OnOffApplication> ooff = 
     CreateObjectWith<OnOffApplication> (
                                         "Node", n0, 
-                                        "Remote", Address (InetSocketAddress ("10.1.3.2", port)), 
+                                        "Remote", Address (InetSocketAddress ("10.1.4.2", port)), 
                                         "Protocol", TypeId::LookupByName ("Udp"),
                                         "OnTime", ConstantVariable(1), 
                                         "OffTime", ConstantVariable(0));
@@ -172,7 +180,7 @@ main (int argc, char *argv[])
   // Create an optional packet sink to receive these packets
   Ptr<PacketSink> sink = 
     CreateObjectWith<PacketSink> (
-                                  "Node", n3,
+                                  "Node", n4,
                                   "Local", Address (InetSocketAddress (Ipv4Address::GetAny (), port)),
                                   "Protocol", TypeId::LookupByName ("Udp"));
   n3->AddApplication (sink);
@@ -181,7 +189,7 @@ main (int argc, char *argv[])
 
   // Create a similar flow from n3 to n1, starting at time 1.1 seconds
   ooff = CreateObjectWith<OnOffApplication> (
-                                             "Node", n3, 
+                                             "Node", n4, 
                                              "Remote", Address (InetSocketAddress ("10.1.2.1", port)), 
                                              "Protocol", TypeId::LookupByName ("Udp"),
                                              "OnTime", ConstantVariable(1), 

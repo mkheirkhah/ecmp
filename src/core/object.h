@@ -99,8 +99,11 @@ public:
   /**
    * \returns the parent of this TypeId
    *
-   * This method cannot fail: it will crash if the input
-   * id is not a valid interface id.
+   * This method cannot fail. It will return itself
+   * if this TypeId has no parent. i.e., it is at the top
+   * of the TypeId hierarchy. Currently, this is the
+   * case for the TypeId associated to the Object class 
+   * only.
    */
   TypeId GetParent (void) const;
 
