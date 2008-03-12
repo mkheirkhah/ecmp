@@ -1,0 +1,38 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    mobility = bld.create_ns3_module('mobility', ['core', 'simulator'])
+    mobility.source = [
+        'vector.cc',
+        'hierarchical-mobility-model.cc',
+        'mobility-model.cc',
+        'mobility-model-notifier.cc',
+        'position-allocator.cc',
+        'rectangle.cc',
+        'static-mobility-model.cc',
+        'static-speed-helper.cc',
+        'static-speed-mobility-model.cc',
+        'random-waypoint-mobility-model.cc',
+        'random-walk-2d-mobility-model.cc',
+        'random-direction-2d-mobility-model.cc',
+        'ns2-mobility-helper.cc',
+        'mobility-helper.cc',
+        ]
+
+    headers = bld.create_obj('ns3header')
+    headers.source = [
+        'vector.h',
+        'hierarchical-mobility-model.h',
+        'mobility-model.h',
+        'mobility-model-notifier.h',
+        'position-allocator.h',
+        'rectangle.h',
+        'static-mobility-model.h',
+        'static-speed-helper.h',
+        'static-speed-mobility-model.h',
+        'random-waypoint-mobility-model.h',
+        'random-walk-2d-mobility-model.h',
+        'random-direction-2d-mobility-model.h',
+        'ns2-mobility-helper.h',
+        'mobility-helper.h',
+        ]
