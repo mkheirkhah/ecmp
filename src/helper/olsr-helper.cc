@@ -1,12 +1,12 @@
 #include "olsr-helper.h"
-#include "olsr-agent.h"
+#include "ns3/olsr-agent.h"
 #include "ns3/node-list.h"
 
 namespace ns3 {
 
 OlsrHelper::OlsrHelper ()
 {
-  m_agentFactory.SetTypeId ("olsr::AgentImpl");
+  m_agentFactory.SetTypeId ("ns3::olsr::AgentImpl");
 }
 
 void 

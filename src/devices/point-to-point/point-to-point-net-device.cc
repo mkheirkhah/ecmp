@@ -39,14 +39,9 @@ NS_OBJECT_ENSURE_REGISTERED (PointToPointNetDevice);
 TypeId 
 PointToPointNetDevice::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("PointToPointNetDevice")
+  static TypeId tid = TypeId ("ns3::PointToPointNetDevice")
     .SetParent<NetDevice> ()
     .AddConstructor<PointToPointNetDevice> ()
-    .AddAttribute ("Node", "The node with which this device is associated",
-                   TypeId::ATTR_GET | TypeId::ATTR_CONSTRUCT,
-                   Ptr<Node> (0),
-                   MakePtrAccessor (&PointToPointNetDevice::m_node),
-                   MakePtrChecker<Node> ())
     .AddAttribute ("Address", "The address of this device.",
                    Mac48Address ("ff:ff:ff:ff:ff:ff"),
                    MakeMac48AddressAccessor (&PointToPointNetDevice::m_address),
@@ -378,6 +373,11 @@ Ptr<Node>
 PointToPointNetDevice::GetNode (void) const
 {
   return m_node;
+}
+void 
+PointToPointNetDevice::SetNode (Ptr<Node> node)
+{
+  m_node = node;
 }
 bool 
 PointToPointNetDevice::NeedsArp (void) const

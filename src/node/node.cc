@@ -35,7 +35,7 @@ NS_OBJECT_ENSURE_REGISTERED (Node);
 TypeId 
 Node::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("Node")
+  static TypeId tid = TypeId ("ns3::Node")
     .SetParent<Object> ()
     .AddAttribute ("DeviceList", "The list of devices associated to this Node.",
                    ObjectVector (),
@@ -96,6 +96,7 @@ Node::AddDevice (Ptr<NetDevice> device)
 {
   uint32_t index = m_devices.size ();
   m_devices.push_back (device);
+  device->SetNode (this);
   device->SetIfIndex(index);
   device->SetReceiveCallback (MakeCallback (&Node::ReceiveFromDevice, this));
   NotifyDeviceAdded (device);
@@ -117,6 +118,7 @@ Node::AddApplication (Ptr<Application> application)
 {
   uint32_t index = m_applications.size ();
   m_applications.push_back (application);
+  application->SetNode (this);
   return index;
 }
 Ptr<Application> 

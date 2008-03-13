@@ -1,11 +1,11 @@
 #include "wifi-helper.h"
-#include "wifi-net-device.h"
-#include "wifi-mac.h"
-#include "wifi-phy.h"
-#include "wifi-remote-station-manager.h"
-#include "wifi-channel.h"
-#include "propagation-delay-model.h"
-#include "propagation-loss-model.h"
+#include "ns3/wifi-net-device.h"
+#include "ns3/wifi-mac.h"
+#include "ns3/wifi-phy.h"
+#include "ns3/wifi-remote-station-manager.h"
+#include "ns3/wifi-channel.h"
+#include "ns3/propagation-delay-model.h"
+#include "ns3/propagation-loss-model.h"
 #include "ns3/mobility-model.h"
 #include "ns3/log.h"
 
@@ -15,9 +15,9 @@ namespace ns3 {
 
 WifiHelper::WifiHelper ()
 {
-  m_stationManager.SetTypeId ("ArfWifiManager");
-  m_phy.SetTypeId ("WifiPhy");
-  m_mac.SetTypeId ("AdhocWifiMac");
+  m_stationManager.SetTypeId ("ns3::ArfWifiManager");
+  m_phy.SetTypeId ("ns3::WifiPhy");
+  m_mac.SetTypeId ("ns3::AdhocWifiMac");
 }
 
 void 
@@ -110,7 +110,10 @@ WifiHelper::Build (NodeContainer c, Ptr<WifiChannel> channel) const
       Ptr<WifiRemoteStationManager> manager = m_stationManager.Create<WifiRemoteStationManager> ();
       Ptr<WifiMac> mac = m_mac.Create<WifiMac> ();
       Ptr<WifiPhy> phy = m_phy.Create<WifiPhy> ();
-      device->Setup (node, mac, phy, manager, channel);
+      device->SetMac (mac);
+      device->SetPhy (phy);
+      device->SetRemoteStationManager (manager);
+      device->SetChannel (channel);
       node->AddDevice (device);
       devices.Add (device);
       NS_LOG_DEBUG ("node="<<node<<", mob="<<node->GetObject<MobilityModel> ());
