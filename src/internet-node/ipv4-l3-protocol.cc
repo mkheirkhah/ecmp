@@ -21,12 +21,14 @@
 
 #include "ns3/packet.h"
 #include "ns3/log.h"
-#include "ns3/composite-trace-resolver.h"
 #include "ns3/callback.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv4-route.h"
 #include "ns3/node.h"
 #include "ns3/net-device.h"
+#include "ns3/uinteger.h"
+#include "ns3/trace-source-accessor.h"
+#include "ns3/object-vector.h"
 
 #include "ipv4-l3-protocol.h"
 #include "ipv4-l4-protocol.h"
@@ -47,134 +49,46 @@ NS_OBJECT_ENSURE_REGISTERED (Ipv4L3Protocol);
 TypeId 
 Ipv4L3Protocol::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("Ipv4L3Protocol")
-    .SetParent<Object> ();
+  static TypeId tid = TypeId ("ns3::Ipv4L3Protocol")
+    .SetParent<Object> ()
+    .AddConstructor<Ipv4L3Protocol> ()
+    .AddAttribute ("DefaultTtl", "The TTL value set by default on all outgoing packets generated on this node.",
+                   Uinteger (64),
+                   MakeUintegerAccessor (&Ipv4L3Protocol::m_defaultTtl),
+                   MakeUintegerChecker<uint8_t> ())
+    .AddTraceSource ("Tx", "Send ipv4 packet to outgoing interface.",
+                   MakeTraceSourceAccessor (&Ipv4L3Protocol::m_txTrace))
+    .AddTraceSource ("Rx", "Receive ipv4 packet from incoming interface.",
+                     MakeTraceSourceAccessor (&Ipv4L3Protocol::m_rxTrace))
+    .AddTraceSource ("Drop", "Drop ipv4 packet",
+                     MakeTraceSourceAccessor (&Ipv4L3Protocol::m_dropTrace))
+    .AddAttribute ("InterfaceList", "The set of Ipv4 interfaces associated to this Ipv4 stack.",
+                   ObjectVector (),
+                   MakeObjectVectorAccessor (&Ipv4L3Protocol::m_interfaces),
+                   MakeObjectVectorChecker ())
+    ;
   return tid;
 }
 
-Ipv4L3ProtocolTraceContextElement::Ipv4L3ProtocolTraceContextElement ()
-  : m_type (TX)
-{
-  NS_LOG_FUNCTION;
-}
-
-Ipv4L3ProtocolTraceContextElement::Ipv4L3ProtocolTraceContextElement (enum Type type)
-  : m_type (type)
-{
-  NS_LOG_FUNCTION;
-}
-
-bool 
-Ipv4L3ProtocolTraceContextElement::IsTx (void) const
-{
-  NS_LOG_FUNCTION;
-  return m_type == TX;
-}
-
-bool 
-Ipv4L3ProtocolTraceContextElement::IsRx (void) const
-{
-  NS_LOG_FUNCTION;
-  return m_type == RX;
-}
-
-bool 
-Ipv4L3ProtocolTraceContextElement::IsDrop (void) const
-{
-  NS_LOG_FUNCTION;
-  return m_type == DROP;
-}
-
-void 
-Ipv4L3ProtocolTraceContextElement::Print (std::ostream &os) const
-{
-  NS_LOG_FUNCTION;
-  os << "ipv4=";
-  switch (m_type)
-    {
-    case TX:
-      os << "tx";
-      break;
-    case RX:
-      os << "rx";
-      break;
-    case DROP:
-      os << "drop";
-      break;
-    }
-}
-
-uint16_t 
-Ipv4L3ProtocolTraceContextElement::GetUid (void)
-{
-  NS_LOG_FUNCTION;
-  static uint16_t uid = AllocateUid<Ipv4L3ProtocolTraceContextElement> ("Ipv4L3ProtocolTraceContextElement");
-  return uid;
-}
-
-std::string 
-Ipv4L3ProtocolTraceContextElement::GetTypeName (void) const
-{
-  NS_LOG_FUNCTION;
-  return "ns3::Ipv4L3ProtocolTraceContextElement";
-}
-
-Ipv4L3ProtocolInterfaceIndex::Ipv4L3ProtocolInterfaceIndex ()
-  : m_index (0)
-{
-  NS_LOG_FUNCTION;
-}
-
-Ipv4L3ProtocolInterfaceIndex::Ipv4L3ProtocolInterfaceIndex (uint32_t index)
-  : m_index (index)
-{
-  NS_LOG_FUNCTION;
-}
-
-uint32_t 
-Ipv4L3ProtocolInterfaceIndex::Get (void) const
-{
-  NS_LOG_FUNCTION;
-  return m_index;
-}
-
-void 
-Ipv4L3ProtocolInterfaceIndex::Print (std::ostream &os) const
-{
-  os << "ipv4-interface=" << m_index;
-}
-
-uint16_t 
-Ipv4L3ProtocolInterfaceIndex::GetUid (void)
-{
-  NS_LOG_FUNCTION;
-  static uint16_t uid = AllocateUid<Ipv4L3ProtocolInterfaceIndex> ("Ipv4L3ProtocolInterfaceIndex");
-  return uid;
-}
-
-std::string
-Ipv4L3ProtocolInterfaceIndex::GetTypeName (void) const
-{
-  NS_LOG_FUNCTION;
-  return "ns3::Ipv4L3ProtocolInterfaceIndex";
-}
-
-
-Ipv4L3Protocol::Ipv4L3Protocol(Ptr<Node> node)
+Ipv4L3Protocol::Ipv4L3Protocol()
   : m_nInterfaces (0),
-    m_defaultTtl (64),
-    m_identification (0),
-    m_node (node)
+    m_identification (0)
 {
   NS_LOG_FUNCTION;
   m_staticRouting = CreateObject<Ipv4StaticRouting> ();
   AddRoutingProtocol (m_staticRouting, 0);
-  SetupLoopback ();
 }
 
 Ipv4L3Protocol::~Ipv4L3Protocol ()
 {
   NS_LOG_FUNCTION;
+}
+
+void
+Ipv4L3Protocol::SetNode (Ptr<Node> node)
+{
+  m_node = node;
+  SetupLoopback ();
 }
 
 void 
@@ -193,38 +107,13 @@ Ipv4L3Protocol::SetupLoopback (void)
 {
   NS_LOG_FUNCTION;
 
-  Ptr<Ipv4LoopbackInterface> interface = CreateObject<Ipv4LoopbackInterface> (m_node);
+  Ptr<Ipv4LoopbackInterface> interface = CreateObject<Ipv4LoopbackInterface> ();
+  interface->SetNode (m_node);
   interface->SetAddress (Ipv4Address::GetLoopback ());
   interface->SetNetworkMask (Ipv4Mask::GetLoopback ());
   uint32_t index = AddIpv4Interface (interface);
   AddHostRouteTo (Ipv4Address::GetLoopback (), index);
   interface->SetUp ();
-}
-
-Ptr<TraceResolver>
-Ipv4L3Protocol::GetTraceResolver (void) const
-{
-  NS_LOG_FUNCTION;
-
-  Ptr<CompositeTraceResolver> resolver = Create<CompositeTraceResolver> ();
-  resolver->AddSource ("tx", 
-                       TraceDoc ("send ipv4 packet to outgoing interface",
-                                 "Ptr<const Packet>", "packet sent",
-                                 "uint32_t", "index of output ipv4 interface"),
-                       m_txTrace, Ipv4L3ProtocolTraceContextElement(Ipv4L3ProtocolTraceContextElement::TX));
-  resolver->AddSource ("rx",
-                       TraceDoc ("receive ipv4 packet from incoming interface",
-                                 "Ptr<const Packet>", "packet received",
-                                 "uint32_t", "index of input ipv4 interface"),
-                       m_rxTrace, Ipv4L3ProtocolTraceContextElement(Ipv4L3ProtocolTraceContextElement::RX));
-  resolver->AddSource ("drop", 
-                       TraceDoc ("drop ipv4 packet",
-                                 "Ptr<const Packet>", "packet dropped"),
-                       m_dropTrace, Ipv4L3ProtocolTraceContextElement (Ipv4L3ProtocolTraceContextElement::DROP));
-  resolver->AddArray ("interfaces", 
-                      m_interfaces.begin (), m_interfaces.end (), 
-                      Ipv4L3ProtocolInterfaceIndex ());
-  return resolver;
 }
 
 void 
@@ -441,7 +330,9 @@ Ipv4L3Protocol::AddInterface (Ptr<NetDevice> device)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << &device);
-  Ptr<Ipv4Interface> interface = CreateObject<ArpIpv4Interface> (m_node, device);
+  Ptr<ArpIpv4Interface> interface = CreateObject<ArpIpv4Interface> ();
+  interface->SetNode (m_node);
+  interface->SetDevice (device);
   return AddIpv4Interface (interface);
 }
 

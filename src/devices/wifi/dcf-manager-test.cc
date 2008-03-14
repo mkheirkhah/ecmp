@@ -4,7 +4,6 @@
 #include "ns3/test.h"
 #include "ns3/simulator.h"
 #include "dcf-manager.h"
-#include "mac-parameters.h"
 
 
 namespace ns3 {
@@ -51,7 +50,7 @@ public:
 
 
 private:
-  void StartTest (uint64_t slotTime, uint64_t sifs, uint64_t ackTxDuration);
+  void StartTest (uint64_t slotTime, uint64_t sifs, uint64_t eifsNoDifsNoSifs);
   void AddDcfState (uint32_t aifsn);
   void EndTest (void);
   void ExpectInternalCollision (uint64_t time, uint32_t from, uint32_t nSlots);
@@ -67,7 +66,6 @@ private:
   typedef std::vector<DcfStateTest *> DcfStates;
 
   DcfManager *m_dcfManager;
-  MacParameters *m_parameters;
   DcfStates m_dcfStates;
   bool m_result;
 };
@@ -171,12 +169,12 @@ DcfManagerTest::ExpectCollision (uint64_t time, uint32_t nSlots, uint32_t from)
 }
 
 void
-DcfManagerTest::StartTest (uint64_t slotTime, uint64_t sifs, uint64_t ackTxDuration)
+DcfManagerTest::StartTest (uint64_t slotTime, uint64_t sifs, uint64_t eifsNoDifsNoSifs)
 {
   m_dcfManager = new DcfManager ();
-  m_dcfManager->SetSlotTime (MicroSeconds (slotTime));
+  m_dcfManager->SetSlot (MicroSeconds (slotTime));
   m_dcfManager->SetSifs (MicroSeconds (sifs));
-  m_dcfManager->SetAckTxDuration (MicroSeconds (ackTxDuration));
+  m_dcfManager->SetEifsNoDifs (MicroSeconds (eifsNoDifsNoSifs+sifs));
 }
 
 void
@@ -204,7 +202,6 @@ DcfManagerTest::EndTest (void)
     }
   m_dcfStates.clear ();
   delete m_dcfManager;
-  delete m_parameters;
   if (!result)
     {
       m_result = result;

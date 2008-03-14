@@ -34,7 +34,6 @@
 #include <cassert>
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
 #include "ns3/log.h"
@@ -103,7 +102,8 @@ int main (int argc, char *argv[])
 
   // Allow the user to override any of the defaults and the above
   // Bind()s at run-time, via command-line arguments
-  CommandLine::Parse (argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
   // Here, we will explicitly create three nodes.  In more sophisticated
   // topologies, we could configure a node factory.
@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
   Ptr<PacketSink> sink = Create<PacketSink> (
     n2,
     InetSocketAddress (Ipv4Address::GetAny (), servPort),
-    "Tcp");
+    "ns3::Tcp");
   // Start the sink
   sink->Start (Seconds (0.0));
   sink->Stop (Seconds (10.0));

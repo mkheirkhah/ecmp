@@ -52,7 +52,8 @@ class RandomVariable;
 class Application : public Object
 {
 public:
-  Application(Ptr<Node>);
+  static TypeId GetTypeId (void);
+  Application();
   virtual ~Application();
   
   /**
@@ -101,6 +102,8 @@ public:
    * \returns the Node to which this Application object is attached.
    */
   Ptr<Node> GetNode() const;
+
+  void SetNode (Ptr<Node> node);
   
 private:
   /**

@@ -40,13 +40,13 @@ NS_OBJECT_ENSURE_REGISTERED (ArpL3Protocol);
 TypeId 
 ArpL3Protocol::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ArpL3Protocol")
-    .SetParent<Object> ();
+  static TypeId tid = TypeId ("ns3::ArpL3Protocol")
+    .SetParent<Object> ()
+    ;
   return tid;
 }
 
-ArpL3Protocol::ArpL3Protocol (Ptr<Node> node)
-  : m_node (node)
+ArpL3Protocol::ArpL3Protocol ()
 {
   NS_LOG_FUNCTION;
 }
@@ -54,6 +54,12 @@ ArpL3Protocol::ArpL3Protocol (Ptr<Node> node)
 ArpL3Protocol::~ArpL3Protocol ()
 {
   NS_LOG_FUNCTION;
+}
+
+void 
+ArpL3Protocol::SetNode (Ptr<Node> node)
+{
+  m_node = node;
 }
 
 void 

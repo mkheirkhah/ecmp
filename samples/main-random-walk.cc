@@ -4,14 +4,15 @@
 
 #include "ns3/ptr.h"
 #include "ns3/mobility-model.h"
-#include "ns3/mobility-model-notifier.h"
-#include "ns3/random-topology.h"
-#include "ns3/default-value.h"
+#include "ns3/position-allocator.h"
 #include "ns3/command-line.h"
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
 #include "ns3/node.h"
 #include "ns3/node-list.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/string.h"
+#include "ns3/config.h"
 
 using namespace ns3;
 
@@ -27,31 +28,33 @@ CourseChange (ns3::TraceContext const&, Ptr<const MobilityModel> mobility)
 
 int main (int argc, char *argv[])
 {
-  DefaultValue::Bind ("RandomWalk2dMode", "Time");
-  DefaultValue::Bind ("RandomWalk2dTime", "2s");
-  DefaultValue::Bind ("RandomWalk2dSpeed", "Constant:1.0");
-  DefaultValue::Bind ("RandomWalk2dBounds", "0:200:0:100");
+  Config::SetDefault ("RandomWalk2dMobilityModel::Mode", String ("Time"));
+  Config::SetDefault ("RandomWalk2dMobilityModel::Time", String ("2s"));
+  Config::SetDefault ("RandomWalk2dMobilityModel::Speed", String ("Constant:1.0"));
+  Config::SetDefault ("RandomWalk2dMobilityModel::Bounds", String ("0:200:0:100"));
 
-  DefaultValue::Bind ("RandomDiscPositionX", "100");
-  DefaultValue::Bind ("RandomDiscPositionY", "50");
-  DefaultValue::Bind ("RandomDiscPositionRho", "Uniform:0:30");
-
-  DefaultValue::Bind ("RandomTopologyPositionType", "RandomDiscPosition");
-  DefaultValue::Bind ("RandomTopologyMobilityType", "RandomWalk2dMobilityModel");
-
-  CommandLine::Parse (argc, argv);
-
-  RandomTopology topology;
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
   for (uint32_t i = 0; i < 100; i++)
     {
       Ptr<Node> node = CreateObject<Node> ();
-      node->AggregateObject (CreateObject<MobilityModelNotifier> ());
     }
 
-  topology.Layout (NodeList::Begin (), NodeList::End ());
-  NodeList::Connect ("/nodes/*/$MobilityModelNotifier/course-change", 
-                     MakeCallback (&CourseChange));
+  MobilityHelper mobility;
+  mobility.EnableNotifier ();
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                                 "X", String ("100.0"),
+                                 "Y", String ("100.0"),
+                                 "Rho", String ("Uniform:0:30"));
+  mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+                             "Mode", String ("Time"),
+                             "Time", String ("2s"),
+                             "Speed", String ("Constant:1.0"),
+                             "Bounds", String ("0:200:0:100"));
+  mobility.Layout (NodeList::Begin (), NodeList::End ());
+  Config::Connect ("/NodeList/*/$MobilityModelNotifier/CourseChange",
+                              MakeCallback (&CourseChange));
 
   Simulator::StopAt (Seconds (100.0));
 

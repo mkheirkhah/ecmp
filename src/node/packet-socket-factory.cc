@@ -29,7 +29,7 @@ NS_OBJECT_ENSURE_REGISTERED (PacketSocketFactory);
 TypeId 
 PacketSocketFactory::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("Packet")
+  static TypeId tid = TypeId ("ns3::PacketSocketFactory")
     .SetParent<SocketFactory> ();
   return tid;
 }
@@ -40,7 +40,8 @@ PacketSocketFactory::PacketSocketFactory ()
 Ptr<Socket> PacketSocketFactory::CreateSocket (void)
 {
   Ptr<Node> node = GetObject<Node> ();
-  Ptr<PacketSocket> socket = CreateObject<PacketSocket> (node);
+  Ptr<PacketSocket> socket = CreateObject<PacketSocket> ();
+  socket->SetNode (node);
   return socket;
 } 
 } // namespace ns3

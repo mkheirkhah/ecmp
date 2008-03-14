@@ -31,6 +31,7 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv4.h"
 #include "ns3/queue.h"
+#include "ns3/drop-tail-queue.h"
 
 #include "point-to-point-channel.h"
 #include "point-to-point-net-device.h"
@@ -45,17 +46,19 @@ PointToPointTopology::AddPointToPointLink(
   const DataRate& bps,
   const Time& delay)
 {
-  Ptr<PointToPointChannel> channel = CreateObject<PointToPointChannel> (bps, delay);
+  Ptr<PointToPointChannel> channel = CreateObject<PointToPointChannel> ("BitRate", bps, "Delay", delay);
 
-  Ptr<PointToPointNetDevice> net1 = CreateObject<PointToPointNetDevice> (n1);
+  Ptr<PointToPointNetDevice> net1 = CreateObject<PointToPointNetDevice> ("Address", Mac48Address::Allocate ());
+  n1->AddDevice (net1);
 
-  Ptr<Queue> q = Queue::CreateDefault ();
+  Ptr<Queue> q = CreateObject<DropTailQueue> ();
   net1->AddQueue(q);
   net1->Attach (channel);
   
-  Ptr<PointToPointNetDevice> net2 = CreateObject<PointToPointNetDevice> (n2);
+  Ptr<PointToPointNetDevice> net2 = CreateObject<PointToPointNetDevice> ("Address", Mac48Address::Allocate ());
+  n2->AddDevice (net2);
 
-  q = Queue::CreateDefault ();
+  q = CreateObject<DropTailQueue> ();
   net2->AddQueue(q);
   net2->Attach (channel);
 

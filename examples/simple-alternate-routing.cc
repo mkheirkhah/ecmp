@@ -40,9 +40,10 @@
 #include "ns3/log.h"
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
+#include "ns3/config.h"
+#include "ns3/uinteger.h"
 
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
@@ -101,15 +102,14 @@ main (int argc, char *argv[])
   // DefaultValue::Bind () technique to tell the system what subclass of 
   // Queue to use, and what the queue limit is
 
-  // The below Bind command tells the queue factory which class to
-  // instantiate, when the queue factory is invoked in the topology code
-  DefaultValue::Bind ("Queue", "DropTailQueue");
 
-  DefaultValue::Bind ("OnOffApplicationPacketSize", "210");
-  DefaultValue::Bind ("OnOffApplicationDataRate", "300b/s");
+  Config::SetDefault ("OnOffApplication::PacketSize", Uinteger (210));
+  Config::SetDefault ("OnOffApplication::DataRate", DataRate ("300b/s"));
 
   // The below metric, if set to 3 or higher, will cause packets between
   // n1 and n3 to take the 2-hop route through n2
+
+  CommandLine cmd;
   // 
   // Additionally, we plumb this metric into the default value / command 
   // line argument system as well, for exemplary purposes.  This means 
@@ -117,13 +117,13 @@ main (int argc, char *argv[])
   // rather than recompiling
   // e.g. waf --run "simple-alternate-routing --AlternateCost=5"
   uint16_t sampleMetric = 1;
-  CommandLine::AddArgValue ("AlternateCost",
-    "This metric is used in the example script between n3 and n1 ", 
-    sampleMetric);
+  cmd.AddValue ("AlternateCost",
+                "This metric is used in the example script between n3 and n1 ", 
+                sampleMetric);
 
   // Allow the user to override any of the defaults and the above
   // DefaultValue::Bind ()s at run-time, via command-line arguments
-  CommandLine::Parse (argc, argv);
+  cmd.Parse (argc, argv);
 
   // Here, we will explicitly create four nodes.  In more sophisticated
   // topologies, we could configure a node factory.
@@ -182,21 +182,21 @@ main (int argc, char *argv[])
   uint16_t port = 9;   // Discard port (RFC 863)
 
   // Create a flow from n3 to n1, starting at time 1.1 seconds
-  Ptr<OnOffApplication> ooff = CreateObject<OnOffApplication> (
-    n3, 
-    InetSocketAddress ("10.1.1.1", port),
-    "Udp",
-    ConstantVariable (1), 
-    ConstantVariable (0));
+  Ptr<OnOffApplication> ooff = 
+    CreateObject<OnOffApplication> ("Remote", Address (InetSocketAddress ("10.1.1.1", port)),
+                                    "Protocol", TypeId::LookupByName ("ns3::Udp"),
+                                    "OnTime", ConstantVariable (1), 
+                                    "OffTime", ConstantVariable (0));
+  n3->AddApplication (ooff);
   // Start the application
   ooff->Start (Seconds (1.1));
   ooff->Stop (Seconds (10.0));
 
   // Create a packet sink to receive these packets
-  Ptr<PacketSink> sink = CreateObject<PacketSink> (
-    n1, 
-    InetSocketAddress (Ipv4Address::GetAny (), port), 
-    "Udp");
+  Ptr<PacketSink> sink = 
+    CreateObject<PacketSink> ("Remote", Address (InetSocketAddress (Ipv4Address::GetAny (), port)), 
+                              "Protocol", TypeId::LookupByName ("ns3::Udp"));
+  n1->AddApplication (sink);
   // Start the sink
   sink->Start (Seconds (1.1));
   sink->Stop (Seconds (10.0));

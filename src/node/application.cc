@@ -31,14 +31,22 @@ using namespace std;
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (Application);
+
 // Application Methods
 
-// \brief Application Constructor
-Application::Application(Ptr<Node> n) 
-    : m_node (n)
+TypeId 
+Application::GetTypeId (void)
 {
-  m_node->AddApplication (this);
+  static TypeId tid = TypeId ("ns3::Application")
+    .SetParent<Object> ()
+    ;
+  return tid;
 }
+
+// \brief Application Constructor
+Application::Application()
+{}
   
 // \brief Application Destructor
 Application::~Application()
@@ -78,6 +86,12 @@ void Application::Stop(const RandomVariable& stopVar)
 Ptr<Node> Application::GetNode() const
 {
   return m_node;
+}
+
+void 
+Application::SetNode (Ptr<Node> node)
+{
+  m_node = node;
 }
 
 // Protected methods

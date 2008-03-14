@@ -32,7 +32,6 @@ class ArpCache;
 class NetDevice;
 class Node;
 class Packet;
-class TraceResolver;
 class TraceContext;
 /**
  * \brief An implementation of the ARP protocol
@@ -42,12 +41,12 @@ class ArpL3Protocol : public Object
 public:
   static TypeId GetTypeId (void);
   static const uint16_t PROT_NUMBER;
-  /**
-   * \brief Constructor
-   * \param node The node which this ARP object is associated with
-   */
-  ArpL3Protocol (Ptr<Node> node);
+
+  ArpL3Protocol ();
   virtual ~ArpL3Protocol ();
+
+  void SetNode (Ptr<Node> node);
+
   /**
    * \brief Recieve a packet
    */

@@ -33,7 +33,6 @@
 #include <cassert>
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
 #include "ns3/log.h"
@@ -93,16 +92,11 @@ main (int argc, char *argv[])
 #endif
 
   // Set up some default values for the simulation.  Use the Bind()
-  // technique to tell the system what subclass of Queue to use,
-  // and what the queue limit is
-
-  // The below Bind command tells the queue factory which class to
-  // instantiate, when the queue factory is invoked in the topology code
-  DefaultValue::Bind ("Queue", "DropTailQueue");
 
   // Allow the user to override any of the defaults and the above
   // Bind()s at run-time, via command-line arguments
-  CommandLine::Parse (argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
   // Here, we will explicitly create four nodes.  In more sophisticated
   // topologies, we could configure a node factory.
@@ -154,30 +148,30 @@ main (int argc, char *argv[])
   // Create the OnOff application to send UDP datagrams of size
   // 512 bytes (default) at a rate of 500 Kb/s (default) from n0
   NS_LOG_INFO ("Create Applications.");
-  Ptr<OnOffApplication> ooff = CreateObject<OnOffApplication> (
-    n0, 
-    InetSocketAddress ("255.255.255.255", port), 
-    "Udp",
-    ConstantVariable(1), 
-    ConstantVariable(0));
+  Ptr<OnOffApplication> ooff = 
+    CreateObject<OnOffApplication> ("Remote", Address (InetSocketAddress ("255.255.255.255", port)), 
+                                    "Protocol", TypeId::LookupByName ("ns3::Udp"),
+                                    "OnTime", ConstantVariable(1), 
+                                    "OffTime", ConstantVariable(0));
+  n0->AddApplication (ooff);
   // Start the application
   ooff->Start(Seconds(1.0));
   ooff->Stop (Seconds(10.0));
   
   // Create an optional packet sink to receive these packets
-  Ptr<PacketSink> sink = CreateObject<PacketSink> (
-    n1,
-    InetSocketAddress (Ipv4Address::GetAny (), port),
-    "Udp");
+  Ptr<PacketSink> sink = 
+    CreateObject<PacketSink> ("Local", Address (InetSocketAddress (Ipv4Address::GetAny (), port)),
+                              "Protocol", TypeId::LookupByName ("ns3::Udp"));
+  n1->AddApplication (sink);
   // Start the sink
   sink->Start (Seconds (1.0));
   sink->Stop (Seconds (10.0));
 
   // Create an optional packet sink to receive these packets
-  sink = CreateObject<PacketSink> (
-    n2,
-    InetSocketAddress (Ipv4Address::GetAny (), port),
-    "Udp");
+  sink = CreateObject<PacketSink> ("Local", Address (InetSocketAddress (Ipv4Address::GetAny (), port)),
+                                   "Protocol", TypeId::LookupByName ("ns3::Udp"));
+  n2->AddApplication (sink);
+
   // Start the sink
   sink->Start (Seconds (1.0));
   sink->Stop (Seconds (10.0));

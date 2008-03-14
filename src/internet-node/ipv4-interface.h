@@ -32,7 +32,6 @@ namespace ns3 {
 
 class NetDevice;
 class Packet;
-class TraceResolver;
 class TraceContext;
 
 /**
@@ -65,19 +64,14 @@ class TraceContext;
 class Ipv4Interface  : public Object
 {
 public:
-  /**
-   * \param nd the NetDevice associated to this Ipv4Interface.
-   *           This value can be zero in which case the MTU
-   *           of this interface will be 2^(16-1).
-   */
-  Ipv4Interface (Ptr<NetDevice> nd);
+  Ipv4Interface ();
   virtual ~Ipv4Interface();
 
   /**
    * \returns the underlying NetDevice. This method can return
    *          zero if this interface has no associated NetDevice.
    */
-  Ptr<NetDevice> GetDevice (void) const;
+  virtual Ptr<NetDevice> GetDevice (void) const = 0;
 
   /**
    * \param a set the ipv4 address of this interface.
@@ -151,7 +145,6 @@ protected:
   virtual void DoDispose (void);
 private:
   virtual void SendTo (Ptr<Packet> p, Ipv4Address dest) = 0;
-  Ptr<NetDevice> m_netdevice;
   bool m_ifup;
   Ipv4Address m_address;
   Ipv4Mask m_netmask;

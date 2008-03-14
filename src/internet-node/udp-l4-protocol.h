@@ -33,7 +33,6 @@
 namespace ns3 {
 
 class Node;
-class TraceResolver;
 class TraceContext;
 class Socket;
 /**
@@ -41,13 +40,16 @@ class Socket;
  */
 class UdpL4Protocol : public Ipv4L4Protocol {
 public:
+  static TypeId GetTypeId (void);
   static const uint8_t PROT_NUMBER;
-  /**
-   * \brief Constructor
-   * \param node The node this protocol is associated with
-   */
-  UdpL4Protocol (Ptr<Node> node);
+
+  UdpL4Protocol ();
   virtual ~UdpL4Protocol ();
+
+  void SetNode (Ptr<Node> node);
+
+  virtual int GetProtocolNumber (void) const;
+  virtual int GetVersion (void) const;
 
   /**
    * \return A smart Socket pointer to a UdpSocket, allocated by this instance
@@ -56,11 +58,13 @@ public:
   Ptr<Socket> CreateSocket (void);
 
   Ipv4EndPoint *Allocate (void);
-  Ipv4EndPoint *Allocate (Ipv4Address address);
+  Ipv4EndPoint *Allocate (Ipv4Address address, Ipv4Address localInterface);
   Ipv4EndPoint *Allocate (uint16_t port);
-  Ipv4EndPoint *Allocate (Ipv4Address address, uint16_t port);
+  Ipv4EndPoint *Allocate (Ipv4Address address, uint16_t port,
+                          Ipv4Address localInterface);
   Ipv4EndPoint *Allocate (Ipv4Address localAddress, uint16_t localPort,
-                          Ipv4Address peerAddress, uint16_t peerPort);
+                          Ipv4Address peerAddress, uint16_t peerPort,
+                          Ipv4Address localInterface);
 
   void DeAllocate (Ipv4EndPoint *endPoint);
 

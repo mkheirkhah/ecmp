@@ -27,32 +27,54 @@ NS_OBJECT_ENSURE_REGISTERED (HierarchicalMobilityModel);
 TypeId 
 HierarchicalMobilityModel::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("HierarchicalMobilityModel")
-    .SetParent<MobilityModel> ();
+  static TypeId tid = TypeId ("ns3::HierarchicalMobilityModel")
+    .SetParent<MobilityModel> ()
+    .AddConstructor<HierarchicalMobilityModel> ()
+    .AddAttribute ("Child", "The child mobility model.",
+                   Ptr<MobilityModel> (0),
+                   MakePtrAccessor (&HierarchicalMobilityModel::SetChild),
+                   MakePtrChecker<MobilityModel> ())
+    .AddAttribute ("Parent", "The parent mobility model.",
+                   Ptr<MobilityModel> (0),
+                   MakePtrAccessor (&HierarchicalMobilityModel::SetParent),
+                   MakePtrChecker<MobilityModel> ())
+    ;
   return tid;
 }
 
-HierarchicalMobilityModel::HierarchicalMobilityModel (Ptr<MobilityModel> child, Ptr<MobilityModel> parent)
-  : m_child (child),
-    m_parent (parent)
+HierarchicalMobilityModel::HierarchicalMobilityModel ()
+  : m_child (0),
+    m_parent (0)
+{}
+
+void 
+HierarchicalMobilityModel::SetChild (Ptr<MobilityModel> model)
 {
-  Ptr<MobilityModelNotifier> childNotifier = 
+  m_child = model;
+  Ptr<MobilityModelNotifier> notifier = 
     m_child->GetObject<MobilityModelNotifier> ();
-  Ptr<MobilityModelNotifier> parentNotifier = 
-    m_parent->GetObject<MobilityModelNotifier> ();
-  if (childNotifier == 0)
+  if (notifier == 0)
     {
-      childNotifier = CreateObject<MobilityModelNotifier> ();
-      child->AggregateObject (childNotifier);
+      notifier = CreateObject<MobilityModelNotifier> ();
+      m_child->AggregateObject (notifier);
     }
-  if (parentNotifier == 0)
-    {
-      parentNotifier = CreateObject<MobilityModelNotifier> ();
-      parent->AggregateObject (parentNotifier);
-    }
-  childNotifier->TraceConnect ("/course-changed", MakeCallback (&HierarchicalMobilityModel::ChildChanged, this));
-  parentNotifier->TraceConnect ("/course-changed", MakeCallback (&HierarchicalMobilityModel::ParentChanged, this));
+  notifier->TraceConnectWithoutContext ("CourseChange", MakeCallback (&HierarchicalMobilityModel::ChildChanged, this));
 }
+
+void 
+HierarchicalMobilityModel::SetParent (Ptr<MobilityModel> model)
+{
+  m_parent = model;
+  Ptr<MobilityModelNotifier> notifier = 
+    m_parent->GetObject<MobilityModelNotifier> ();
+  if (notifier == 0)
+    {
+      notifier = CreateObject<MobilityModelNotifier> ();
+      m_parent->AggregateObject (notifier);
+    }
+  notifier->TraceConnectWithoutContext ("CourseChange", MakeCallback (&HierarchicalMobilityModel::ParentChanged, this));
+}
+
 
 Ptr<MobilityModel> 
 HierarchicalMobilityModel::GetChild (void) const
@@ -78,6 +100,10 @@ HierarchicalMobilityModel::DoGetPosition (void) const
 void 
 HierarchicalMobilityModel::DoSetPosition (const Vector &position)
 {
+  if (m_parent == 0 || m_child == 0)
+    {
+      return;
+    }
   // This implementation of DoSetPosition is really an arbitraty choice.
   // anything else would have been ok.
   Vector parentPosition = m_parent->GetPosition ();
@@ -98,13 +124,13 @@ HierarchicalMobilityModel::DoGetVelocity (void) const
 }
 
 void 
-HierarchicalMobilityModel::ParentChanged (const TraceContext &context, Ptr<const MobilityModel> model)
+HierarchicalMobilityModel::ParentChanged (Ptr<const MobilityModel> model)
 {
   MobilityModel::NotifyCourseChange ();
 }
 
 void 
-HierarchicalMobilityModel::ChildChanged (const TraceContext &context, Ptr<const MobilityModel> model)
+HierarchicalMobilityModel::ChildChanged (Ptr<const MobilityModel> model)
 {
   MobilityModel::NotifyCourseChange ();
 }

@@ -125,25 +125,15 @@ DoParse (const std::string s, uint64_t *v)
 
 namespace ns3 {
 
+ATTRIBUTE_HELPER_CPP (DataRate);
+
+DataRate::DataRate ()
+  : m_bps (0)
+{}
+
 DataRate::DataRate(uint64_t bps)
   :m_bps(bps)
-{
-}
-
-DataRate::DataRate (const std::string s)
-  : m_bps(DataRate::Parse(s))
-{
-}
-
-uint64_t DataRate::Parse(const std::string s)
-{
-  uint64_t v;
-  if (!DoParse (s, &v))
-    {
-      NS_FATAL_ERROR("Can't Parse data rate "<<s);
-    }
-  return v;
-}
+{}
 
 bool DataRate::operator < (const DataRate& rhs) const
 {
@@ -185,6 +175,36 @@ uint64_t DataRate::GetBitRate() const
   return m_bps;
 }
 
+DataRate::DataRate (std::string rate)
+{
+  bool ok = DoParse (rate, &m_bps);
+  if (!ok)
+    {
+      NS_FATAL_ERROR ("Could not parse rate: "<<rate);
+    }
+}
+
+std::ostream &operator << (std::ostream &os, const DataRate &rate)
+{
+  os << rate.GetBitRate () << "bps";
+  return os;
+}
+std::istream &operator >> (std::istream &is, DataRate &rate)
+{
+  std::string value;
+  is >> value;
+  uint64_t v;
+  bool ok = DoParse (value, &v);
+  if (!ok)
+    {
+      is.setstate (std::ios_base::failbit);
+    }
+  rate = DataRate (v);
+  return is;
+}
+
+
+
 double operator*(const DataRate& lhs, const Time& rhs)
 {
   return rhs.GetSeconds()*lhs.GetBitRate();
@@ -195,61 +215,4 @@ double operator*(const Time& lhs, const DataRate& rhs)
   return lhs.GetSeconds()*rhs.GetBitRate();
 }
 
-
-DataRateDefaultValue::DataRateDefaultValue (std::string name,
-                                            std::string help,
-                                            DataRate defaultValue)
-  : DefaultValueBase (name, help),
-    m_defaultValue (defaultValue),
-    m_value (defaultValue)
-{
-  DefaultValueList::Add (this);
-}
-void 
-DataRateDefaultValue::SetValue (DataRate rate)
-{
-  m_value = rate;
-}
-DataRate 
-DataRateDefaultValue::GetValue ()
-{
-  return m_value;
-}
-bool 
-DataRateDefaultValue::DoParseValue (const std::string &value)
-{
-  uint64_t v;
-  if (DoParse (value, &v))
-    {
-      m_value = DataRate (v);
-      return true;
-    }
-  return false;
-}
-std::string 
-DataRateDefaultValue::DoGetType (void) const
-{
-  return "(b/s|kb/s|Mb/s)";
-}
-std::string 
-DataRateDefaultValue::DoGetDefaultValue (void) const
-{
-  uint64_t defaultValue = m_defaultValue.GetBitRate ();
-  std::ostringstream oss;
-  if (defaultValue < 1000)
-    {
-      oss << defaultValue << "b/s";
-    }
-  else if (defaultValue < 1000000)
-    {
-      oss << (defaultValue/1000) << "kb/s";
-    }
-  else 
-    {
-      oss << (defaultValue/1000) << "Mb/s";
-    }
-  return oss.str ();
-}
-
-
-};//namespace ns3
+} //namespace ns3

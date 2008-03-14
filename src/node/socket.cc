@@ -164,11 +164,8 @@ Socket::NotifyConnectionRequest (const Address &from)
     }
   else
     {
-      // accept all incoming connections by default.
-      // this way people writing code don't have to do anything
-      // special like register a callback that returns true
-      // just to get incoming connections
-      return true;
+      // refuse all incomming connections by default.
+      return false;
     }
 }
 

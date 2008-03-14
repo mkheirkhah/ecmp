@@ -31,9 +31,25 @@ NS_LOG_COMPONENT_DEFINE ("WifiChannel");
 
 namespace ns3 {
 
+TypeId 
+WifiChannel::GetTypdId (void)
+{
+  static TypeId tid = TypeId ("ns3::WifiChannel")
+    .SetParent<WifiChannel> ()
+    .AddConstructor<WifiChannel> ()
+    .AddAttribute ("PropagationLossModel", "XXX",
+                   Ptr<PropagationLossModel> (0),
+                   MakePtrAccessor (&WifiChannel::m_loss),
+                   MakePtrChecker<PropagationLossModel> ())
+    .AddAttribute ("PropagationDelayModel", "XXX",
+                   Ptr<PropagationDelayModel> (0),
+                   MakePtrAccessor (&WifiChannel::m_delay),
+                   MakePtrChecker<PropagationDelayModel> ())
+    ;
+  return tid;
+}
+
 WifiChannel::WifiChannel ()
-  : m_loss (PropagationLossModel::CreateDefault ()),
-    m_delay (PropagationDelayModel::CreateDefault ())
 {}
 WifiChannel::~WifiChannel ()
 {
@@ -52,19 +68,28 @@ WifiChannel::SetPropagationDelayModel (Ptr<PropagationDelayModel> delay)
 }
 
 void 
-WifiChannel::Add (Ptr<NetDevice> device,  ReceiveCallback callback)
+WifiChannel::Add (Ptr<NetDevice> device, Ptr<WifiPhy> phy)
 {
-  m_deviceList.push_back (std::make_pair (device, callback));
+  m_deviceList.push_back (std::make_pair (device, phy));
 }
 void 
-WifiChannel::Send (Ptr<NetDevice> sender, Ptr<const Packet> packet, double txPowerDbm,
+WifiChannel::Send (Ptr<WifiPhy> sender, Ptr<const Packet> packet, double txPowerDbm,
                    WifiMode wifiMode, WifiPreamble preamble) const
 {
-  Ptr<MobilityModel> senderMobility = sender->GetNode ()->GetObject<MobilityModel> ();
+  Ptr<MobilityModel> senderMobility = 0;
+  for (DeviceList::const_iterator i = m_deviceList.begin (); i != m_deviceList.end (); i++)
+    {
+      if (sender == i->second)
+        {
+          senderMobility = i->first->GetNode ()->GetObject<MobilityModel> ();
+          break;
+        }
+    }
+  NS_ASSERT (senderMobility != 0);
   uint32_t j = 0;
   for (DeviceList::const_iterator i = m_deviceList.begin (); i != m_deviceList.end (); i++)
     {
-      if (sender != i->first)
+      if (sender != i->second)
         {
           Ptr<MobilityModel> receiverMobility = i->first->GetNode ()->GetObject<MobilityModel> ();
           Time delay = m_delay->GetDelay (senderMobility, receiverMobility);
@@ -83,7 +108,7 @@ void
 WifiChannel::Receive (uint32_t i, Ptr<Packet> packet, double rxPowerDbm,
                       WifiMode txMode, WifiPreamble preamble) const
 {
-  m_deviceList[i].second (packet, rxPowerDbm, txMode, preamble);
+  m_deviceList[i].second->StartReceivePacket (packet, rxPowerDbm, txMode, preamble);
 }
 
 uint32_t 

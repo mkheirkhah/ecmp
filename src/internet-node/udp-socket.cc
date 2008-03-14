@@ -34,10 +34,10 @@ NS_LOG_COMPONENT_DEFINE ("UdpSocket");
 
 namespace ns3 {
 
-UdpSocket::UdpSocket (Ptr<Node> node, Ptr<UdpL4Protocol> udp)
+UdpSocket::UdpSocket ()
   : m_endPoint (0),
-    m_node (node),
-    m_udp (udp),
+    m_node (0),
+    m_udp (0),
     m_errno (ERROR_NOTERROR),
     m_shutdownSend (false),
     m_shutdownRecv (false),
@@ -68,6 +68,18 @@ UdpSocket::~UdpSocket ()
     }
   m_udp = 0;
 }
+
+void 
+UdpSocket::SetNode (Ptr<Node> node)
+{
+  m_node = node;
+}
+void 
+UdpSocket::SetUdp (Ptr<UdpL4Protocol> udp)
+{
+  m_udp = udp;
+}
+
 
 enum Socket::SocketErrno
 UdpSocket::GetErrno (void) const
@@ -127,6 +139,16 @@ UdpSocket::Bind (const Address &address)
   InetSocketAddress transport = InetSocketAddress::ConvertFrom (address);
   Ipv4Address ipv4 = transport.GetIpv4 ();
   uint16_t port = transport.GetPort ();
+
+  Ipv4Address localInterface = Ipv4Address::GetAny ();
+  if (ipv4 != Ipv4Address::GetAny ())
+    {
+      Ptr<Ipv4> ipv4_api = m_node->GetObject<Ipv4> ();
+      // Assert that the given address matches an existing local interface
+      NS_ASSERT (ipv4_api->FindInterfaceForAddr (ipv4) != 0);
+      localInterface = ipv4;
+    }
+
   if (ipv4 == Ipv4Address::GetAny () && port == 0)
     {
       m_endPoint = m_udp->Allocate ();
@@ -137,11 +159,11 @@ UdpSocket::Bind (const Address &address)
     }
   else if (ipv4 != Ipv4Address::GetAny () && port == 0)
     {
-      m_endPoint = m_udp->Allocate (ipv4);
+      m_endPoint = m_udp->Allocate (ipv4, localInterface);
     }
   else if (ipv4 != Ipv4Address::GetAny () && port != 0)
     {
-      m_endPoint = m_udp->Allocate (ipv4, port);
+      m_endPoint = m_udp->Allocate (ipv4, port, localInterface);
     }
 
   return FinishBind ();
@@ -390,7 +412,8 @@ UdpSocketTest::RunTests (void)
   Ptr<Node> rxNode = CreateObject<InternetNode> ();
   Ptr<PointToPointNetDevice> rxDev1, rxDev2;
   { // first interface
-    rxDev1 = CreateObject<PointToPointNetDevice> (rxNode);
+    rxDev1 = CreateObject<PointToPointNetDevice> ("Address", Mac48Address::Allocate ());
+    rxNode->AddDevice (rxDev1);
     rxDev1->AddQueue(CreateObject<DropTailQueue> ());
     Ptr<Ipv4> ipv4 = rxNode->GetObject<Ipv4> ();
     uint32_t netdev_idx = ipv4->AddInterface (rxDev1);
@@ -400,7 +423,8 @@ UdpSocketTest::RunTests (void)
   }
 
   { // second interface
-    rxDev2 = CreateObject<PointToPointNetDevice> (rxNode);
+    rxDev2 = CreateObject<PointToPointNetDevice> ("Address", Mac48Address::Allocate ());
+    rxNode->AddDevice (rxDev2);
     rxDev2->AddQueue(CreateObject<DropTailQueue> ());
     Ptr<Ipv4> ipv4 = rxNode->GetObject<Ipv4> ();
     uint32_t netdev_idx = ipv4->AddInterface (rxDev2);
@@ -413,7 +437,8 @@ UdpSocketTest::RunTests (void)
   Ptr<Node> txNode = CreateObject<InternetNode> ();
   Ptr<PointToPointNetDevice> txDev;
   {
-    txDev = CreateObject<PointToPointNetDevice> (txNode);
+    txDev = CreateObject<PointToPointNetDevice> ("Address", Mac48Address::Allocate ());
+    txNode->AddDevice (txDev);
     txDev->AddQueue(CreateObject<DropTailQueue> ());
     Ptr<Ipv4> ipv4 = txNode->GetObject<Ipv4> ();
     uint32_t netdev_idx = ipv4->AddInterface (txDev);

@@ -32,6 +32,8 @@
 #include "ns3/ascii-trace.h"
 #include "ns3/pcap-trace.h"
 #include "ns3/global-route-manager.h"
+#include "ns3/inet-socket-address.h"
+#include "ns3/uinteger.h"
 
 NS_LOG_COMPONENT_DEFINE ("DumbbellSimulation");
 
@@ -124,19 +126,47 @@ main (int argc, char *argv[])
 //
   uint16_t port = 7;
 
-  Ptr<UdpEchoClient> client0 = CreateObject<UdpEchoClient> (n0, "10.1.2.1", 
-    port, 100, Seconds(.01), 1024);
-  Ptr<UdpEchoClient> client1 = CreateObject<UdpEchoClient> (n1, "10.1.2.2", 
-    port, 100, Seconds(.01), 1024);
-  Ptr<UdpEchoClient> client2 = CreateObject<UdpEchoClient> (n2, "10.1.2.3", 
-    port, 100, Seconds(.01), 1024);
-  Ptr<UdpEchoClient> client3 = CreateObject<UdpEchoClient> (n3, "10.1.2.4", 
-    port, 100, Seconds(.01), 1024);
+  Ptr<UdpEchoClient> client0 = 
+    CreateObject<UdpEchoClient> ("RemoteIpv4", Ipv4Address ("10.1.2.1"),
+                                 "RemotePort", Uinteger (port),
+                                 "MaxPackets", Uinteger (100),
+                                 "Interval", Seconds (0.01),
+                                 "PacketSize", Uinteger (1024));
+  n0->AddApplication (client0);
+  Ptr<UdpEchoClient> client1 = 
+    CreateObject<UdpEchoClient> ("RemoteIpv4", Ipv4Address ("10.1.2.2"),
+                                 "RemotePort", Uinteger (port),
+                                 "MaxPackets", Uinteger (100),
+                                 "Interval", Seconds (0.01),
+                                 "PacketSize", Uinteger (1024));
+  n1->AddApplication (client1);
+  Ptr<UdpEchoClient> client2 = 
+    CreateObject<UdpEchoClient> ("RemoteIpv4", Ipv4Address ("10.1.2.3"),
+                                 "RemotePort", Uinteger (port),
+                                 "MaxPackets", Uinteger (100),
+                                 "Interval", Seconds (0.01),
+                                 "PacketSize", Uinteger (1024));
+  n2->AddApplication (client2);
+  Ptr<UdpEchoClient> client3 = 
+    CreateObject<UdpEchoClient> ("RemoteIpv4", Ipv4Address ("10.1.2.4"),
+                                 "RemotePort", Uinteger (port),
+                                 "MaxPackets", Uinteger (100),
+                                 "Interval", Seconds (0.01),
+                                 "PacketSize", Uinteger (1024));
+  n3->AddApplication (client3);
 
-  Ptr<UdpEchoServer> server4 = CreateObject<UdpEchoServer> (n4, port);
-  Ptr<UdpEchoServer> server5 = CreateObject<UdpEchoServer> (n5, port);
-  Ptr<UdpEchoServer> server6 = CreateObject<UdpEchoServer> (n6, port);
-  Ptr<UdpEchoServer> server7 = CreateObject<UdpEchoServer> (n7, port);
+  Ptr<UdpEchoServer> server4 = 
+    CreateObject<UdpEchoServer> ("Port", Uinteger (port));
+  n4->AddApplication (server4);
+  Ptr<UdpEchoServer> server5 = 
+    CreateObject<UdpEchoServer> ("Port", Uinteger (port));
+  n5->AddApplication (server5);
+  Ptr<UdpEchoServer> server6 = 
+    CreateObject<UdpEchoServer> ("Port", Uinteger (port));
+  n6->AddApplication (server6);
+  Ptr<UdpEchoServer> server7 = 
+    CreateObject<UdpEchoServer> ("Port", Uinteger (port));
+  n7->AddApplication (server7);
 
   server4->Start(Seconds(1.));
   server5->Start(Seconds(1.));

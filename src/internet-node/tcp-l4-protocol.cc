@@ -36,11 +36,12 @@
 
 #include <vector>
 #include <sstream>
-#include <iomanip>
 
 NS_LOG_COMPONENT_DEFINE ("TcpL4Protocol");
 
 namespace ns3 {
+
+NS_OBJECT_ENSURE_REGISTERED (TcpL4Protocol);
 
 //State Machine things --------------------------------------------------------
 TcpStateMachine::TcpStateMachine() 
@@ -77,7 +78,7 @@ TcpStateMachine::TcpStateMachine()
   aT[LISTEN][APP_CLOSE]   = SA (CLOSED,   NO_ACT);
   aT[LISTEN][TIMEOUT]     = SA (LISTEN,   NO_ACT);
   aT[LISTEN][ACK_RX]      = SA (LISTEN,   NO_ACT);
-  aT[LISTEN][SYN_RX]      = SA (LISTEN,   SYN_ACK_TX);//stay in listen and fork
+  aT[LISTEN][SYN_RX]      = SA (SYN_RCVD,   SYN_ACK_TX);  //XXX hacked for now, should stay in listen and replicate
   aT[LISTEN][SYN_ACK_RX]  = SA (LISTEN,   NO_ACT);
   aT[LISTEN][FIN_RX]      = SA (LISTEN,   NO_ACT);
   aT[LISTEN][FIN_ACK_RX]  = SA (LISTEN,   NO_ACT);
@@ -178,7 +179,7 @@ TcpStateMachine::TcpStateMachine()
   aT[FIN_WAIT_2][APP_LISTEN]  = SA (CLOSED,      RST_TX);
   aT[FIN_WAIT_2][APP_CONNECT] = SA (CLOSED,      RST_TX);
   aT[FIN_WAIT_2][APP_SEND]    = SA (CLOSED,      RST_TX);
-  aT[FIN_WAIT_2][SEQ_RECV]    = SA (FIN_WAIT_2,  NEW_SEQ_RX);
+  aT[FIN_WAIT_2][SEQ_RECV]    = SA (FIN_WAIT_2,  NO_ACT);
   aT[FIN_WAIT_2][APP_CLOSE]   = SA (FIN_WAIT_2,  NO_ACT);
   aT[FIN_WAIT_2][TIMEOUT]     = SA (FIN_WAIT_2,  NO_ACT);
   aT[FIN_WAIT_2][ACK_RX]      = SA (FIN_WAIT_2,  NEW_ACK);
@@ -310,20 +311,56 @@ static TcpStateMachine tcpStateMachine; //only instance of a TcpStateMachine
 /* see http://www.iana.org/assignments/protocol-numbers */
 const uint8_t TcpL4Protocol::PROT_NUMBER = 6;
 
-TcpL4Protocol::TcpL4Protocol (Ptr<Node> node)
-  : Ipv4L4Protocol (PROT_NUMBER, 2),
-    m_node (node),
-    m_endPoints (new Ipv4EndPointDemux ())
+ObjectFactory
+TcpL4Protocol::GetDefaultRttEstimatorFactory (void)
+{
+  ObjectFactory factory;
+  factory.SetTypeId (RttMeanDeviation::GetTypeId ());
+  return factory;
+}
+
+TypeId 
+TcpL4Protocol::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::TcpL4Protocol")
+    .SetParent<Ipv4L4Protocol> ()
+    .AddAttribute ("RttEstimatorFactory",
+                   "How RttEstimator objects are created.",
+                   GetDefaultRttEstimatorFactory (),
+                   MakeObjectFactoryAccessor (&TcpL4Protocol::m_rttFactory),
+                   MakeObjectFactoryChecker ())
+    ;
+  return tid;
+}
+
+TcpL4Protocol::TcpL4Protocol ()
+  : m_endPoints (new Ipv4EndPointDemux ())
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAMS (this << node);
   NS_LOG_LOGIC("Made a TcpL4Protocol "<<this);
 }
 
 TcpL4Protocol::~TcpL4Protocol ()
 {
   NS_LOG_FUNCTION;
- }
+}
+
+void 
+TcpL4Protocol::SetNode (Ptr<Node> node)
+{
+  m_node = node;
+}
+
+int 
+TcpL4Protocol::GetProtocolNumber (void) const
+{
+  return PROT_NUMBER;
+}
+int 
+TcpL4Protocol::GetVersion (void) const
+{
+  return 2;
+}
 
 void
 TcpL4Protocol::DoDispose (void)
@@ -342,7 +379,11 @@ Ptr<Socket>
 TcpL4Protocol::CreateSocket (void)
 {
   NS_LOG_FUNCTION;
-  Ptr<Socket> socket = CreateObject<TcpSocket> (m_node, this);
+  Ptr<RttEstimator> rtt = m_rttFactory.Create<RttEstimator> ();
+  Ptr<TcpSocket> socket = CreateObject<TcpSocket> ();
+  socket->SetNode (m_node);
+  socket->SetTcp (this);
+  socket->SetRtt (rtt);
   return socket;
 }
 
@@ -354,11 +395,11 @@ TcpL4Protocol::Allocate (void)
 }
 
 Ipv4EndPoint *
-TcpL4Protocol::Allocate (Ipv4Address address)
+TcpL4Protocol::Allocate (Ipv4Address address, Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << address);
-  return m_endPoints->Allocate (address);
+  return m_endPoints->Allocate (address, localInterface);
 }
 
 Ipv4EndPoint *
@@ -370,21 +411,23 @@ TcpL4Protocol::Allocate (uint16_t port)
 }
 
 Ipv4EndPoint *
-TcpL4Protocol::Allocate (Ipv4Address address, uint16_t port)
+TcpL4Protocol::Allocate (Ipv4Address address, uint16_t port, Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << address << port);
-  return m_endPoints->Allocate (address, port);
+  return m_endPoints->Allocate (address, port, localInterface);
 }
 
 Ipv4EndPoint *
 TcpL4Protocol::Allocate (Ipv4Address localAddress, uint16_t localPort,
-                         Ipv4Address peerAddress, uint16_t peerPort)
+                         Ipv4Address peerAddress, uint16_t peerPort,
+                         Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << localAddress << localPort << peerAddress << peerPort);
   return m_endPoints->Allocate (localAddress, localPort,
-                                peerAddress, peerPort);
+                                peerAddress, peerPort,
+                                localInterface);
 }
 
 void 
@@ -407,11 +450,6 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
   TcpHeader tcpHeader;
   //these two do a peek, so that the packet can be forwarded up
   packet->RemoveHeader (tcpHeader);
-  NS_LOG_LOGIC("TcpL4Protocol " << this
-               << " receiving seq " << tcpHeader.GetSequenceNumber()
-               << " ack " << tcpHeader.GetAckNumber()
-               << " flags "<< std::hex << (int)tcpHeader.GetFlags() << std::dec
-               << " data size " << packet->GetSize());
   packet->AddHeader (tcpHeader); 
   NS_LOG_LOGIC ("TcpL4Protocol "<<this<<" received a packet");
   Ipv4EndPointDemux::EndPoints endPoints =
@@ -427,11 +465,13 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
     source.Print (oss);
     oss<<" source port: "<<tcpHeader.GetSourcePort ();
     NS_LOG_LOGIC (oss.str ());
-    return;
   }
-  NS_ASSERT_MSG (endPoints.size() == 1 , "Demux returned more than one endpoint");
-  NS_LOG_LOGIC ("TcpL4Protocol "<<this<<" forwarding up to endpoint/socket");
-  (*endPoints.begin ())->ForwardUp (packet, source, tcpHeader.GetSourcePort ());
+  for (Ipv4EndPointDemux::EndPointsI endPoint = endPoints.begin ();
+       endPoint != endPoints.end (); endPoint++)
+    {
+      NS_LOG_LOGIC ("TcpL4Protocol "<<this<<" forwarding up to endpoint/socket");
+      (*endPoint)->ForwardUp (packet, source, tcpHeader.GetSourcePort ());
+    }
 }
 
 void
@@ -465,11 +505,6 @@ void
 TcpL4Protocol::SendPacket (Ptr<Packet> packet, TcpHeader outgoingHeader,
                                Ipv4Address saddr, Ipv4Address daddr)
 {
-  NS_LOG_LOGIC("TcpL4Protocol " << this
-              << " sending seq " << outgoingHeader.GetSequenceNumber()
-              << " ack " << outgoingHeader.GetAckNumber()
-              << " flags " << std::hex << (int)outgoingHeader.GetFlags() << std::dec
-              << " data size " << packet->GetSize());
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << packet << saddr << daddr);
   // XXX outgoingHeader cannot be logged

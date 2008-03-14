@@ -26,6 +26,7 @@
 #include "ns3/channel.h"
 #include "wifi-mode.h"
 #include "wifi-preamble.h"
+#include "wifi-phy.h"
 
 namespace ns3 {
 
@@ -47,13 +48,8 @@ class PropagationDelayModel;
 class WifiChannel : public Channel
 {
 public:
-  /**
-   * arg1: the packet to receive
-   * arg2: the rx power of the packet to receive (dbm)
-   * arg3: the tx mode of the packet to receive
-   * arg4: the preamble of the packet to receive
-   */
-  typedef Callback<void,Ptr<Packet>,double,WifiMode,WifiPreamble> ReceiveCallback;
+  static TypeId GetTypdId (void);
+
   WifiChannel ();
   virtual ~WifiChannel ();
 
@@ -77,13 +73,13 @@ public:
   /**
    * \param device the device to add to the list of connected
    *        devices.
-   * \param callback the callback to invoke when a packet must
-   *        be received.
+   * \param phy the physical layer which will receive packets
+   *        on behalf of the device.
    *
    * This method should not be invoked by normal users. It is 
    * currently invoked only from WifiPhy::SetChannel.
    */
-  void Add (Ptr<NetDevice> device,  ReceiveCallback callback);
+  void Add (Ptr<NetDevice> device,  Ptr<WifiPhy> phy);
   /**
    * \param sender the device from which the packet is originating.
    * \param packet the packet to send
@@ -94,11 +90,11 @@ public:
    * This method should not be invoked by normal users. It is 
    * currently invoked only from WifiPhy::Send.
    */
-  void Send (Ptr<NetDevice> sender, Ptr<const Packet> packet, double txPowerDbm,
+  void Send (Ptr<WifiPhy> sender, Ptr<const Packet> packet, double txPowerDbm,
              WifiMode wifiMode, WifiPreamble preamble) const;
 
 private:
-  typedef std::vector<std::pair<Ptr<NetDevice>, ReceiveCallback> > DeviceList;
+  typedef std::vector<std::pair<Ptr<NetDevice>, Ptr<WifiPhy> > > DeviceList;
   void Receive (uint32_t i, Ptr<Packet> packet, double rxPowerDbm,
                 WifiMode txMode, WifiPreamble preamble) const;
   /**

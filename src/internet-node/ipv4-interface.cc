@@ -22,7 +22,6 @@
 #include "ipv4-interface.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/net-device.h"
-#include "ns3/trace-resolver.h"
 #include "ns3/log.h"
 #include "ns3/packet.h"
 
@@ -36,13 +35,12 @@ namespace ns3 {
    * becoming useable, the user must invoke SetUp on them
    * once the final Ipv4 address and mask has been set.
    */
-Ipv4Interface::Ipv4Interface (Ptr<NetDevice> nd) 
-  : m_netdevice (nd), 
-    m_ifup(false),
+Ipv4Interface::Ipv4Interface () 
+  : m_ifup(false),
     m_metric(1)
 {
   NS_LOG_FUNCTION;
-  NS_LOG_PARAMS (this << &nd);
+  NS_LOG_PARAMS (this);
 }
 
 Ipv4Interface::~Ipv4Interface ()
@@ -54,15 +52,7 @@ void
 Ipv4Interface::DoDispose (void)
 {
   NS_LOG_FUNCTION;
-  m_netdevice = 0;
   Object::DoDispose ();
-}
-
-Ptr<NetDevice>
-Ipv4Interface::GetDevice (void) const
-{
-  NS_LOG_FUNCTION;
-  return m_netdevice;
 }
 
 void 
@@ -124,12 +114,12 @@ uint16_t
 Ipv4Interface::GetMtu (void) const
 {
   NS_LOG_FUNCTION;
-  if (m_netdevice == 0)
+  if (GetDevice () == 0)
     {
       uint32_t mtu = (1<<16) - 1;
       return mtu;
     }
-  return m_netdevice->GetMtu ();
+  return GetDevice ()->GetMtu ();
 }
 
 /**

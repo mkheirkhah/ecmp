@@ -24,11 +24,12 @@
 #include <utility>
 #include "ns3/packet.h"
 #include "ns3/nstime.h"
+#include "ns3/object.h"
 #include "wifi-mac-header.h"
 
 namespace ns3 {
 
-class MacParameters;
+class WifiMacParameters;
 
 /**
  * \brief a 802.11e-specific queue.
@@ -45,13 +46,17 @@ class MacParameters;
  * dot11EDCATableMSDULifetime has elapsed, it is dropped.
  * Otherwise, it is returned to the caller.
  */
-class WifiMacQueue {
+class WifiMacQueue : public Object
+{
 public:
+  static TypeId GetTypeId (void);
   WifiMacQueue ();
   ~WifiMacQueue ();
 
   void SetMaxSize (uint32_t maxSize);
   void SetMaxDelay (Time delay);
+  uint32_t GetMaxSize (void) const;
+  Time GetMaxDelay (void) const;
 
   void Enqueue (Ptr<const Packet> packet, WifiMacHeader const &hdr);
   Ptr<const Packet> Dequeue (WifiMacHeader *hdr);
@@ -75,7 +80,7 @@ private:
   typedef std::deque<struct Item>::reverse_iterator PacketQueueRI;
   typedef std::deque<struct Item>::iterator PacketQueueI;
   PacketQueue m_queue;
-  MacParameters *m_parameters;
+  WifiMacParameters *m_parameters;
   uint32_t m_size;
   uint32_t m_maxSize;
   Time m_maxDelay;

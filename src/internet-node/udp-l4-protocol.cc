@@ -35,13 +35,23 @@ NS_LOG_COMPONENT_DEFINE ("UdpL4Protocol");
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (UdpL4Protocol);
+
 /* see http://www.iana.org/assignments/protocol-numbers */
 const uint8_t UdpL4Protocol::PROT_NUMBER = 17;
 
-UdpL4Protocol::UdpL4Protocol (Ptr<Node> node)
-  : Ipv4L4Protocol (PROT_NUMBER, 2),
-    m_node (node),
-    m_endPoints (new Ipv4EndPointDemux ())
+TypeId 
+UdpL4Protocol::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::UdpL4Protocol")
+    .SetParent<Ipv4L4Protocol> ()
+    .AddConstructor<UdpL4Protocol> ()
+    ;
+  return tid;
+}
+
+UdpL4Protocol::UdpL4Protocol ()
+  : m_endPoints (new Ipv4EndPointDemux ())
 {
   NS_LOG_FUNCTION;
 }
@@ -50,6 +60,24 @@ UdpL4Protocol::~UdpL4Protocol ()
 {
   NS_LOG_FUNCTION;
 }
+
+void 
+UdpL4Protocol::SetNode (Ptr<Node> node)
+{
+  m_node = node;
+}
+
+int 
+UdpL4Protocol::GetProtocolNumber (void) const
+{
+  return PROT_NUMBER;
+}
+int 
+UdpL4Protocol::GetVersion (void) const
+{
+  return 2;
+}
+
 
 void
 UdpL4Protocol::DoDispose (void)
@@ -68,7 +96,9 @@ Ptr<Socket>
 UdpL4Protocol::CreateSocket (void)
 {
   NS_LOG_FUNCTION;
-  Ptr<Socket> socket = CreateObject<UdpSocket> (m_node, this);
+  Ptr<UdpSocket> socket = CreateObject<UdpSocket> ();
+  socket->SetNode (m_node);
+  socket->SetUdp (this);
   return socket;
 }
 
@@ -80,11 +110,11 @@ UdpL4Protocol::Allocate (void)
 }
 
 Ipv4EndPoint *
-UdpL4Protocol::Allocate (Ipv4Address address)
+UdpL4Protocol::Allocate (Ipv4Address address, Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << address);
-  return m_endPoints->Allocate (address);
+  return m_endPoints->Allocate (address, localInterface);
 }
 
 Ipv4EndPoint *
@@ -96,20 +126,21 @@ UdpL4Protocol::Allocate (uint16_t port)
 }
 
 Ipv4EndPoint *
-UdpL4Protocol::Allocate (Ipv4Address address, uint16_t port)
+UdpL4Protocol::Allocate (Ipv4Address address, uint16_t port, Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION;
   NS_LOG_PARAMS (this << address << port);
-  return m_endPoints->Allocate (address, port);
+  return m_endPoints->Allocate (address, port, localInterface);
 }
 Ipv4EndPoint *
 UdpL4Protocol::Allocate (Ipv4Address localAddress, uint16_t localPort,
-                         Ipv4Address peerAddress, uint16_t peerPort)
+                         Ipv4Address peerAddress, uint16_t peerPort,
+                         Ipv4Address localInterface)
 {
   NS_LOG_FUNCTION; 
   NS_LOG_PARAMS (this << localAddress << localPort << peerAddress << peerPort);
   return m_endPoints->Allocate (localAddress, localPort,
-                                peerAddress, peerPort);
+                                peerAddress, peerPort, localInterface);
 }
 
 void 

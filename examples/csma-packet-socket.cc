@@ -34,10 +34,10 @@
 #include <cassert>
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
 #include "ns3/log.h"
+#include "ns3/string.h"
 
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
@@ -53,6 +53,7 @@
 #include "ns3/socket.h"
 #include "ns3/onoff-application.h"
 #include "ns3/queue.h"
+#include "ns3/drop-tail-queue.h"
 
 using namespace ns3;
 
@@ -61,9 +62,11 @@ NS_LOG_COMPONENT_DEFINE ("CsmaPacketSocketExample");
 static Ptr<CsmaNetDevice>
 CreateCsmaDevice (Ptr<Node> node, Ptr<CsmaChannel> channel)
 {
-  Ptr<CsmaNetDevice> device = CreateObject<CsmaNetDevice> (node);
+  Ptr<CsmaNetDevice> device = CreateObject<CsmaNetDevice> ("Address", Mac48Address::Allocate (),
+                                                           "EncapsulationMode", String ("Llc"));
+  node->AddDevice (device);
   device->Attach (channel);
-  Ptr<Queue> queue = Queue::CreateDefault ();
+  Ptr<Queue> queue = CreateObject<DropTailQueue> ();
   device->AddQueue (queue);
   return device;
 }
@@ -97,7 +100,8 @@ main (int argc, char *argv[])
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_ALL);
 #endif
 
-  CommandLine::Parse (argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
   // Here, we will explicitly create four nodes.  In more sophisticated
   // topologies, we could configure a node factory.
@@ -109,7 +113,8 @@ main (int argc, char *argv[])
 
   // create the shared medium used by all csma devices.
   NS_LOG_INFO ("Create channels.");
-  Ptr<CsmaChannel> channel = CreateObject<CsmaChannel> (DataRate(5000000), MilliSeconds(2));
+  Ptr<CsmaChannel> channel = CreateObject<CsmaChannel> ("BitRate", DataRate(5000000), 
+                                                        "Delay", MilliSeconds(2));
 
   // use a helper function to connect our nodes to the shared channel.
   NS_LOG_INFO ("Build Topology.");
@@ -134,23 +139,22 @@ main (int argc, char *argv[])
   // 210 bytes at a rate of 448 Kb/s
   // from n0 to n1
   NS_LOG_INFO ("Create Applications.");
-  Ptr<OnOffApplication> ooff = CreateObject<OnOffApplication> (
-    n0, 
-    n0ToN1,
-    "Packet",
-    ConstantVariable(1), 
-    ConstantVariable(0));
+  Ptr<OnOffApplication> ooff = 
+    CreateObject<OnOffApplication> ("Remote", Address (n0ToN1),
+                                    "Protocol", TypeId::LookupByName ("ns3::PacketSocketFactory"),
+                                    "OnTime", ConstantVariable(1), 
+                                    "OffTime", ConstantVariable(0));
+  n0->AddApplication (ooff);
   // Start the application
   ooff->Start(Seconds(1.0));
   ooff->Stop (Seconds(10.0));
 
   // Create a similar flow from n3 to n0, starting at time 1.1 seconds
-  ooff = CreateObject<OnOffApplication> (
-    n3, 
-    n3ToN0,
-    "Packet",
-    ConstantVariable(1), 
-    ConstantVariable(0));
+  ooff = CreateObject<OnOffApplication> ("Remote", Address (n3ToN0),
+                                         "Protocol", TypeId::LookupByName ("ns3::PacketSocketFactory"),
+                                         "OnTime", ConstantVariable(1), 
+                                         "OffTime", ConstantVariable(0));
+  n3->AddApplication (ooff);
   // Start the application
   ooff->Start(Seconds(1.1));
   ooff->Stop (Seconds(10.0));

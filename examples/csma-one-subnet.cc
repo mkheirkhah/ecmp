@@ -26,7 +26,6 @@
 // - Tracing of queues and packet receptions to file "csma-one-subnet.tr"
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
 #include "ns3/log.h"
@@ -85,17 +84,12 @@ main (int argc, char *argv[])
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_ALL);
 #endif
 //
-// Set up default values for the simulation.  Use the DefaultValue::Bind()
-// technique to tell the system what subclass of Queue to use.  The Bind
-// command command tells the queue factory which class to instantiate when the
-// queue factory is invoked in the topology code
-//
-  DefaultValue::Bind ("Queue", "DropTailQueue");
 //
 // Allow the user to override any of the defaults and the above Bind() at
 // run-time, via command-line arguments
 //
-  CommandLine::Parse (argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 //
 // Explicitly create the nodes required by the topology (shown above).
 //
@@ -165,12 +159,13 @@ main (int argc, char *argv[])
 //
   NS_LOG_INFO ("Create Applications.");
   uint16_t port = 9;   // Discard port (RFC 863)
-  Ptr<OnOffApplication> ooff = CreateObject<OnOffApplication> (
-    n0, 
-    InetSocketAddress ("10.1.1.2", port), 
-    "Udp",
-    ConstantVariable(1), 
-    ConstantVariable(0));
+  Ptr<OnOffApplication> ooff = 
+    CreateObject<OnOffApplication> ("Remote", Address (InetSocketAddress ("10.1.1.2", port)), 
+                                    "Protocol", TypeId::LookupByName ("ns3::Udp"),
+                                    "OnTime", ConstantVariable(1), 
+                                    "OffTime", ConstantVariable(0));
+  n0->AddApplication (ooff);
+
 //
 // Tell the application when to start and stop.
 //
@@ -179,12 +174,11 @@ main (int argc, char *argv[])
 // 
 // Create a similar flow from n3 to n0, starting at time 1.1 seconds
 //
-  ooff = CreateObject<OnOffApplication> (
-    n3, 
-    InetSocketAddress ("10.1.1.1", port), 
-    "Udp",
-    ConstantVariable(1), 
-    ConstantVariable(0));
+  ooff = CreateObject<OnOffApplication> ("Remote", Address (InetSocketAddress ("10.1.1.1", port)), 
+                                         "Protocol", TypeId::LookupByName ("ns3::Udp"),
+                                         "OnTime", ConstantVariable(1), 
+                                         "OffTime", ConstantVariable(0));
+  n3->AddApplication (ooff);
 
   ooff->Start(Seconds(1.1));
   ooff->Stop (Seconds(10.0));

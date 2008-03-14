@@ -35,7 +35,6 @@
 #include <cassert>
 
 #include "ns3/command-line.h"
-#include "ns3/default-value.h"
 #include "ns3/ptr.h"
 #include "ns3/random-variable.h"
 #include "ns3/log.h"
@@ -59,6 +58,7 @@
 #include "ns3/packet-sink.h"
 #include "ns3/error-model.h"
 #include "ns3/node-list.h"
+#include "ns3/config.h"
 
 #include "ns3/tcp.h"
 
@@ -67,8 +67,8 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("TcpLargeTransfer");
 
 void 
-ApplicationTraceSink (const TraceContext &context, Ptr<const Packet> packet,
-  const Address &addr)
+ApplicationTraceSink (Ptr<const Packet> packet,
+                      const Address &addr)
 {
 // g_log is not declared in optimized builds
 // should convert this to use of some other flag than the logging system
@@ -140,7 +140,8 @@ int main (int argc, char *argv[])
 
   // Allow the user to override any of the defaults and the above
   // Bind()s at run-time, via command-line arguments
-  CommandLine::Parse (argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
   // Here, we will explicitly create three nodes.  In more sophisticated
   // topologies, we could configure a node factory.
@@ -196,10 +197,10 @@ int main (int argc, char *argv[])
   localSocket->Bind ();
 
   // Create a packet sink to receive these packets
-  Ptr<PacketSink> sink = Create<PacketSink> (
-    n2,
-    InetSocketAddress (Ipv4Address::GetAny (), servPort),
-    "Tcp");
+  Ptr<PacketSink> sink = 
+    CreateObject<PacketSink> ("Local", Address (InetSocketAddress (Ipv4Address::GetAny (), servPort)),
+                              "Protocol", TypeId::LookupByName ("ns3::Tcp"));
+  n2->AddApplication (sink);
   sink->Start (Seconds (0.0));
   sink->Stop (Seconds (100.0));
 
@@ -221,7 +222,8 @@ int main (int argc, char *argv[])
   PcapTrace pcaptrace ("tcp-large-transfer.pcap");
   pcaptrace.TraceAllIp ();
 
-  NodeList::Connect ("/nodes/*/applications/*/rx", MakeCallback (&ApplicationTraceSink));
+  Config::ConnectWithoutContext ("/NodeList/*/ApplicationList/*/Rx", 
+                   MakeCallback (&ApplicationTraceSink));
 
   Simulator::StopAt (Seconds(1000));
   Simulator::Run ();

@@ -26,22 +26,13 @@ NS_OBJECT_ENSURE_REGISTERED (StaticSpeedMobilityModel);
 
 TypeId StaticSpeedMobilityModel::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("StaticSpeedMobilityModel")
+  static TypeId tid = TypeId ("ns3::StaticSpeedMobilityModel")
     .SetParent<MobilityModel> ()
-    .AddConstructor<StaticSpeedMobilityModel> ()
-    .AddConstructor<StaticSpeedMobilityModel,const Vector &> ()
-    .AddConstructor<StaticSpeedMobilityModel,const Vector &,const Vector &> ();
+    .AddConstructor<StaticSpeedMobilityModel> ();
   return tid;
 }
 
 StaticSpeedMobilityModel::StaticSpeedMobilityModel ()
-{}
-StaticSpeedMobilityModel::StaticSpeedMobilityModel (const Vector &position)
-  : m_helper (position)
-{}
-StaticSpeedMobilityModel::StaticSpeedMobilityModel (const Vector &position,
-                                                    const Vector &speed)
-  : m_helper (position, speed)
 {}
 
 StaticSpeedMobilityModel::~StaticSpeedMobilityModel ()

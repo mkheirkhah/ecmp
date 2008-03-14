@@ -29,7 +29,7 @@
 
 #include "rtt-estimator.h"
 #include "ns3/simulator.h"
-#include "ns3/type-id-default-value.h"
+#include "ns3/double.h"
 
 namespace ns3{
 
@@ -39,19 +39,21 @@ NS_OBJECT_ENSURE_REGISTERED (RttEstimator);
 TypeId 
 RttEstimator::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("RttEstimator")
-    .SetParent<Object> ();
+  static TypeId tid = TypeId ("ns3::RttEstimator")
+    .SetParent<Object> ()
+    .AddAttribute ("MaxMultiplier", 
+                   "XXX",
+                   Double (64.0),
+                   MakeDoubleAccessor (&RttEstimator::m_maxMultiplier),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("InitialEstimation", 
+                   "XXX",
+                   Seconds (1.0),
+                   MakeTimeAccessor (&RttEstimator::est),
+                   MakeTimeChecker ())
+    ;
   return tid;
 }
-
-//Default values
-TypeIdDefaultValue RttEstimator::defaultTid ("RttEstimator",
-                                             "Tahoe round trip time estimation",
-                                             RttEstimator::GetTypeId (), "RttMeanDeviation");
-NumericDefaultValue<double> RttEstimator::defaultMaxMultiplier ("RttMaxMultiplier","",64.0);
-
-// RttEstimator Static Member variables
-Time        RttEstimator::initialEstimate = Seconds (1.0); // Default initial estimate
 
 //RttHistory methods
 RttHistory::RttHistory (SequenceNumber s, uint32_t c, Time t)
@@ -66,7 +68,7 @@ RttHistory::RttHistory (const RttHistory& h)
 
 // Base class methods
 
-RttEstimator::RttEstimator () : next (1), history (), est (initialEstimate),
+RttEstimator::RttEstimator () : next (1), history (),
     nSamples (0), multiplier (1.0) 
 { 
   //note next=1 everywhere since first segment will have sequence 1
@@ -142,7 +144,7 @@ void RttEstimator::ClearSent ()
 
 void RttEstimator::IncreaseMultiplier ()
 {
-  multiplier = std::min (multiplier * 2.0, defaultMaxMultiplier.GetValue ());
+  multiplier = std::min (multiplier * 2.0, m_maxMultiplier);
 }
 
 void RttEstimator::ResetMultiplier ()
@@ -153,24 +155,13 @@ void RttEstimator::ResetMultiplier ()
 void RttEstimator::Reset ()
 { // Reset to initial state
   next = 1;
-  est = initialEstimate;
+  est = Seconds (1.0); // XXX: we should go back to the 'initial value' here. Need to add support in Object for this.
   history.clear ();         // Remove all info from the history
   nSamples = 0;
   ResetMultiplier ();
 }
 
-// Base class, static methods
-void RttEstimator::InitialEstimate (Time e)
-{ // Set a new default initial estimate
-  initialEstimate = e;
-}
 
-Ptr<RttEstimator> RttEstimator::CreateDefault ()
-{
-  TypeId tid = defaultTid.GetValue ();
-  Ptr<RttEstimator> rtte = tid.CreateObject (0.1, initialEstimate)->GetObject<RttEstimator> ();
-  return rtte;
-}
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -181,26 +172,26 @@ NS_OBJECT_ENSURE_REGISTERED (RttMeanDeviation);
 TypeId 
 RttMeanDeviation::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("RttMeanDeviation")
+  static TypeId tid = TypeId ("ns3::RttMeanDeviation")
     .SetParent<RttEstimator> ()
-    .AddConstructor<RttMeanDeviation, double> ()
-    .AddConstructor<RttMeanDeviation, double, Time> ();
+    .AddConstructor<RttMeanDeviation> ()
+    .AddAttribute ("Gain",
+                   "XXX",
+                   Double (0.1),
+                   MakeDoubleAccessor (&RttMeanDeviation::gain),
+                   MakeDoubleChecker<double> ())
+    ;
   return tid;
 }
 
-RttMeanDeviation::RttMeanDeviation(double g) :
-  gain (g), variance (ns3::Seconds(0)) 
+RttMeanDeviation::RttMeanDeviation() :
+  variance (ns3::Seconds(0)) 
 { 
 }
 
 RttMeanDeviation::RttMeanDeviation (const RttMeanDeviation& c)
   : RttEstimator (c), gain (c.gain), variance (c.variance)
 {
-}
-
-RttMeanDeviation::RttMeanDeviation (double g, Time e) : 
-  RttEstimator (e), gain (g), variance (ns3::Seconds(0)) 
-{ 
 }
 
 void RttMeanDeviation::Measurement (Time m)
@@ -230,9 +221,9 @@ Time RttMeanDeviation::RetransmitTimeout ()
   return (est + Scalar (4) * variance) * Scalar (multiplier); // As suggested by Jacobson
 }
 
-Ptr<RttEstimator> RttMeanDeviation::Copy () const
+RttEstimator* RttMeanDeviation::Copy () const
 {
-  return Create<RttMeanDeviation> (*this);
+  return new RttMeanDeviation (*this);
 }
 
 void RttMeanDeviation::Reset ()
