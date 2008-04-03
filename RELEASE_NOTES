@@ -1,0 +1,115 @@
+
+		ns-3 RELEASE NOTES
+
+This file contains ns-3 release notes (most recent releases first).
+
+Release 3.0.12 (2008/03/31)
+========================
+    - Add Attribute support to the TypeId metadata system and add
+attribute support to all in-tree models
+    - Add a mid-level helper API to build simulation topologies 
+and perform simple ascii and pcap link-level tracing.
+    - Large amount of structural changes to accomodate the needs
+of the upcoming python bindings
+    - new rate control algorithm (RRAA) and a jakes propagation model
+in the 802.11 model (Federico Maguolo).
+
+Release 3.0.11 (2008/02/15)
+========================
+    - Initial port of GTNetS TCP implementation (initial version 
+that does not support multitasking or delayed acknowledgments yet, 
+but supports a reliable stream service)
+    - Changes to the ns-3 object model to create a TypeId-based 
+metadata system
+    - lots of bug fixes throughout the system
+    - tutorial updates
+
+Release 3.0.10 (2008/01/15)
+========================
+   - Add tutorial document content;
+   - Valgrind option for "waf" tool;
+   - Doxygen organization changes.
+
+Release 3.0.9 (2007/12/15)
+========================
+   - A 802.11 model ported from Yans. This model supports:
+       * a rather extensive PHY model
+       * log-distance and friis propagation model
+       * a simple set of rate control algorithms (ARF, Ideal, 
+         AARF, constant-rate)
+       * adhoc and infrastructure mode (beacon+assoc)
+   - Use smart pointer for Packet in the APIs
+   - A new contrib directory with helper classes: 
+     EventGarbageCollector, Gnuplot
+   - Tracing support for Applications
+   - many bugs fixed
+
+Release 3.0.8 (2007/11/15)
+========================
+   - A simple error model
+   - Source files for ns-3 tutorial
+
+Release 3.0.7 (2007/10/15)
+========================
+  - OLSR routing protocol
+  - A timer class
+  - Additional mobility models (random waypoint, random 2D walk)
+  - A mobility visualization tool 
+
+Release 3.0.6 (2007/09/15)
+========================
+  - Static multicast IPv4 routing
+  - Logging overhaul (NS_LOG macros)
+  - Refactoring of tracing subsystem
+  - Tutorial document started
+ 
+Release 3.0.5 (2007/08/15)
+========================
+
+  - Refactoring to support win32-based unix environments (Cygwin, mingw)
+  - "Packet socket" for allowing applications to access NetDevices directly
+  - Generalized, polymorphic Address class
+  - Add CSMA NetDevice model (from Emmanuelle Laprise)
+  - Modularize IPv4 routing support (from Gustavo Carneiro)
+  - Add mobility framework and basic mobility models 
+  - Global unicast centralized routing 
+
+Release 3.0.4 (2007/07/15)
+========================
+
+  - Enable waf as the default build system.
+  - Per-packet metadata:  a system to track which headers and trailers 
+    are added to a packet
+  - Simplifications to point-to-point devices and channel
+
+Release 3.0.3 (2007/06/15)
+========================
+
+  - Enable Waf for release tarballs: users can now build ns-3
+    with the "waf" tool. See doc/build-waf.txt.
+  - Add support for variable time precision: it is now possible
+    to run a simulation with an accuracy which is higher or lower
+    than a nanosecond: seconds, milliseconds, microseconds, 
+    femtoseconds and picoseconds are supported.
+  - Optimize and rework the COM framework, solidify the component 
+    manager
+  - Many small API cleanups
+
+Release 3.0.2 (2007/05/18)
+========================
+
+  - Implement a new memory management infrastructure based
+    on reference counting and smart pointers (the latter being
+    optional)
+
+  - Implement a COM-like framework with support for QueryInterface
+    to provide object extensibility
+
+  - Add support for a BSD-style socket API for user applications
+
+Release 3.0.1 (2007/03/31)
+========================
+
+  - First public release; not yet pre-alpha.
+
+  - Simple UDP-based simulation script (examples/simple-p2p.cc)
