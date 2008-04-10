@@ -1,0 +1,17 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('contrib', ['simulator'])
+    module.source = [
+        'event-garbage-collector.cc',
+        'gnuplot.cc',
+        'delay-jitter-estimation.cc',
+        ]
+
+    headers = bld.create_obj('ns3header')
+    headers.module = 'contrib'
+    headers.source = [
+        'event-garbage-collector.h',
+        'gnuplot.h',
+        'delay-jitter-estimation.h',
+        ]
