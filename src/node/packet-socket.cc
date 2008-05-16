@@ -24,12 +24,27 @@
 #include "ns3/log.h"
 #include "ns3/node.h"
 #include "ns3/packet.h"
+#include "ns3/uinteger.h"
+#include "ns3/socket-defaults.h"
+#include "ns3/trace-source-accessor.h"
 
 NS_LOG_COMPONENT_DEFINE ("PacketSocket");
 
 namespace ns3 {
 
-PacketSocket::PacketSocket ()
+TypeId
+PacketSocket::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::PacketSocket")
+    .SetParent<Socket> ()
+    .AddConstructor<PacketSocket> ()
+    .AddTraceSource ("Drop", "Drop packet due to receive buffer overflow",
+                     MakeTraceSourceAccessor (&PacketSocket::m_dropTrace))
+    ;
+  return tid;
+}
+
+PacketSocket::PacketSocket () : m_rxAvailable (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_state = STATE_OPEN;
@@ -41,7 +56,18 @@ PacketSocket::PacketSocket ()
 void 
 PacketSocket::SetNode (Ptr<Node> node)
 {
+  NS_LOG_FUNCTION_NOARGS ();
   m_node = node;
+  // Pull default values for socket options from SocketDefaults
+  // object that was aggregated to the node 
+  Ptr<SocketDefaults> sd = node->GetObject<SocketDefaults> ();
+  NS_ASSERT (sd != 0);
+  UintegerValue uiv;
+  sd->GetAttribute ("DefaultSndBufLimit", uiv);
+  m_sndBufLimit =  uiv.Get();
+  sd->GetAttribute ("DefaultRcvBufLimit", uiv);
+  m_rcvBufLimit =  uiv.Get();
+
 }
 
 PacketSocket::~PacketSocket ()
@@ -211,11 +237,18 @@ PacketSocket::Send (Ptr<Packet> p)
       m_errno = ERROR_NOTCONN;
       return -1;
     }
-  return SendTo (m_destAddr, p);
+  return SendTo (p, m_destAddr);
+}
+
+uint32_t 
+PacketSocket::GetTxAvailable (void) const
+{
+  // No finite send buffer is modelled
+  return 0xffffffff;
 }
 
 int
-PacketSocket::SendTo(const Address &address, Ptr<Packet> p)
+PacketSocket::SendTo(Ptr<Packet> p, const Address &address)
 {
   NS_LOG_FUNCTION_NOARGS ();
   PacketSocketAddress ad;
@@ -301,8 +334,84 @@ PacketSocket::ForwardUp (Ptr<NetDevice> device, Ptr<Packet> packet,
   address.SetSingleDevice (device->GetIfIndex ());
   address.SetProtocol (protocol);
 
-  NS_LOG_LOGIC ("UID is " << packet->GetUid() << " PacketSocket " << this);
-  NotifyDataReceived (packet, address);
+  if ((m_rxAvailable + packet->GetSize ()) <= m_rcvBufLimit)
+    {
+      SocketRxAddressTag tag;
+      tag.SetAddress (address);
+      packet->AddTag (tag);
+      m_deliveryQueue.push (packet);
+      m_rxAvailable += packet->GetSize ();
+      NS_LOG_LOGIC ("UID is " << packet->GetUid() << " PacketSocket " << this);
+      NotifyDataRecv ();
+    }
+  else
+    {
+      // In general, this case should not occur unless the
+      // receiving application reads data from this socket slowly
+      // in comparison to the arrival rate
+      //
+      // drop and trace packet
+      NS_LOG_WARN ("No receive buffer space available.  Drop.");
+      m_dropTrace (packet);
+    }
+}
+
+Ptr<Packet> 
+PacketSocket::Recv (uint32_t maxSize, uint32_t flags)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  if (m_deliveryQueue.empty() )
+    {
+      return 0;
+    }
+  Ptr<Packet> p = m_deliveryQueue.front ();
+  if (p->GetSize () <= maxSize)
+    {
+      m_deliveryQueue.pop ();
+      m_rxAvailable -= p->GetSize ();
+    }
+  else
+    {
+      p = 0;
+    }
+  return p;
+}
+
+uint32_t
+PacketSocket::GetRxAvailable (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  // We separately maintain this state to avoid walking the queue 
+  // every time this might be called
+  return m_rxAvailable;
+}
+
+void 
+PacketSocket::SetSndBuf (uint32_t size)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_WARN ("PacketSocket send buffer limit not enforced");
+  m_sndBufLimit = size;
+}
+
+uint32_t 
+PacketSocket::GetSndBuf (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_sndBufLimit;
+}
+void 
+PacketSocket::SetRcvBuf (uint32_t size)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_rcvBufLimit = size;
+}
+
+uint32_t 
+PacketSocket::GetRcvBuf (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_rcvBufLimit;
 }
 
 }//namespace ns3

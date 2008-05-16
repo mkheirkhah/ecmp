@@ -31,6 +31,8 @@
 #include "tcp-typedefs.h"
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
+#include "ns3/uinteger.h"
+#include "ns3/socket-defaults.h"
 #include "ns3/trace-source-accessor.h"
 
 #include <algorithm>
@@ -78,7 +80,11 @@ TcpSocket::GetTypeId ()
     m_nextRxSequence (0),
     m_pendingData (0),
     m_rtt (0),
-    m_lastMeasuredRtt (Seconds(0.0))
+    m_lastMeasuredRtt (Seconds(0.0)),
+    m_rxAvailable (0), 
+    m_sndBufLimit (0xffffffff), 
+    m_rcvBufLimit (0xffffffff), 
+    m_wouldBlock (false) 
 {
   NS_LOG_FUNCTION (this);
   
@@ -122,7 +128,10 @@ TcpSocket::TcpSocket(const TcpSocket& sock)
     m_rtt (0),
     m_lastMeasuredRtt (Seconds(0.0)),
     m_cnTimeout (sock.m_cnTimeout),
-    m_cnCount (sock.m_cnCount)
+    m_cnCount (sock.m_cnCount),
+    m_rxAvailable (0),
+    m_sndBufLimit (0xffffffff),
+    m_rcvBufLimit (0xffffffff) 
 {
   NS_LOG_FUNCTION_NOARGS ();
   NS_LOG_LOGIC("Invoked the copy constructor");
@@ -179,6 +188,17 @@ TcpSocket::SetNode (Ptr<Node> node)
   m_cnCount = t->GetDefaultConnCount ();
   m_delAckTimout = Seconds(t->GetDefaultDelAckTimeout ());
   m_delAckMaxCount = t->GetDefaultDelAckCount ();
+
+  // Pull default values for socket options from SocketDefaults
+  // object that was aggregated to the node 
+  Ptr<SocketDefaults> sd = node->GetObject<SocketDefaults> ();
+  NS_ASSERT (sd != 0);
+  UintegerValue uiv;
+  sd->GetAttribute ("DefaultSndBufLimit", uiv);
+  m_sndBufLimit =  uiv.Get();
+  sd->GetAttribute ("DefaultRcvBufLimit", uiv);
+  m_rcvBufLimit =  uiv.Get();
+
 }
 
 void 
@@ -359,20 +379,22 @@ int TcpSocket::Send (const uint8_t* buf, uint32_t size)
   NS_LOG_FUNCTION (this << buf << size);
   if (m_state == ESTABLISHED || m_state == SYN_SENT || m_state == CLOSE_WAIT)
     { // Ok to buffer some data to send
+      if (size > GetTxAvailable ())
+        {
+          size = std::min(size, GetTxAvailable() ); //only buffer what can fit
+          m_wouldBlock = true;
+        }
       if (!m_pendingData)
-      {
-        m_pendingData = new PendingData ();   // Create if non-existent
-        m_firstPendingSequence = m_nextTxSequence; // Note seq of first
-      }
+        {
+          m_pendingData = new PendingData ();   // Create if non-existent
+          m_firstPendingSequence = m_nextTxSequence; // Note seq of first
+        }
       //PendingData::Add always copies the data buffer, never modifies
       m_pendingData->Add (size,buf);
       NS_LOG_DEBUG("TcpSock::Send, pdsize " << m_pendingData->Size() << 
                    " state " << m_state);
       Actions_t action = ProcessEvent (APP_SEND);
       NS_LOG_DEBUG(" action " << action);
-      // We do not model any limit to the buffer, so report that the
-      // maximum is available
-      NotifySend (std::numeric_limits<uint32_t>::max ());
       if (!ProcessAction (action)) 
         {
           return -1; // Failed, return zero
@@ -419,7 +441,7 @@ int TcpSocket::DoSendTo (Ptr<Packet> p, Ipv4Address ipv4, uint16_t port)
 }
 
 int 
-TcpSocket::SendTo (const Address &address, Ptr<Packet> p)
+TcpSocket::SendTo (Ptr<Packet> p, const Address &address)
 {
   NS_LOG_FUNCTION (this << address << p);
   if (!m_connected)
@@ -433,6 +455,23 @@ TcpSocket::SendTo (const Address &address, Ptr<Packet> p)
     }
 }
 
+uint32_t
+TcpSocket::GetTxAvailable (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  if (m_pendingData != 0)
+    {
+      uint32_t unAckedDataSize = 
+        m_pendingData->SizeFromSeq (m_firstPendingSequence, m_highestRxAck);
+      NS_ASSERT (m_sndBufLimit >= unAckedDataSize); //else a logical error
+      return m_sndBufLimit-unAckedDataSize;
+    }
+  else
+    {
+      return m_sndBufLimit;
+    }
+}
+
 int
 TcpSocket::Listen (uint32_t q)
 {
@@ -440,6 +479,64 @@ TcpSocket::Listen (uint32_t q)
   Actions_t action = ProcessEvent (APP_LISTEN);
   ProcessAction (action);
   return 0;
+}
+
+Ptr<Packet>
+TcpSocket::Recv (uint32_t maxSize, uint32_t flags)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  if (m_deliveryQueue.empty() )
+    {
+      return 0;
+    }
+  Ptr<Packet> p = m_deliveryQueue.front ();
+  if (p->GetSize () <= maxSize)
+    {
+      m_deliveryQueue.pop ();
+      m_rxAvailable -= p->GetSize ();
+    }
+  else
+    {
+      p = 0;
+    }
+  return p;
+}
+
+uint32_t
+TcpSocket::GetRxAvailable (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  // We separately maintain this state to avoid walking the queue 
+  // every time this might be called
+  return m_rxAvailable;
+}
+
+void
+TcpSocket::SetSndBuf (uint32_t size)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_sndBufLimit = size;
+}
+
+uint32_t
+TcpSocket::GetSndBuf (void) const 
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_sndBufLimit;
+}
+
+void
+TcpSocket::SetRcvBuf (uint32_t size)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_rcvBufLimit = size;
+}
+
+uint32_t
+TcpSocket::GetRcvBuf (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_rcvBufLimit;
 }
 
 void
@@ -692,9 +789,12 @@ bool TcpSocket::ProcessPacketAction (Actions_t a, Ptr<Packet> p,
       if (tcpHeader.GetAckNumber () > m_highestRxAck)
       {
         m_highestRxAck = tcpHeader.GetAckNumber ();
-        // We do not model any limit to the buffer, so report that the
-        // maximum is available
-        NotifySend (std::numeric_limits<uint32_t>::max ());
+        // Data freed from the send buffer; notify any blocked sender
+        if (m_wouldBlock)
+          {
+            NotifySend (GetTxAvailable ());
+            m_wouldBlock = false;
+          }
       }
       SendPendingData ();
       break;
@@ -956,7 +1056,12 @@ void TcpSocket::NewRx (Ptr<Packet> p,
       m_nextRxSequence += s;           // Advance next expected sequence
       //bytesReceived += s;       // Statistics
       NS_LOG_LOGIC("Case 1, advanced nrxs to " << m_nextRxSequence );
-      NotifyDataReceived (p, fromAddress);
+      SocketRxAddressTag tag;
+      tag.SetAddress (fromAddress);
+      p->AddTag (tag);
+      m_deliveryQueue.push (p);
+      m_rxAvailable += p->GetSize ();
+      NotifyDataRecv ();
       if (m_closeNotified)
         {
           NS_LOG_LOGIC ("Tcp " << this << " HuH?  Got data after closeNotif");
@@ -1008,7 +1113,12 @@ void TcpSocket::NewRx (Ptr<Packet> p,
                 }
               s1 = p1->GetSize ();
             }
-          NotifyDataReceived (p1, fromAddress);
+          SocketRxAddressTag tag;
+          tag.SetAddress (fromAddress);
+          p1->AddTag (tag);
+          m_deliveryQueue.push (p1);
+          m_rxAvailable += p->GetSize ();
+          NotifyDataRecv ();
 
           NS_LOG_LOGIC ("TcpSocket " << this << " adv rxseq1 by " << s1 );
           m_nextRxSequence += s1;           // Note data received
@@ -1083,9 +1193,13 @@ void TcpSocket::CommonNewAck (SequenceNumber ack, bool skipTimer)
   NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack 
            << " numberAck " << (ack - m_highestRxAck)); // Number bytes ack'ed
   m_highestRxAck = ack;         // Note the highest recieved Ack
-  // We do not model any limit to the buffer, so report that the
-  // maximum is available
-  NotifySend (std::numeric_limits<uint32_t>::max ());
+  if (m_wouldBlock)
+    {
+      // m_highestRxAck advancing means some data was acked, and the size 
+      // of free space in the buffer has increased
+      NotifySend (GetTxAvailable ());
+      m_wouldBlock = false;
+    }
   if (ack > m_nextTxSequence) 
     {
       m_nextTxSequence = ack; // If advanced
