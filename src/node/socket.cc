@@ -22,15 +22,45 @@
 
 #include "ns3/log.h"
 #include "ns3/packet.h"
+#include "node.h"
 #include "socket.h"
+#include "socket-factory.h"
 
 NS_LOG_COMPONENT_DEFINE ("Socket");
 
 namespace ns3 {
 
+#if 0
+TypeId
+Socket::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::Socket")
+    .SetParent<Object> ()
+    .AddConstructor<Socket> ()
+  ;
+  return tid;
+}
+
+#endif
+
+Socket::Socket (void)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+}
+
 Socket::~Socket ()
 {
   NS_LOG_FUNCTION_NOARGS ();
+}
+
+Ptr<Socket> 
+Socket::CreateSocket (Ptr<Node> node, TypeId tid)
+{
+  Ptr<Socket> s;
+  Ptr<SocketFactory> socketFactory = node->GetObject<SocketFactory> (tid);
+  s = socketFactory->CreateSocket ();
+  NS_ASSERT (s != 0);
+  return s;
 }
 
 void 
@@ -80,7 +110,7 @@ Socket::SetSendCallback (Callback<void, Ptr<Socket>, uint32_t> sendCb)
 }
 
 void 
-Socket::SetRecvCallback (Callback<void, Ptr<Socket>, Ptr<Packet>,const Address&> receivedData)
+Socket::SetRecvCallback (Callback<void, Ptr<Socket> > receivedData)
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_receivedData = receivedData;
@@ -107,7 +137,13 @@ int Socket::Send (const uint8_t* buf, uint32_t size)
   return Send (p);
 }
 
-int Socket::SendTo (const Address &address, const uint8_t* buf, uint32_t size)
+Ptr<Packet>
+Socket::Recv (void)
+{
+  return Recv (std::numeric_limits<uint32_t>::max(), 0);
+}
+
+int Socket::SendTo (const uint8_t* buf, uint32_t size, const Address &address)
 {
   NS_LOG_FUNCTION_NOARGS ();
   Ptr<Packet> p;
@@ -119,7 +155,7 @@ int Socket::SendTo (const Address &address, const uint8_t* buf, uint32_t size)
     {
       p = Create<Packet> (size);
     }
-  return SendTo (address,p);
+  return SendTo (p, address);
 }
 
 void 
@@ -221,13 +257,109 @@ Socket::NotifySend (uint32_t spaceAvailable)
 }
 
 void 
-Socket::NotifyDataReceived (Ptr<Packet> p, const Address &from)
+Socket::NotifyDataRecv (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
   if (!m_receivedData.IsNull ())
     {
-      m_receivedData (this, p, from);
+      m_receivedData (this);
     }
+}
+
+SocketRxAddressTag::SocketRxAddressTag ()  
+{
+}
+
+uint32_t 
+SocketRxAddressTag::GetUid (void)
+{
+  static uint32_t uid = ns3::Tag::AllocateUid<SocketRxAddressTag> ("SocketRxAddressTag.ns3");
+  return uid;
+}
+
+void
+SocketRxAddressTag::Print (std::ostream &os) const
+{
+  os << "address="<< m_address;
+}
+
+uint32_t 
+SocketRxAddressTag::GetSerializedSize (void) const
+{
+  return 0;
+}
+
+void 
+SocketRxAddressTag::Serialize (Buffer::Iterator i) const
+{
+  // for local use in stack only
+}
+
+uint32_t 
+SocketRxAddressTag::Deserialize (Buffer::Iterator i)
+{
+  // for local use in stack only
+  return 0;
+}
+
+void 
+SocketRxAddressTag::SetAddress (Address addr)
+{
+  m_address = addr;
+}
+
+Address 
+SocketRxAddressTag::GetAddress (void) const
+{
+  return m_address;
+}
+
+SocketIpTtlTag::SocketIpTtlTag ()  
+{
+}
+
+uint32_t 
+SocketIpTtlTag::GetUid (void)
+{
+  static uint32_t uid = ns3::Tag::AllocateUid<SocketIpTtlTag> ("SocketIpTtlTag.ns3");
+  return uid;
+}
+
+void
+SocketIpTtlTag::Print (std::ostream &os) const
+{
+  os << "ttl="<< m_ttl;
+}
+
+uint32_t 
+SocketIpTtlTag::GetSerializedSize (void) const
+{
+  return 0;
+}
+
+void 
+SocketIpTtlTag::Serialize (Buffer::Iterator i) const
+{
+  // for local use in stack only
+}
+
+uint32_t 
+SocketIpTtlTag::Deserialize (Buffer::Iterator i)
+{
+  // for local use in stack only
+  return 0;
+}
+
+void 
+SocketIpTtlTag::SetTtl (uint8_t ttl)
+{
+  m_ttl = ttl;
+}
+
+uint8_t 
+SocketIpTtlTag::GetTtl (void) const
+{
+  return m_ttl;
 }
 
 }//namespace ns3
