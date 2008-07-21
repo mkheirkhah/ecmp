@@ -14,6 +14,12 @@ New functionality added
 - Kernel mutual exclusion support (class SystemMutex) added;
 - Kernel critical section RAII support (class CriticalSection) added;
 - Kernel system condition support (class SystemCondition) added;
+- Move required methods in helper classes to constructors;
+- Change obsolete references to Parameter to Attribute in helpers;
+- Split simulator into interface and implementation pieces, make 
+  implementation a replaceable component via the 
+  "SimulatorImplementationType" global value.
+  Hint:  try ./waf --run "udp-echo --PrintGlobals"
 - implement Packet::PeekHeader and Packet::PeekTrailer to avoid evil workarounds when receiving tcp packets. 
 
 Bugs fixed
