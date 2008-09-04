@@ -1,0 +1,33 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def configure(conf):
+    check = conf.create_pkgconfig_configurator()
+    check.name = 'gtk+-2.0 >= 2.12'
+    check.uselib = 'GTK_CONFIG_STORE'
+    check.mandatory = False
+    conf.env['ENABLE_GTK_CONFIG_STORE'] = check.run()
+    conf.sub_config('stats')
+
+def build(bld):
+    module = bld.create_ns3_module('contrib', ['simulator'])
+    module.source = [
+        'event-garbage-collector.cc',
+        'gnuplot.cc',
+        'delay-jitter-estimation.cc',
+        'attribute-iterator.cc',
+        'config-store.cc',
+        ]
+
+    headers = bld.create_obj('ns3header')
+    headers.module = 'contrib'
+    headers.source = [
+        'event-garbage-collector.h',
+        'gnuplot.h',
+        'delay-jitter-estimation.h',
+        'config-store.h',
+        ]
+
+    if bld.env()['ENABLE_GTK_CONFIG_STORE']:
+        headers.source.append ('gtk-config-store.h')
+        module.source.append ('gtk-config-store.cc')
+        module.uselib = 'GTK_CONFIG_STORE'
