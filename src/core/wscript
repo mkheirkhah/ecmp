@@ -1,0 +1,143 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+import sys
+
+
+def configure(conf):
+    e = conf.create_header_configurator()
+    e.mandatory = False
+    e.name = 'stdlib.h'
+    e.define = 'HAVE_STDLIB_H'
+    e.run()
+
+    e = conf.create_header_configurator()
+    e.mandatory = False
+    e.name = 'stdlib.h'
+    e.define = 'HAVE_GETENV'
+    e.run()
+
+    e = conf.create_header_configurator()
+    e.mandatory = False
+    e.name = 'signal.h'
+    e.define = 'HAVE_SIGNAL_H'
+    e.run()
+
+    e = conf.create_library_configurator()
+    e.mandatory = False
+    e.name = 'rt'
+    e.define = 'HAVE_RT'
+    e.uselib = 'RT'
+    e.run()
+
+    e = conf.create_header_configurator()
+    e.mandatory = False
+    e.name = 'pthread.h'
+    e.define = 'HAVE_PTHREAD_H'
+    conf.env['ENABLE_THREADING'] = e.run()
+    conf.report_optional_feature("Threading", "Threading Primitives",
+                                 conf.env['ENABLE_THREADING'],
+                                 "<pthread.h> include not detected")
+
+    conf.write_config_header('ns3/core-config.h')
+
+def build(bld):
+    core = bld.create_ns3_module('core')
+    core.source = [
+        'callback-test.cc',
+        'log.cc',
+        'breakpoint.cc',
+        'type-id.cc',
+        'attribute-list.cc',
+        'object-base.cc',
+        'ref-count-base.cc',
+        'ptr.cc',
+        'object.cc',
+        'test.cc',
+        'random-variable.cc',
+        'rng-stream.cc',
+        'command-line.cc',
+        'type-name.cc',
+        'type-traits-test.cc',
+        'attribute.cc',
+        'boolean.cc',
+        'integer.cc',
+        'uinteger.cc',
+        'enum.cc',
+        'double.cc',
+        'string.cc',
+        'pointer.cc',
+        'object-vector.cc',
+        'attribute-test.cc',
+        'object-factory.cc',
+        'global-value.cc',
+        'traced-callback.cc',
+        'trace-source-accessor.cc',
+        'config.cc',
+        'callback.cc',
+        ]
+    core.uselib = 'RT'
+
+    headers = bld.create_obj('ns3header')
+    headers.module = 'core'
+    headers.source = [
+        'system-wall-clock-ms.h',
+        'empty.h',
+        'callback.h',
+        'object-base.h',
+        'ref-count-base.h',
+        'type-id.h',
+        'attribute-list.h',
+        'ptr.h',
+        'object.h',
+        'log.h',
+        'assert.h',
+        'breakpoint.h',
+        'fatal-error.h',
+        'test.h',
+        'random-variable.h',
+        'rng-stream.h',
+        'command-line.h',
+        'type-name.h',
+        'type-traits.h',
+        'int-to-type.h',
+        'attribute.h',
+        'attribute-accessor-helper.h',
+        'boolean.h',
+        'integer.h',
+        'uinteger.h',
+        'double.h',
+        'enum.h',
+        'string.h',
+        'pointer.h',
+        'object-factory.h',
+        'attribute-helper.h',
+        'global-value.h',
+        'traced-callback.h',
+        'traced-value.h',
+        'trace-source-accessor.h',
+        'config.h',
+        'object-vector.h',
+        'deprecated.h',
+        'abort.h',
+        ]
+
+    if sys.platform == 'win32':
+        core.source.extend([
+            'win32-system-wall-clock-ms.cc',
+            ])
+    else:
+        core.source.extend([
+            'unix-system-wall-clock-ms.cc',
+            ])
+
+    if bld.env()['ENABLE_THREADING']:
+        core.source.extend([
+            'unix-system-thread.cc',
+            'unix-system-mutex.cc',
+            'unix-system-condition.cc',
+            ])
+        headers.source.extend([
+                'system-mutex.h',
+                'system-thread.h',
+                'system-condition.h',
+                ])
+
