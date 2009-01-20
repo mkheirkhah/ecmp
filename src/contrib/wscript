@@ -1,0 +1,36 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def configure(conf):
+    have_it = conf.pkg_check_modules('GTK_CONFIG_STORE', 'gtk+-2.0 >= 2.12', mandatory=False)
+    conf.env['ENABLE_GTK_CONFIG_STORE'] = have_it
+    conf.report_optional_feature("GtkConfigStore", "GtkConfigStore",
+                                 conf.env['ENABLE_GTK_CONFIG_STORE'],
+                                 "library 'gtk+-2.0 >= 2.12' not found")
+
+    conf.sub_config('stats')
+
+def build(bld):
+    module = bld.create_ns3_module('contrib', ['simulator', 'common'])
+    module.source = [
+        'event-garbage-collector.cc',
+        'gnuplot.cc',
+        'delay-jitter-estimation.cc',
+        'attribute-iterator.cc',
+        'config-store.cc',
+        'flow-id-tag.cc',
+        ]
+
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'contrib'
+    headers.source = [
+        'event-garbage-collector.h',
+        'gnuplot.h',
+        'delay-jitter-estimation.h',
+        'config-store.h',
+        'flow-id-tag.h',
+        ]
+
+    if bld.env['ENABLE_GTK_CONFIG_STORE']:
+        headers.source.append ('gtk-config-store.h')
+        module.source.append ('gtk-config-store.cc')
+        module.uselib = 'GTK_CONFIG_STORE'
