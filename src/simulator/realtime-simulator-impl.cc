@@ -384,7 +384,7 @@ RealtimeSimulatorImpl::IsFinished (void) const
   bool rc;
   {
     CriticalSection cs (m_mutex);
-    rc = m_events->IsEmpty ();
+    rc = m_events->IsEmpty () || m_stop;
   }
 
   return rc;
@@ -421,6 +421,7 @@ RealtimeSimulatorImpl::Run (void)
   NS_ASSERT_MSG (m_running == false, 
                  "RealtimeSimulatorImpl::Run(): Simulator already running");
 
+  m_stop = false;
   m_running = true;
   m_synchronizer->SetOrigin (m_currentTs);
 

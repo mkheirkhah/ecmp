@@ -12,6 +12,7 @@ def build(bld):
         'wifi-phy.cc',
         'wifi-phy-state-helper.cc',
         'error-rate-model.cc',
+        'yans-error-rate-model.cc',
         'interference-helper.cc',
         'yans-wifi-phy.cc',
         'yans-wifi-channel.cc',
@@ -44,7 +45,7 @@ def build(bld):
         'constant-rate-wifi-manager.cc',
         'wifi-test.cc',
         ]
-    headers = bld.create_obj('ns3header')
+    headers = bld.new_task_gen('ns3header')
     headers.module = 'wifi'
     headers.source = [
         'propagation-delay-model.h',
@@ -75,6 +76,7 @@ def build(bld):
         'wifi-phy.h',
         'supported-rates.h',
         'error-rate-model.h',
+        'yans-error-rate-model.h',
         ]
 
     obj = bld.create_ns3_program('wifi-phy-test',

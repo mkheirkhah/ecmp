@@ -1,24 +1,42 @@
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+# python lib modules
 import sys
 import shutil
 import types
 import optparse
 import os.path
 
+# WAF modules
 import pproc as subprocess
+import Options
+import Logs
+import TaskGen
 
-import Params
-import Object
 import ccroot
-import Task
+ccroot.USE_TOP_LEVEL = True
 
+import Task
+import Utils
+import Build
+import Configure
+
+import cflags # override the build profiles from waf
+cflags.profiles = {
+	# profile name: [optimization_level, warnings_level, debug_level]
+	'debug':     [0, 2, 3],
+	'optimized': [3, 2, 1],
+	}
+cflags.default_profile = 'debug'
+
+# local modules
 import wutils
 import regression
 
-Params.g_autoconfig = 1
+Configure.autoconfig = 1
 
 # the following two variables are used by the target "waf dist"
-VERSION = file("VERSION").read().strip()
+VERSION = file("VERSION", "rt").read().strip()
 APPNAME = 'ns'
 
 wutils.VERSION = VERSION
@@ -35,16 +53,13 @@ def dist_hook():
     shutil.rmtree("doc/latex", True)
     shutil.rmtree("nsc", True)
 
-    if not os.path.exists("bindings/python/pybindgen"):
-        Params.fatal("Missing pybindgen checkout; run './waf configure --pybindgen-checkout' first.")
-
     ## build the name of the traces subdirectory.  Will be something like
     ## ns-3-dev-ref-traces
     traces_name = APPNAME + '-' + VERSION + regression.REGRESSION_SUFFIX
     ## Create a tar.bz2 file with the traces
     traces_dir = os.path.join(regression.REGRESSION_DIR, traces_name)
     if not os.path.isdir(traces_dir):
-        Params.warning("Not creating traces archive: the %s directory does not exist" % traces_dir)
+        Logs.warn("Not creating traces archive: the %s directory does not exist" % traces_dir)
     else:
         traceball = traces_name + wutils.TRACEBALL_SUFFIX
         tar = tarfile.open(os.path.join("..", traceball), 'w:bz2')
@@ -54,27 +69,9 @@ def dist_hook():
         shutil.rmtree(traces_dir, True)
 
 def set_options(opt):
-
-    def debug_option_callback(option, opt, value, parser):
-        if value == 'debug':
-            setattr(parser.values, option.dest, 'ultradebug')
-        elif value == 'optimized':
-            setattr(parser.values, option.dest, 'optimized')
-        else:
-            raise optparse.OptionValueError("allowed --debug-level values"
-                                            " are debug, optimized.")
-
-    opt.add_option('-d', '--debug-level',
-                   action='callback',
-                   type="string", dest='debug_level', default='ultradebug',
-                   help=('Specify the debug level, does nothing if CFLAGS is set'
-                         ' in the environment. [Allowed Values: debug, optimized].'
-                         ' WARNING: this option only has effect '
-                         'with the configure command.'),
-                   callback=debug_option_callback)
-    
     # options provided by the modules
     opt.tool_options('compiler_cxx')
+    opt.tool_options('cflags')
 
     opt.add_option('--cwd',
                    help=('Set the working directory for a program.'),
@@ -160,49 +157,46 @@ def check_compilation_flag(conf, flag):
     flag: can be a string or a list of strings
     """
 
-    # Check for -Wno-error=deprecated-declarations
-    save_CXXFLAGS = list(conf.env['CXXFLAGS'])
-    conf.env.append_value('CXXFLAGS', flag)
-    e = conf.create_test_configurator()
-    e.mandatory = 0
-    e.code = '#include <stdio.h>\nint main() { return 0; }\n'
-    e.want_message = 0
-    ok = e.run()
-    conf.check_message_custom(flag, 'compilation flag support',
-                              (ok and 'yes' or 'no'))
+    env = conf.env.copy()
+    env.append_value('CXXFLAGS', flag)
+    try:
+        retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
+                                 env=env, compile_filename='test.cc',
+                                 compile_mode='cxx',type='program', execute=False)
+    except Configure.ConfigurationError:
+        ok = False
+    else:
+        ok = (retval == 0)
+    conf.check_message_custom(flag, 'support', (ok and 'yes' or 'no'))
+    return ok
 
-    if not ok: # if it doesn't accept, remove it again
-        conf.env['CXXFLAGS'] = save_CXXFLAGS
     
 def report_optional_feature(conf, name, caption, was_enabled, reason_not_enabled):
     conf.env.append_value('NS3_OPTIONAL_FEATURES', (name, caption, was_enabled, reason_not_enabled))
 
 def configure(conf):
-    
     # attach some extra methods
     conf.check_compilation_flag = types.MethodType(check_compilation_flag, conf)
     conf.report_optional_feature = types.MethodType(report_optional_feature, conf)
     conf.env['NS3_OPTIONAL_FEATURES'] = []
 
-    conf.env['NS3_BUILDDIR'] = conf.m_blddir
+    conf.env['NS3_BUILDDIR'] = conf.blddir
     conf.check_tool('compiler_cxx')
+    conf.check_tool('cflags')
+    try:
+        conf.check_tool('pkgconfig')
+    except Configure.ConfigurationError:
+        pass
+    conf.check_tool('command')
 
     # create the second environment, set the variant and set its name
     variant_env = conf.env.copy()
-    debug_level = Params.g_options.debug_level.lower()
-    if debug_level == 'ultradebug':
-        variant_name = 'debug'
-    else:
-        variant_name = debug_level
+    variant_name = Options.options.build_profile
 
-    variant_env['INCLUDEDIR'] = os.path.join(variant_env['PREFIX'], 'include')
+    if Options.options.regression_traces is not None:
+        variant_env['REGRESSION_TRACES'] = os.path.abspath(Options.options.regression_traces)
 
-    if Params.g_options.regression_traces is not None:
-        variant_env['REGRESSION_TRACES'] = os.path.join("..", Params.g_options.regression_traces)
-    else:
-        variant_env['REGRESSION_TRACES'] = None
-
-    if Params.g_options.enable_gcov:
+    if Options.options.enable_gcov:
         variant_name += '-gcov'
         variant_env.append_value('CCFLAGS', '-fprofile-arcs')
         variant_env.append_value('CCFLAGS', '-ftest-coverage')
@@ -215,48 +209,29 @@ def configure(conf):
     variant_env.set_variant(variant_name)
     conf.set_env_name(variant_name, variant_env)
     conf.setenv(variant_name)
+    env = variant_env
 
-    variant_env.append_value('CXXDEFINES', 'RUN_SELF_TESTS')
+    env.append_value('CXXDEFINES', 'RUN_SELF_TESTS')
     
-    if (os.path.basename(conf.env['CXX']).startswith("g++")
-        and 'CXXFLAGS' not in os.environ):
-
-        variant_env.append_value('CXXFLAGS', '-Werror')
-
-        check_compilation_flag(conf, '-Wno-error=deprecated-declarations')
-
+    if env['COMPILER_CXX'] == 'g++' and 'CXXFLAGS' not in os.environ:
+        if check_compilation_flag(conf, '-Wno-error=deprecated-declarations'):
+            env.append_value('CXXFLAGS', '-Wno-error=deprecated-declarations')
         
-    if 'debug' in Params.g_options.debug_level.lower():
-        variant_env.append_value('CXXDEFINES', 'NS3_ASSERT_ENABLE')
-        variant_env.append_value('CXXDEFINES', 'NS3_LOG_ENABLE')
-
-    ## In optimized builds we still want debugging symbols, e.g. for
-    ## profiling, and at least partially usable stack traces.
-    if ('optimized' in Params.g_options.debug_level.lower() 
-        and 'CXXFLAGS' not in os.environ):
-        for flag in variant_env['CXXFLAGS_DEBUG']:
-            ## this probably doesn't work for MSVC
-            if flag.startswith('-g'):
-                variant_env.append_value('CXXFLAGS', flag)
-
-    ## in optimized builds, replace -O2 with -O3
-    if 'optimized' in Params.g_options.debug_level.lower():
-        lst = variant_env['CXXFLAGS']
-        for i, flag in enumerate(lst):
-            if flag == '-O2':
-                lst[i] = '-O3'
+    if Options.options.build_profile == 'debug':
+        env.append_value('CXXDEFINES', 'NS3_ASSERT_ENABLE')
+        env.append_value('CXXDEFINES', 'NS3_LOG_ENABLE')
 
     if sys.platform == 'win32':
-        if os.path.basename(conf.env['CXX']).startswith("g++"):
-            variant_env.append_value("LINKFLAGS", "-Wl,--enable-runtime-pseudo-reloc")
+        if env['COMPILER_CXX'] == 'g++':
+            env.append_value("LINKFLAGS", "-Wl,--enable-runtime-pseudo-reloc")
 
     conf.sub_config('src')
     conf.sub_config('utils')
     conf.sub_config('bindings/python')
 
-    if Params.g_options.enable_modules:
+    if Options.options.enable_modules:
         conf.env['NS3_ENABLED_MODULES'] = ['ns3-'+mod for mod in
-                                           Params.g_options.enable_modules.split(',')]
+                                           Options.options.enable_modules.split(',')]
 
     # we cannot run regression tests without diff
     conf.find_program('diff', var='DIFF')
@@ -280,9 +255,9 @@ def configure(conf):
 class SuidBuildTask(Task.TaskBase):
     """task that makes a binary Suid
     """
+    after = 'link'
     def __init__(self, bld, program):
         self.m_display = 'build-suid'
-        self.prio = 1000 # build after the rest of ns-3
         self.__program = program
         self.__env = bld.env ()
         super(SuidBuildTask, self).__init__()
@@ -291,29 +266,30 @@ class SuidBuildTask(Task.TaskBase):
         try:
             program_obj = wutils.find_program(self.__program.target, self.__env)
         except ValueError, ex:
-            Params.fatal(str(ex))
+            raise Utils.WafError(str(ex))
 
-        try:
-            program_node = program_obj.path.find_build(ccroot.get_target_name(program_obj))
-        except AttributeError:
-            Params.fatal("%s does not appear to be a program" % (self.__program.name,))
+        program_node = program_obj.path.find_or_declare(ccroot.get_target_name(program_obj))
+        #try:
+        #    program_node = program_obj.path.find_or_declare(ccroot.get_target_name(program_obj))
+        #except AttributeError:
+        #    raise Utils.WafError("%s does not appear to be a program" % (self.__program.name,))
 
         filename = program_node.abspath(self.__env)
         os.system ('sudo chown root ' + filename)
         os.system ('sudo chmod u+s ' + filename)
 
 def create_suid_program(bld, name):
-    program = bld.create_obj('cpp', 'program')
+    program = bld.new_task_gen('cxx', 'program')
     program.is_ns3_program = True
     program.module_deps = list()
     program.name = name
     program.target = name
-    if bld.env ()['SUDO'] and Params.g_options.enable_sudo:
-        SuidBuildTask (bld, program)
+    if bld.env['SUDO'] and Options.options.enable_sudo:
+        SuidBuildTask(bld, program)
     return program
 
 def create_ns3_program(bld, name, dependencies=('simulator',)):
-    program = bld.create_obj('cpp', 'program')
+    program = bld.new_task_gen('cxx', 'program')
     program.is_ns3_program = True
     program.name = name
     program.target = program.name
@@ -322,72 +298,56 @@ def create_ns3_program(bld, name, dependencies=('simulator',)):
     return program
 
 def add_scratch_programs(bld):
-    all_modules = [mod[len("ns3-"):] for mod in bld.env()['NS3_MODULES']]
+    all_modules = [mod[len("ns3-"):] for mod in bld.env['NS3_MODULES']]
     for filename in os.listdir("scratch"):
         if filename.startswith('.') or filename == 'CVS':
 	    continue
         if os.path.isdir(os.path.join("scratch", filename)):
             obj = bld.create_ns3_program(filename, all_modules)
-            obj.path = obj.path.find_dir('scratch')
-            obj.find_sources_in_dirs(filename)
-            obj.target = os.path.join(filename, filename)
+            obj.path = obj.path.find_dir('scratch').find_dir(filename)
+            obj.find_sources_in_dirs('.')
+            obj.target = filename
             obj.name = obj.target
         elif filename.endswith(".cc"):
             name = filename[:-len(".cc")]
             obj = bld.create_ns3_program(name, all_modules)
-            obj.source = "scratch/%s" % filename
-            obj.target = "scratch/%s" % name
+            obj.path = obj.path.find_dir('scratch')
+            obj.source = filename
+            obj.target = name
             obj.name = obj.target
 
 
-##
-## This replacement spawn function increases the maximum command line length to 32k
-##
-def _exec_command_interact_win32(s):
-    if Params.g_verbose:
-        print s
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    proc = subprocess.Popen(s, shell=False, startupinfo=startupinfo)
-    stat = proc.wait()
-    if stat & 0xff:
-        return stat | 0x80
-    return stat >> 8
-
-
 def build(bld):
-    if Params.g_options.no_task_lines:
+    if Options.options.no_task_lines:
         import Runner
         def null_printout(s):
             pass
         Runner.printout = null_printout
 
-    if sys.platform == 'win32':
-        import Runner
-        Runner.exec_command = _exec_command_interact_win32
-
-    Params.g_cwd_launch = Params.g_build.m_curdirnode.abspath()
+    Options.cwd_launch = bld.path.abspath()
     bld.create_ns3_program = types.MethodType(create_ns3_program, bld)
     bld.create_suid_program = types.MethodType(create_suid_program, bld)
+
+    # switch default variant to the one matching our debug level
     variant_name = bld.env_of_name('default')['NS3_ACTIVE_VARIANT']
     variant_env = bld.env_of_name(variant_name)
-    bld.m_allenvs['default'] = variant_env # switch to the active variant
+    bld.all_envs['default'] = variant_env
 
-    if Params.g_options.shell:
+    if Options.options.shell:
         run_shell()
         raise SystemExit(0)
 
-    if Params.g_options.doxygen:
+    if Options.options.doxygen:
         doxygen()
         raise SystemExit(0)
 
     check_shell()
 
-    if Params.g_options.doxygen:
+    if Options.options.doxygen:
         doxygen()
         raise SystemExit(0)
 
-    print "Entering directory `%s'" % os.path.join(Params.g_build.m_curdirnode.abspath(), 'build')
+    print "Entering directory `%s'" % os.path.join(bld.path.abspath(), 'build')
     # process subfolders from here
     bld.add_subdirs('src')
     bld.add_subdirs('samples utils examples')
@@ -397,13 +357,13 @@ def build(bld):
     ## if --enabled-modules option was given, we disable building the
     ## modules that were not enabled, and programs that depend on
     ## disabled modules.
-    env = bld.env()
+    env = bld.env
 
-    if Params.g_options.enable_modules:
-        Params.warning("the option --enable-modules is being applied to this build only;"
+    if Options.options.enable_modules:
+        Logs.warn("the option --enable-modules is being applied to this build only;"
                        " to make it permanent it needs to be given to waf configure.")
         env['NS3_ENABLED_MODULES'] = ['ns3-'+mod for mod in
-                                      Params.g_options.enable_modules.split(',')]
+                                      Options.options.enable_modules.split(',')]
 
     if env['NS3_ENABLED_MODULES']:
         modules = env['NS3_ENABLED_MODULES']
@@ -422,17 +382,17 @@ def build(bld):
                         changed = True
 
         ## remove objects that depend on modules not listed
-        for obj in list(Object.g_allobjs):
+        for obj in list(Build.bld.all_task_gen):
             if hasattr(obj, 'ns3_module_dependencies'):
                 for dep in obj.ns3_module_dependencies:
                     if dep not in modules:
-                        Object.g_allobjs.remove(obj)
+                        Build.bld.all_task_gen.remove(obj)
                         break
             if obj.name in env['NS3_MODULES'] and obj.name not in modules:
-                Object.g_allobjs.remove(obj)
+                Build.bld.all_task_gen.remove(obj)
 
     ## Create a single ns3 library containing all enabled modules
-    lib = bld.create_obj('cpp', 'shlib')
+    lib = bld.new_task_gen('cxx', 'shlib')
     lib.name = 'ns3'
     lib.target = 'ns3'
     if env['NS3_ENABLED_MODULES']:
@@ -445,71 +405,62 @@ def build(bld):
 
     bld.add_subdirs('bindings/python')
 
-    if Params.g_options.run:
+    if Options.options.run:
         # Check that the requested program name is valid
-        program_name, dummy_program_argv = wutils.get_run_program(Params.g_options.run, get_command_template())
+        program_name, dummy_program_argv = wutils.get_run_program(Options.options.run, get_command_template())
 
         # When --run'ing a program, tell WAF to only build that program,
         # nothing more; this greatly speeds up compilation when all you
         # want to do is run a test program.
-        if not Params.g_options.compile_targets:
-            Params.g_options.compile_targets = program_name
+        if not Options.options.compile_targets:
+            Options.options.compile_targets = os.path.basename(program_name)
 
 
 
 def get_command_template(*arguments):
-    if Params.g_options.valgrind:
-        if Params.g_options.command_template:
-            Params.fatal("Options --command-template and --valgrind are conflicting")
+    if Options.options.valgrind:
+        if Options.options.command_template:
+            raise Utils.WafError("Options --command-template and --valgrind are conflicting")
         cmd = "valgrind --leak-check=full %s"
     else:
-        cmd = Params.g_options.command_template or '%s'
+        cmd = Options.options.command_template or '%s'
     for arg in arguments:
         cmd = cmd + " " + arg
     return cmd
 
 
 def shutdown():
-    #import UnitTest
-    #ut = UnitTest.unit_test()
-    #ut.change_to_testfile_dir = True
-    #ut.want_to_see_test_output = True
-    #ut.want_to_see_test_error = True
-    #ut.run()
-    #ut.print_results()
-    env = Params.g_build.env_of_name('default')
+    env = Build.bld.env
 
-    if Params.g_commands['check']:
+    if Options.commands['check']:
         _run_waf_check()
 
-    if Params.g_options.regression or Params.g_options.regression_generate:
+    if Options.options.regression or Options.options.regression_generate:
         if not env['DIFF']:
-            Params.fatal("Cannot run regression tests: the 'diff' program is not installed.")
+            raise Utils.WafError("Cannot run regression tests: the 'diff' program is not installed.")
 
-        _dir = os.getcwd()
-        os.chdir("regression")
         regression_traces = env['REGRESSION_TRACES']
         if not regression_traces:
-            regression_traces = None
-        try:
-            regression.run_regression(regression_traces)
-        finally:
-            os.chdir(_dir)
+            raise Utils.WafError("Cannot run regression tests: reference traces directory not given"
+                                 " (--with-regression-traces configure option)")
+        retval = regression.run_regression(regression_traces)
+        if retval:
+            sys.exit(retval)
 
-    if Params.g_options.lcov_report:
+    if Options.options.lcov_report:
         lcov_report()
 
-    if Params.g_options.run:
-        wutils.run_program(Params.g_options.run, get_command_template())
+    if Options.options.run:
+        wutils.run_program(Options.options.run, get_command_template())
         raise SystemExit(0)
 
-    if Params.g_options.pyrun:
-        wutils.run_python_program(Params.g_options.pyrun)
+    if Options.options.pyrun:
+        wutils.run_python_program(Options.options.pyrun)
         raise SystemExit(0)
 
 def _run_waf_check():
     ## generate the trace sources list docs
-    env = Params.g_build.env_of_name('default')
+    env = Build.bld.env
     proc_env = wutils.get_proc_env()
     try:
         program_obj = wutils.find_program('print-introspected-doxygen', env)
@@ -518,7 +469,7 @@ def _run_waf_check():
                        # --enable-modules=xxx
         pass
     else:
-        prog = program_obj.path.find_build(ccroot.get_target_name(program_obj)).abspath(env)
+        prog = program_obj.path.find_or_declare(ccroot.get_target_name(program_obj)).abspath(env)
         out = open(os.path.join('doc', 'introspected-doxygen.h'), 'w')
         if subprocess.Popen([prog], stdout=out, env=proc_env).wait():
             raise SystemExit(1)
@@ -539,7 +490,7 @@ def _run_waf_check():
 def check_shell():
     if 'NS3_MODULE_PATH' not in os.environ:
         return
-    env = Params.g_build.env_of_name('default')
+    env = Build.bld.env
     correct_modpath = os.pathsep.join(env['NS3_MODULE_PATH'])
     found_modpath = os.environ['NS3_MODULE_PATH']
     if found_modpath != correct_modpath:
@@ -552,7 +503,7 @@ def check_shell():
                "You should correct this situation before running any program.  Possible solutions:\n"
                "  1. Exit this shell, and start a new one\n"
                "  2. Run a new nested shell")
-        Params.fatal(msg)
+        raise Utils.WafError(msg)
 
 
 def run_shell():
@@ -561,12 +512,12 @@ def run_shell():
     else:
         shell = os.environ.get("SHELL", "/bin/sh")
 
-    env = Params.g_build.env_of_name('default')
+    env = Build.bld.env
     wutils.run_argv([shell], {'NS3_MODULE_PATH': os.pathsep.join(env['NS3_MODULE_PATH'])})
 
 def doxygen():
     if not os.path.exists('doc/introspected-doxygen.h'):
-        Params.warning("doc/introspected-doxygen.h does not exist; run waf check to generate it.")
+        Logs.warn("doc/introspected-doxygen.h does not exist; run waf check to generate it.")
 
     ## run doxygen
     doxygen_config = os.path.join('doc', 'doxygen.conf')
@@ -574,11 +525,11 @@ def doxygen():
         raise SystemExit(1)
 
 def lcov_report():
-    env = Params.g_build.env_of_name('default')
+    env = Build.bld.env
     variant_name = env['NS3_ACTIVE_VARIANT']
 
     if 'gcov' not in variant_name:
-        Params.fatal("project not configured for code coverage;"
+        raise Utils.WafError("project not configured for code coverage;"
                      " reconfigure with --enable-gcov")
 
     os.chdir(blddir)
@@ -616,7 +567,7 @@ def lcov_report():
 ## implementation that is more efficient.
 ##
 import Scripting
-from Scripting import g_dist_exts, g_excludes, BLDDIR
+from Scripting import dist_exts, excludes, BLDDIR
 import Utils
 import os
 
@@ -665,7 +616,7 @@ def copytree(src, dst, symlinks=False, excludes=(), build_dir=None):
                 if name.startswith('.') or name.startswith('++'):
                     to_remove = True
                 else:
-                    for x in g_dist_exts:
+                    for x in dist_exts:
                         if ends(x):
                             to_remove = True
                             break
@@ -705,7 +656,7 @@ def DistDir(appname, version):
     build_dir = getattr(Utils.g_module, BLDDIR, None)
 
     # Copy everything into the new folder
-    copytree('.', TMPFOLDER, excludes=g_excludes, build_dir=build_dir)
+    copytree('.', TMPFOLDER, excludes=excludes, build_dir=build_dir)
 
     # TODO undocumented hook
     dist_hook = getattr(Utils.g_module, 'dist_hook', None)

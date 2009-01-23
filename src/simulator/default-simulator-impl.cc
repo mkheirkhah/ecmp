@@ -124,7 +124,7 @@ DefaultSimulatorImpl::ProcessOneEvent (void)
 bool 
 DefaultSimulatorImpl::IsFinished (void) const
 {
-  return m_events->IsEmpty ();
+  return m_events->IsEmpty () || m_stop;
 }
 
 uint64_t
@@ -144,7 +144,7 @@ DefaultSimulatorImpl::Next (void) const
 void
 DefaultSimulatorImpl::Run (void)
 {
-
+  m_stop = false;
   while (!m_events->IsEmpty () && !m_stop) 
     {
       ProcessOneEvent ();

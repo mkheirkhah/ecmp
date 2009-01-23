@@ -1,123 +1,63 @@
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
-import Params
-import Task
 import os
 import urllib
 
-# Mercurial repository of the network simulation cradle
-NSC_REPO = "https://secure.wand.net.nz/mercurial/nsc"
-NSC_RELEASE_URL = "http://research.wand.net.nz/software/nsc"
-NSC_RELEASE_NAME = "nsc-0.5.0"
+import Options
+import Logs
+import Utils
+import Task
 
-# directory that contains network simulation cradle source
-# note, this path is relative to the project root
-NSC_DIR = "nsc"
+# Required NSC version
+NSC_RELEASE_NAME = "nsc-0.5.0"
 
 
 def set_options(opt):
-    opt.add_option('--enable-nsc',
-                   help=('Enable Network Simulation Cradle to allow the use real-world network stacks'),
-                   action="store_true", default=False,
-                   dest='enable_nsc')
+    opt.add_option('--with-nsc',
+                   help=('Use Network Simulation Cradle, given by the indicated path,'
+                         ' to allow the use of real-world network stacks'),
+                   default='', dest='with_nsc')
 
-
-def nsc_fetch():
-    def nsc_clone():
-        print "Retrieving nsc from " + NSC_REPO
-        if os.system("hg version > /dev/null 2>&1") != 0:
-            Params.fatal("Mercurial not installed, http fallback not yet implemented")
-        if os.system("hg  clone " + NSC_REPO) != 0:
-            Params.fatal("hg -q clone %s failed" % NSC_REPO)
-
-    def nsc_update():
-        if os.system("hg version > /dev/null 2>&1") != 0:
-            Params.warning("Mercurial not installed, not updating nsc source")
-
-        print "Pulling nsc updates from " + NSC_REPO
-        if os.system("cd nsc && hg pull %s && hg update" % NSC_REPO) != 0:
-            Params.warning("Updating nsc using mercurial failed")
-
-    def nsc_download():
-        local_file = NSC_RELEASE_NAME + ".tar.bz2"
-        remote_file = NSC_RELEASE_URL + "/" + local_file
-        print "Retrieving nsc from " + remote_file
-        urllib.urlretrieve(remote_file, local_file)
-        print "Uncompressing " + local_file
-        os.system("tar -xjf " + local_file)
-        os.system('mv ' + NSC_RELEASE_NAME + ' nsc')
-
-    if not os.path.exists('.hg'):
-        nsc_download ()
-    elif not os.path.exists("nsc"):
-        nsc_clone()
-    else:
-        nsc_update()
 
 def configure(conf):
     conf.env['ENABLE_NSC'] = False
 
     # checks for flex and bison, which is needed to build NSCs globaliser
-    def check_nsc_buildutils():
-        import flex
-        import bison
-        conf.check_tool('flex bison')
-        e = conf.create_library_configurator()
-        e.mandatory = True
-        e.name = 'fl'
-        e.run()
+    # TODO: how to move these checks into the allinone scripts?
+    #def check_nsc_buildutils():
+    #    import flex
+    #    import bison
+    #    conf.check_tool('flex bison')
+    #    conf.check(lib='fl', mandatory=True)
 
-    if not Params.g_options.enable_nsc:
+    if not Options.options.with_nsc:
         conf.report_optional_feature("nsc", "Network Simulation Cradle", False,
-                                     "--enable-nsc configure option not given")
+                                     "--with-nsc configure option not given")
 	return
 
-    check_nsc_buildutils()
+    #check_nsc_buildutils()
+    if Options.options.with_nsc:
+        if not os.path.isdir(Options.options.with_nsc):
+            raise Utils.WafError("--with-nsc nsc path %r does not exist" % Options.options.with_nsc)
+        conf.env['WITH_NSC'] = Options.options.with_nsc
 
     arch = os.uname()[4]
     ok = False
     if arch == 'x86_64' or arch == 'i686' or arch == 'i586' or arch == 'i486' or arch == 'i386':
         conf.env['NSC_ENABLED'] = 'yes'
         conf.env.append_value('CXXDEFINES', 'NETWORK_SIMULATION_CRADLE')
-        e = conf.create_library_configurator()
-        e.mandatory = True
-        e.name = 'dl'
-        e.define = 'HAVE_DL'
-        e.uselib = 'DL'
-        e.run()
-        conf.env['ENABLE_NSC'] = True
+        conf.check(mandatory=True, lib='dl', define_name='HAVE_DL', uselib='DL')
         ok = True
     conf.check_message('NSC supported architecture', arch, ok)
     conf.report_optional_feature("nsc", "Network Simulation Cradle", ok,
                                  "architecture %r not supported" % arch)
-    nsc_fetch()
 
+    # append the NSC kernel dirs to the module path so that these dirs
+    # will end up in the LD_LIBRARY_PATH, thus allowing the NSC NS-3
+    # module to find the necessary NSC shared libraries.
+    for nsc_module in ['linux-2.6.18', 'linux-2.6.26']:
+        conf.env.append_value('NS3_MODULE_PATH',
+                              os.path.abspath(os.path.join(conf.env['WITH_NSC'], nsc_module)))
 
-
-class NscBuildTask(Task.TaskBase):
-    """task that builds nsc
-    """
-    def __init__(self, builddir):
-        self.prio = 1000 # build after the rest of ns-3
-        self.builddir = builddir
-        super(NscBuildTask, self).__init__()
-        self.m_display = 'build-nsc\n'
-
-    def run(self):
-        # XXX: Detect gcc major version(s) available to build supported stacks
-        builddir = self.builddir
-        kernels = [['linux-2.6.18', 'linux2.6.18'],
-                   ['linux-2.6.26', 'linux2.6.26']]
-        for dir, name in kernels:
-            soname = 'lib' + name + '.so'
-            if not os.path.exists(os.path.join("..", NSC_DIR, dir, soname)):
-                if os.system('cd ../%s && python scons.py %s' % (NSC_DIR, dir)) != 0:
-                    Params.fatal("Building NSC stack failed")
-
-            if not os.path.exists(builddir + '/' + soname):
-                try:
-                    os.symlink('../../' + NSC_DIR + '/' + dir + '/' + soname, builddir +  '/' + soname)
-                except:
-                    Params.fatal("Error linking " + builddir + '/' + soname)
 
 
 def build(bld):
@@ -155,7 +95,7 @@ def build(bld):
         'icmpv4-l4-protocol.cc',
         ]
 
-    headers = bld.create_obj('ns3header')
+    headers = bld.new_task_gen('ns3header')
     headers.module = 'internet-stack'
     headers.source = [
         'internet-stack.h',
@@ -169,11 +109,9 @@ def build(bld):
         'icmpv4.h',
         ]
 
-    if bld.env()['NSC_ENABLED']:        
+    if bld.env['WITH_NSC']:        
         obj.source.append ('nsc-tcp-socket-impl.cc')
         obj.source.append ('nsc-tcp-l4-protocol.cc')
         obj.source.append ('nsc-tcp-socket-factory-impl.cc')
         obj.source.append ('nsc-sysctl.cc')
         obj.uselib = 'DL'
-        builddir = os.path.abspath(os.path.join(bld.env()['NS3_BUILDDIR'], bld.env ().variant()))
-        NscBuildTask(builddir)
