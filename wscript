@@ -12,11 +12,14 @@ import pproc as subprocess
 import Options
 import Logs
 import TaskGen
+import Constants
 
 import ccroot
 ccroot.USE_TOP_LEVEL = True
 
 import Task
+Task.algotype = Constants.JOBCONTROL # so that Task.maxjobs=1 takes effect
+
 import Utils
 import Build
 import Configure
@@ -41,6 +44,14 @@ APPNAME = 'ns'
 
 wutils.VERSION = VERSION
 wutils.APPNAME = APPNAME
+
+#
+# The last part of the path name to use to find the regression traces.  The
+# path will be APPNAME + '-' + VERSION + REGRESSION_SUFFIX, e.g.,
+# ns-3-dev-ref-traces
+#
+REGRESSION_SUFFIX = "-ref-traces"
+
 
 # these variables are mandatory ('/' are converted automatically)
 srcdir = '.'
@@ -125,7 +136,10 @@ def set_options(opt):
                    help=('Run a shell with an environment suitably modified to run locally built programs'),
                    action="store_true", default=False,
                    dest='shell')
-
+    opt.add_option('--enable-sudo',
+                   help=('Use sudo to setup suid bits on ns3 executables.'),
+                   dest='enable_sudo', action='store_true',
+                   default=False)
     opt.add_option('--regression',
                    help=("Enable regression testing; only used for the 'check' target"),
                    default=False, dest='regression', action="store_true")
@@ -136,10 +150,6 @@ def set_options(opt):
                    help=('For regression testing, only run/generate the indicated regression tests, '
                          'specified as a comma separated list of test names'),
                    dest='regression_tests', type="string")
-    opt.add_option('--enable-sudo',
-                   help=('Use sudo to setup suid bits on ns3 executables.'),
-                   dest='enable_sudo', action='store_true',
-                   default=False)
     opt.add_option('--with-regression-traces',
                    help=('Path to the regression reference traces directory'),
                    default=None,
@@ -193,8 +203,19 @@ def configure(conf):
     variant_env = conf.env.copy()
     variant_name = Options.options.build_profile
 
+    # Check for the location of regression reference traces
     if Options.options.regression_traces is not None:
-        variant_env['REGRESSION_TRACES'] = os.path.abspath(Options.options.regression_traces)
+        if os.path.isdir(Options.options.regression_traces):
+            conf.check_message("regression traces location", '', True, ("%s (given)" % Options.options.regression_traces))
+            variant_env['REGRESSION_TRACES'] = os.path.abspath(Options.options.regression_traces)
+    else:
+        traces = os.path.join('..', "%s-%s%s" % (APPNAME, VERSION, REGRESSION_SUFFIX))
+        if os.path.isdir(traces):
+            conf.check_message("regression reference traces", '', True, ("%s (guessed)" % traces))
+            variant_env['REGRESSION_TRACES'] = os.path.abspath(traces)
+        del traces
+    if not variant_env['REGRESSION_TRACES']:
+        conf.check_message("regression reference traces", '', False)
 
     if Options.options.enable_gcov:
         variant_name += '-gcov'
@@ -221,6 +242,8 @@ def configure(conf):
         env.append_value('CXXDEFINES', 'NS3_ASSERT_ENABLE')
         env.append_value('CXXDEFINES', 'NS3_LOG_ENABLE')
 
+    env['PLATFORM'] = sys.platform
+
     if sys.platform == 'win32':
         if env['COMPILER_CXX'] == 'g++':
             env.append_value("LINKFLAGS", "-Wl,--enable-runtime-pseudo-reloc")
@@ -239,8 +262,22 @@ def configure(conf):
     # for suid bits
     conf.find_program('sudo', var='SUDO')
 
+    why_not_sudo = "because we like it"
+    if Options.options.enable_sudo and conf.env['SUDO']:
+        env['ENABLE_SUDO'] = True
+    else:
+        env['ENABLE_SUDO'] = False
+        if Options.options.enable_sudo:
+            why_not_sudo = "program sudo not found"
+        else:
+            why_not_sudo = "option --enable-sudo not selected"
+
+    conf.report_optional_feature("ENABLE_SUDO", "Use sudo to set suid bit", env['ENABLE_SUDO'], why_not_sudo)
+
     # we cannot pull regression traces without mercurial
     conf.find_program('hg', var='MERCURIAL')
+
+    conf.find_program('valgrind', var='VALGRIND')
 
     # Write a summary of optional features status
     print "---- Summary of optional NS-3 features:"
@@ -255,28 +292,37 @@ def configure(conf):
 class SuidBuildTask(Task.TaskBase):
     """task that makes a binary Suid
     """
-    after = 'link'
+    after = 'cxx_link cc_link'
+    maxjobs = 1
     def __init__(self, bld, program):
         self.m_display = 'build-suid'
         self.__program = program
-        self.__env = bld.env ()
+        self.__env = bld.env.copy ()
         super(SuidBuildTask, self).__init__()
-
-    def run(self):
         try:
             program_obj = wutils.find_program(self.__program.target, self.__env)
         except ValueError, ex:
             raise Utils.WafError(str(ex))
-
         program_node = program_obj.path.find_or_declare(ccroot.get_target_name(program_obj))
-        #try:
-        #    program_node = program_obj.path.find_or_declare(ccroot.get_target_name(program_obj))
-        #except AttributeError:
-        #    raise Utils.WafError("%s does not appear to be a program" % (self.__program.name,))
+        self.filename = program_node.abspath(self.__env)
 
-        filename = program_node.abspath(self.__env)
-        os.system ('sudo chown root ' + filename)
-        os.system ('sudo chmod u+s ' + filename)
+
+    def run(self):
+        print >> sys.stderr, 'setting suid bit on executable ' + self.filename
+        if subprocess.Popen(['sudo', 'chown', 'root', self.filename]).wait():
+            return 1
+        if subprocess.Popen(['sudo', 'chmod', 'u+s', self.filename]).wait():
+            return 1
+        return 0
+
+    def runnable_status(self):
+        "RUN_ME SKIP_ME or ASK_LATER"
+        st = os.stat(self.filename)
+        if st.st_uid == 0:
+            return Constants.SKIP_ME
+        else:
+            return Constants.RUN_ME
+
 
 def create_suid_program(bld, name):
     program = bld.new_task_gen('cxx', 'program')
@@ -284,8 +330,10 @@ def create_suid_program(bld, name):
     program.module_deps = list()
     program.name = name
     program.target = name
-    if bld.env['SUDO'] and Options.options.enable_sudo:
+
+    if bld.env['ENABLE_SUDO']:
         SuidBuildTask(bld, program)
+
     return program
 
 def create_ns3_program(bld, name, dependencies=('simulator',)):
@@ -407,33 +455,13 @@ def build(bld):
 
     if Options.options.run:
         # Check that the requested program name is valid
-        program_name, dummy_program_argv = wutils.get_run_program(Options.options.run, get_command_template())
+        program_name, dummy_program_argv = wutils.get_run_program(Options.options.run, wutils.get_command_template(env))
 
         # When --run'ing a program, tell WAF to only build that program,
         # nothing more; this greatly speeds up compilation when all you
         # want to do is run a test program.
         if not Options.options.compile_targets:
             Options.options.compile_targets = os.path.basename(program_name)
-
-
-
-def get_command_template(*arguments):
-    if Options.options.valgrind:
-        if Options.options.command_template:
-            raise Utils.WafError("Options --command-template and --valgrind are conflicting")
-        cmd = "valgrind --leak-check=full %s"
-    else:
-        cmd = Options.options.command_template or '%s'
-    for arg in arguments:
-        cmd = cmd + " " + arg
-    return cmd
-
-
-def shutdown():
-    env = Build.bld.env
-
-    if Options.commands['check']:
-        _run_waf_check()
 
     if Options.options.regression or Options.options.regression_generate:
         if not env['DIFF']:
@@ -443,15 +471,20 @@ def shutdown():
         if not regression_traces:
             raise Utils.WafError("Cannot run regression tests: reference traces directory not given"
                                  " (--with-regression-traces configure option)")
-        retval = regression.run_regression(regression_traces)
-        if retval:
-            sys.exit(retval)
+        regression.run_regression(bld, regression_traces)
+
+
+def shutdown():
+    env = Build.bld.env
+
+    if Options.commands['check']:
+        _run_waf_check()
 
     if Options.options.lcov_report:
         lcov_report()
 
     if Options.options.run:
-        wutils.run_program(Options.options.run, get_command_template())
+        wutils.run_program(Options.options.run, wutils.get_command_template(env))
         raise SystemExit(0)
 
     if Options.options.pyrun:
@@ -476,7 +509,7 @@ def _run_waf_check():
         out.close()
 
     print "-- Running NS-3 C++ core unit tests..."
-    wutils.run_program('run-tests', get_command_template())
+    wutils.run_program('run-tests', wutils.get_command_template(env))
 
     if env['ENABLE_PYTHON_BINDINGS']:
         print "-- Running NS-3 Python bindings unit tests..."

@@ -2,11 +2,6 @@
 
 """Generic trace-comparison-type regression test."""
 
-import os
-import shutil
-import tracediff
-
-def run(verbose, generate):
-    """Execute a test."""
-
-    return tracediff.run_test(verbose, generate, "realtime-udp-echo")
+def may_run(env, options):
+    if not env["ENABLE_REAL_TIME"]:
+        return "Real-time support not available"

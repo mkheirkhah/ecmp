@@ -9,10 +9,7 @@ import TaskGen
 import Task
 import Options
 import Build
-#import Action
-#import Common
-#import Object
-#import Params
+from Utils import md5
 
 
 all_modules = (
@@ -26,6 +23,7 @@ all_modules = (
     'devices/csma',
     'devices/emu',
     'devices/bridge',
+    'devices/tap-bridge',
     'applications/onoff',
     'applications/packet-sink',
     'applications/udp-echo',
@@ -47,16 +45,16 @@ def set_options(opt):
                          " --run and --shell; moreover, only works in some"
                          " specific platforms, such as Linux and Solaris)"),
                    action="store_true", dest='enable_rpath', default=False)
-
+    
     opt.add_option('--enable-modules',
                    help=("Build only these modules (and dependencies)"),
                    dest='enable_modules')
-
 
 def configure(conf):
     conf.sub_config('core')
     conf.sub_config('simulator')
     conf.sub_config('devices/emu')
+    conf.sub_config('devices/tap-bridge')
     conf.sub_config('contrib')
     conf.sub_config('internet-stack')
 
@@ -176,6 +174,21 @@ class gen_ns3_module_header_task(Task.Task):
 
         outfile.close()
         return 0
+
+    def sig_explicit_deps(self):
+        m = md5()
+        m.update('\n'.join([node.abspath(self.env) for node in self.inputs]))
+        return m.digest()
+
+    def unique_id(self):
+        try:
+            return self.uid
+        except AttributeError:
+            "this is not a real hot zone, but we want to avoid surprizes here"
+            m = md5()
+            m.update("ns-3-module-header-%s" % self.module)
+            self.uid = m.digest()
+            return self.uid
 
 
 class ns3moduleheader_taskgen(TaskGen.task_gen):

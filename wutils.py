@@ -26,11 +26,13 @@ TRACEBALL_SUFFIX = ".tar.bz2"
 
 
 
-def get_command_template(*arguments):
+def get_command_template(env, arguments=()):
     if Options.options.valgrind:
         if Options.options.command_template:
             raise Utils.WafError("Options --command-template and --valgrind are conflicting")
-        cmd = "valgrind --leak-check=full %s"
+        if not env['VALGRIND']:
+            raise Utils.WafError("valgrind is not installed")
+        cmd = env['VALGRIND'] + " --leak-check=full --error-exitcode=1 %s"
     else:
         cmd = Options.options.command_template or '%s'
     for arg in arguments:
@@ -187,11 +189,10 @@ def run_program(program_string, command_template=None, cwd=None):
 def run_python_program(program_string):
     env = Build.bld.env
     execvec = shlex.split(program_string)
-    if cwd is None:
-        if (Options.options.cwd_launch):
-            cwd = Options.options.cwd_launch
-        else:
-            cwd = Options.cwd_launch
+    if (Options.options.cwd_launch):
+        cwd = Options.options.cwd_launch
+    else:
+        cwd = Options.cwd_launch
     return run_argv([env['PYTHON']] + execvec, cwd=cwd)
 
 
