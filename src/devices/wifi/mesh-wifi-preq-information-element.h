@@ -61,9 +61,9 @@ class WifiPreqInformationElement : public Header
 {
 	public:
 		WifiPreqInformationElement();
-		~WifiPreqInformationElement (void);
-		static TypeId GetTypeId (void);
-		virtual TypeId GetInstanceTypeId(void) const;
+		~WifiPreqInformationElement ();
+		static TypeId GetTypeId ();
+		virtual TypeId GetInstanceTypeId() const;
 		virtual void Print(std::ostream &os) const;
 		void AddDestinationAddressElement(
 			bool doFlag,
@@ -108,7 +108,7 @@ class WifiPreqInformationElement : public Header
 		void		IncrementMetric(uint32_t metric);
 
 	private:
-		static uint8_t ElementId() { return (uint8_t)PATH_REQUEST; }
+		static uint8_t ElementId() { return (uint8_t)IE11S_PREQ; }
 		//how many destinations we support
 		uint8_t	m_maxSize; //TODO: make as an attrubute
 		//Fields:
