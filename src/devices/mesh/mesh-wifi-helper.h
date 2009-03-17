@@ -23,15 +23,20 @@
 #define _MESHWIFIHELPER_H
 
 #include "ns3/wifi-net-device.h"
-#include "ns3/l2-routing-net-device.h"
+#include "ns3/mesh-point-device.h"
 #include "ns3/mesh-wifi-mac.h"
 #include "ns3/wifi-channel.h"
 #include "ns3/mesh-wifi-peer-manager.h"
 #include "ns3/wifi-helper.h"
 
 namespace ns3 {
+  
 class WifiChannel;
 
+/** 
+ * \ingroup mesh 
+ * 
+ */
 class MeshWifiHelper
 {
 public:
