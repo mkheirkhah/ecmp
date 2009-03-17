@@ -142,7 +142,13 @@ protected:
   /// Print information
   virtual void PrintInformation (std::ostream &os) const = 0;
   //\}
+  
+  /// Compare information elements using Element ID
+  friend bool operator<(WifiInformationElement const & a, WifiInformationElement const & b);
 };
 
+/// Compare information elements using Element ID
+bool operator<(WifiInformationElement const & a, WifiInformationElement const & b);
+ 
 }  // namespace ns3
 #endif /* WIFIINFORMATIONELEMENT_H_ */
