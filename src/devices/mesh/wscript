@@ -1,0 +1,46 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj = bld.create_ns3_module('mesh', ['wifi', '802.11s'])
+    obj.source = [
+        # Refactored
+        'mesh-point-device.cc',
+        'mesh-l2-routing-protocol.cc',
+        # Not refactored
+        'mesh-wifi-helper.cc',
+        'mesh-wifi-mac-header.cc',
+        'mesh-wifi-peer-manager.cc',
+        'tx-statistics.cc',
+        'hwmp-rtable.cc',
+        'dot11s-parameters.cc',
+        'hwmp.cc',
+        'mesh-wifi-mac.cc',
+        'hwmp-state.cc',
+        'dot11s-peer-management-element.cc',
+        'mesh-mgt-headers.cc',
+        ]
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'mesh'
+    headers.source = [
+        # Refactored
+        'mesh-point-device.h',
+        'mesh-l2-routing-protocol.h',
+        # Dirty
+        'dot11s-codes.h',
+        'hwmp-state.h',
+        'dot11s-parameters.h',
+        'mesh-mgt-headers.h',
+        'hwmp.h',
+        'tx-statistics.h',
+        'dot11s-peer-management-element.h',
+        'mac48-address-comparator.h',
+        'hwmp-rtable.h',
+        'mesh-wifi-peer-manager.h',
+        'mesh-wifi-mac-header.h',
+        'mesh-wifi-mac.h',
+        'mesh-wifi-helper.h',
+        ]
+
+#    obj = bld.create_ns3_program('wifi-phy-test',
+#        ['core', 'simulator', 'mobility', 'node', 'wifi'])
+#    obj.source = 'wifi-phy-test.cc'
