@@ -34,6 +34,8 @@ all_modules = (
     'helper',
     'contrib/stats',
     'applications/v4ping',
+    'devices/mesh',
+    'devices/mesh/dot11s',
     )
 
 def set_options(opt):
