@@ -83,12 +83,8 @@ public:
   void SetDesinationOnlyFlag (bool f) { DestinationOnly = f; }
   bool GetGratuitousReplyFlag () const { return GratuitousReply; }
   void SetGratuitousReplyFlag (bool f) { GratuitousReply = f; }
-  void SetExpandingRingSearchEnable (bool f) { EnableExpandingRingSearch = f; }
-  bool GetExpandingRingSearchEnable () const { return EnableExpandingRingSearch; }
   void SetHelloEnable (bool f) { EnableHello = f; }
   bool GetHelloEnable () const { return EnableHello; }
-  void SetLocalRepairEnable (bool f) { EnableLocalRepair = f; }
-  bool GetLocalRepairEnable () const { return EnableLocalRepair; }
   //\}
 private:
   ///\name Protocol parameters. TODO document
@@ -116,11 +112,6 @@ private:
    */
   Time DeletePeriod;
   Time NextHopWait;                  ///< Period of our waiting for the neighbour's RREP_ACK
-  uint16_t TtlStart;                 ///< Initial value of TTL in RREQ  when use an expanding ring search
-  uint16_t TtlIncrement;             ///< Increment value of RREQ TTL when use an expanding ring search
-  uint16_t TtlThreshold;             ///< Threshold, beyond which TTL = NetDiameter is used for each attempt in RREQ
-  uint16_t  MaxRepairTtl;            ///< Maximum distance in hops between intermediate node and destination node when local repair still may be applied.
-  uint16_t LocalAddTtl;              ///< Value used in calculation RREQ TTL when use local repair
   /**
    * The TimeoutBuffer is configurable.  Its purpose is to provide a buffer for the timeout so that if the RREP is delayed
    * due to congestion, a timeout is less likely to occur while the RREP is still en route back to the source.
@@ -131,9 +122,7 @@ private:
   Time MaxQueueTime;                 ///< The maximum period of time that a routing protocol is allowed to buffer a packet for.
   bool DestinationOnly;              ///< Indicates only the destination may respond to this RREQ.
   bool GratuitousReply;              ///< Indicates whether a gratuitous RREP should be unicast to the node originated route discovery.
-  bool EnableExpandingRingSearch;    ///< Indicates whether a expanding ring search enable
   bool EnableHello;                  ///< Indicates whether a hello messages enable
-  bool EnableLocalRepair;            ///< Indicates whether a local repair enable
   //\}
 
   /// IP protocol
@@ -153,8 +142,6 @@ private:
   IdCache m_idCache;
   /// Handle neighbors
   Neighbors m_nb;
-  /// Address of the destination, which currently repaired.
-  Ipv4Address m_repairedDst;
 
   /// Unicast callback for own packets
   UnicastForwardCallback m_scb;
@@ -164,22 +151,13 @@ private:
 private:
   /// Start protocol operation
   void Start ();
-  /// Start local route repair procedure
-  void LocalRouteRepair (Ipv4Address dst, Ipv4Address origin);
-  /**
-   * If route exists and valid, forward packet.
-   * If route exists and down try to repair route if following conditions is true
-   *    1. Using local route repair technique enable
-   *    2. The destination is no farther than MAX_REPAIR_TTL hops away.
-   * During local repair data packets SHOULD be buffered.
-   * \return true if node forward packet or try to repair route.
-   */
+  /// If route exists and valid, forward packet.
   bool Forwarding (Ptr<const Packet> p, const Ipv4Header & header, UnicastForwardCallback ucb, ErrorCallback ecb);
   /**
   * To reduce congestion in a network, repeated attempts by a source node at route discovery
   * for a single destination MUST utilize a binary exponential backoff.
   */
-  void ScheduleRreqRetry (Ipv4Address dst,  uint16_t ttl);
+  void ScheduleRreqRetry (Ipv4Address dst);
   /**
    * Update route lifetime.
    * \param addr - destination address
@@ -200,9 +178,9 @@ private:
   /// Receive and process control packet
   void RecvAodv (Ptr<Socket> socket);
   /// Receive RREQ
-  void RecvRequest (Ptr<Packet> p, Ipv4Address receiver, Ipv4Address src, Ipv4Header ipv4Header);
+  void RecvRequest (Ptr<Packet> p, Ipv4Address receiver, Ipv4Address src);
   /// Receive RREP
-  void RecvReply (Ptr<Packet> p, Ipv4Address my ,Ipv4Address src, Ipv4Header ipv4Header);
+  void RecvReply (Ptr<Packet> p, Ipv4Address my ,Ipv4Address src);
   /// Receive RREP_ACK
   void RecvReplyAck(Ipv4Address neighbor);
   /// Receive RERR from node with address src
@@ -218,7 +196,7 @@ private:
   /// Send hello
   void SendHello ();
   /// Send RREQ
-  void SendRequest (Ipv4Address dst, uint16_t ttl);
+  void SendRequest (Ipv4Address dst);
   /// Send RREP
   void SendReply (RreqHeader const & rreqHeader, RoutingTableEntry const & toOrigin);
   /** Send RREP by intermediate node
@@ -231,13 +209,15 @@ private:
   void SendReplyAck (Ipv4Address neighbor);
   /// Initiate RERR
   void SendRerrWhenBreaksLinkToNextHop (Ipv4Address nextHop);
-  void SendRerr (Ipv4Address dst, bool noDelete);
   /// Forward RERR
   void SendRerrMessage(Ptr<Packet> packet,  std::vector<Ipv4Address> precursors);
   /**
-  * Add UDP, IP headers to packet and send it via raw socket
-  */
-  void SendPacketViaRawSocket (Ptr<Packet> packet, std::pair<Ptr<Socket> , Ipv4InterfaceAddress> socketAddress, Ipv4Address dst, uint16_t ttl, uint16_t id);
+   * Send RERR message when no route to forward input packet. Unicast if there is reverse route to originating node, broadcast otherwise.
+   * \param dst - destination node IP address
+   * \param dstSeqNo - destination node sequence number
+   * \param origin - originating node IP address
+   */
+  void SendRerrWhenNoRouteToForward (Ipv4Address dst, uint32_t dstSeqNo, Ipv4Address origin);
   //\}
   
   /// Notify that packet is dropped for some reason 
@@ -247,10 +227,8 @@ private:
   //\{
   Timer htimer; // TODO independent hello timers for all interfaces
   void HelloTimerExpire ();
-  Timer lrtimer;
-  void LocalRepairTimerExpire ();
   std::map<Ipv4Address, Timer> m_addressReqTimer;
-  void RouteRequestTimerExpire(Ipv4Address dst, uint16_t lastTtl);
+  void RouteRequestTimerExpire (Ipv4Address dst);
   void AckTimerExpire (Ipv4Address neighbor,  Time blacklistTimeout);
   //\}
 };
