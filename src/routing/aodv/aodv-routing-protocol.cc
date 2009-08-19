@@ -285,8 +285,12 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<
             Ptr<Packet> packet = p->Copy();
             lcb (p, header, iif);
             Ptr<Ipv4Route> route;
-            NS_LOG_LOGIC ("Forward broadcast");
-            ucb (route, packet, header);
+            
+            if (header.GetTtl () > 1)
+              {
+                NS_LOG_LOGIC ("Forward broadcast");
+                ucb (route, packet, header);
+              }
             return true;
           }
     }
