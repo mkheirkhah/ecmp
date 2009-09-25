@@ -60,7 +60,6 @@ def build(bld):
         'rng-stream.cc',
         'command-line.cc',
         'type-name.cc',
-        'type-traits-test.cc',
         'attribute.cc',
         'boolean.cc',
         'integer.cc',
@@ -70,7 +69,6 @@ def build(bld):
         'string.cc',
         'pointer.cc',
         'object-vector.cc',
-        'attribute-test.cc',
         'object-factory.cc',
         'global-value.cc',
         'traced-callback.cc',
@@ -80,6 +78,8 @@ def build(bld):
         'names.cc',
         'vector.cc',
         'names-test-suite.cc',
+        'attribute-test-suite.cc',
+        'type-traits-test-suite.cc',
         ]
 
     headers = bld.new_task_gen('ns3header')
@@ -151,4 +151,5 @@ def build(bld):
                 ])
 
     if bld.env['ENABLE_GSL']:
+        core.uselib = 'GSL GSLCBLAS M'
         core.source.extend(['rng-test-suite.cc'])
