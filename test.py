@@ -27,6 +27,7 @@ import Queue
 import signal
 import random
 import xml.dom.minidom
+import shutil
 
 #
 # XXX This should really be part of a waf command to list the configuration
@@ -64,7 +65,6 @@ interesting_config_items = [
 # hardcoded.
 #
 example_tests = [
-    ("run-tests", "False"),
     ("csma-bridge", "True"),
     ("csma-bridge-one-hop", "True"),
     ("csma-broadcast", "True"),
@@ -76,17 +76,27 @@ example_tests = [
     ("csma-star", "True"),
     ("dynamic-global-routing", "True"),
     ("first", "True"),
+    ("global-injection-slash32", "True"),
     ("global-routing-slash32", "True"),
     ("hello-simulator", "True"),
+    ("icmpv6-redirect", "True"),
+    ("mesh", "True"),
     ("mixed-global-routing", "True"),
     ("mixed-wireless", "True"),
+    ("multirate", "False"), # takes forever to run
+    ("nix-simple", "True"),
+    ("nms-p2p-nix", "False"), # takes forever to run
     ("object-names", "True"),
+    ("ping6", "True"),
+    ("radvd", "True"),
+    ("radvd-two-prefix", "True"),    
     ("realtime-udp-echo", "ENABLE_REAL_TIME == True"),
     ("second", "True"),
     ("simple-alternate-routing", "True"),
     ("simple-error-model", "True"),
     ("simple-global-routing", "True"),
     ("simple-point-to-point-olsr", "True"),
+    ("simple-routing-ping6", "True"),
     ("simple-wifi-frame-aggregation", "True"),
     ("star", "True"),
     ("static-routing-slash32", "True"),
@@ -96,6 +106,9 @@ example_tests = [
     ("test-ipv6", "True"),
     ("third", "True"),
     ("udp-echo", "True"),
+    ("virtual-net-device", "True"),
+    ("wifi-adhoc", "False"), # takes forever to run
+    ("wifi-ap", "True"),
     ("wifi-wired-bridging", "True"),
 ]
 
@@ -232,7 +245,7 @@ def translate_to_html(results_file, html_file):
     for example in dom.getElementsByTagName("Example"):
         f.write("<tr>\n")
         result = get_node_text(example.getElementsByTagName("Result")[0])
-        if result == "FAIL":
+        if result in ["FAIL", "CRASH"]:
             f.write("<td style=\"color:red\">%s</td>\n" % result)
         else:
             f.write("<td style=\"color:green\">%s</td>\n" % result)
@@ -805,8 +818,9 @@ def run_tests():
             else:
                 f = open(xml_results_file, 'a')
                 f.write("<TestSuite>\n")
-                f.write("  <Name>%s</Name>\n" % job.display_name)
-                f.write('  <Result>CRASH</Result>\n')
+                f.write("  <SuiteName>%s</SuiteName>\n" % job.display_name)
+                f.write('  <SuiteResult>CRASH</SuiteResult>\n')
+                f.write('  <SuiteTime>Execution times not available</SuiteTime>\n')
                 f.write("</TestSuite>\n")
                 f.close()
 
@@ -832,13 +846,16 @@ def run_tests():
 
     #
     # The last things to do are to translate the XML results file to "human
-    # readable form" if the user asked for it
+    # readable form" if the user asked for it (or make an XML file somewhere)
     #
     if len(options.html):
         translate_to_html(xml_results_file, options.html)
 
     if len(options.text):
         translate_to_text(xml_results_file, options.text)
+
+    if len(options.xml):
+        shutil.copyfile(xml_results_file, options.xml)
 
 def main(argv):
     random.seed()
@@ -875,6 +892,10 @@ def main(argv):
     parser.add_option("-t", "--text", action="store", type="string", dest="text", default="",
                       metavar="TEXT-FILE",
                       help="write detailed test results into TEXT-FILE.txt")
+
+    parser.add_option("-x", "--xml", action="store", type="string", dest="xml", default="",
+                      metavar="XML-FILE",
+                      help="write detailed test results into XML-FILE.xml")
 
     global options
     options = parser.parse_args()[0]
