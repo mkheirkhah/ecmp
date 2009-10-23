@@ -52,6 +52,14 @@ public:
   Ipv4AddressHelper ();
 
 /**
+ * @brief Construct a helper class to make life easier while doing simple IPv4
+ * address assignment in scripts.  This version sets the base and mask
+ * in the constructor
+ */
+  Ipv4AddressHelper (Ipv4Address network, Ipv4Mask mask, 
+    Ipv4Address base = "0.0.0.1");
+
+/**
  * @brief Set the base network mumber, network mask and base address.
  *
  * The address helper allocates IP addresses based on a given network number
@@ -168,6 +176,9 @@ public:
   Ipv4InterfaceContainer Assign (const NetDeviceContainer &c);
 
 private:
+  /**
+   * @internal
+   */
   uint32_t NumAddressBits (uint32_t maskbits) const;
 
   uint32_t m_network;

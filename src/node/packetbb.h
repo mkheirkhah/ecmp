@@ -57,6 +57,9 @@ public:
   typedef std::list< Ptr<PbbTlv> >::iterator Iterator;
   typedef std::list< Ptr<PbbTlv> >::const_iterator ConstIterator;
 
+  PbbTlvBlock (void);
+  ~PbbTlvBlock (void);
+
   /**
    * \return an iterator to the first TLV in this block.
    */
@@ -205,6 +208,9 @@ class PbbAddressTlvBlock
 public:
   typedef std::list< Ptr<PbbAddressTlv> >::iterator Iterator;
   typedef std::list< Ptr<PbbAddressTlv> >::const_iterator ConstIterator;
+
+  PbbAddressTlvBlock (void);
+  ~PbbAddressTlvBlock (void);
 
   /**
    * \return an iterator to the first Address TLV in this block.
@@ -363,6 +369,7 @@ public:
   typedef std::list< Ptr<PbbMessage> >::const_iterator ConstMessageIterator;
 
   PbbPacket (void);
+  ~PbbPacket (void);
 
   /**
    * \return the version of PacketBB that constructed this packet.
@@ -609,6 +616,7 @@ public:
 
   /**
    * \brief Deserializes a packet from the specified buffer.
+   * \param start start offset
    * \return the number of bytes deserialized
    *
    * If this returns a number smaller than the total number of bytes in the
@@ -1516,6 +1524,7 @@ class PbbTlv
 {
 public:
   PbbTlv (void);
+  ~PbbTlv (void);
 
   /**
    * \brief Sets the type of this TLV.

@@ -44,6 +44,16 @@ class Ipv6AutoconfiguredPrefix;
 /**
  * \class Ipv6L3Protocol
  * \brief IPv6 layer implementation.
+ *
+ * This class contains two distinct groups of trace sources.  The
+ * trace sources 'Rx' and 'Tx' are called, respectively, immediately
+ * after receiving from the NetDevice and immediately before sending
+ * to a NetDevice for transmitting a packet.  These are low level
+ * trace sources that include the Ipv6Header already serialized into
+ * the packet.  In contrast, the Drop, SendOutgoing, UnicastForward,
+ * and LocalDeliver trace sources are slightly higher-level and pass
+ * around the Ipv6Header as an explicit parameter and not as part of
+ * the packet.
  */
 class Ipv6L3Protocol : public Ipv6
 {
@@ -59,13 +69,16 @@ class Ipv6L3Protocol : public Ipv6
      */
     static const uint16_t PROT_NUMBER;
 
+    /**
+     * \enum DropReason
+     * \brief Reason why a packet has been dropped.
+     */
     enum DropReason 
       {
-        DROP_TTL_EXPIRED = 1,
-        DROP_NO_ROUTE,
-        DROP_BAD_CHECKSUM,
-        DROP_INTERFACE_DOWN,
-        DROP_ROUTE_ERROR,
+        DROP_TTL_EXPIRED = 1, /**< Packet TTL has expired */
+        DROP_NO_ROUTE, /**< No route to host */
+        DROP_INTERFACE_DOWN, /**< Interface is down so can not send packet */
+        DROP_ROUTE_ERROR, /**< Route error */
       };
     
     /**
@@ -216,6 +229,7 @@ class Ipv6L3Protocol : public Ipv6
 
     /**
      * \brief Get number of address for an interface.
+     * \param interface interface index
      * \return number of address
      */
     uint32_t GetNAddresses (uint32_t interface) const;
@@ -330,7 +344,7 @@ class Ipv6L3Protocol : public Ipv6
 
   private:
     /* for unit-tests */
-    friend class Ipv6L3ProtocolTest;
+    friend class Ipv6L3ProtocolTestCase;
 
     typedef std::list<Ptr<Ipv6Interface> > Ipv6InterfaceList;
     typedef std::list<Ptr<Ipv6RawSocketImpl> > SocketList;

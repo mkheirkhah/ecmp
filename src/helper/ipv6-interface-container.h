@@ -33,7 +33,7 @@ namespace ns3
 
 /**
  * \class Ipv6InterfaceContainer
- * \brief keep track of a set of IPv6 interfaces.
+ * \brief Keep track of a set of IPv6 interfaces.
  */
 class Ipv6InterfaceContainer
 {
@@ -102,6 +102,7 @@ class Ipv6InterfaceContainer
     typedef std::vector<std::pair<Ptr<Ipv6>, uint32_t> > InterfaceVector;
 
     /**
+     * \internal
      * \brief List of IPv6 stack and interfaces index.
      */
     InterfaceVector m_interfaces;

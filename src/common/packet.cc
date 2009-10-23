@@ -20,6 +20,9 @@
 #include "packet.h"
 #include "ns3/assert.h"
 #include "ns3/log.h"
+#include "ns3/test.h"
+#include <string>
+#include <stdarg.h>
 
 NS_LOG_COMPONENT_DEFINE ("Packet");
 
@@ -138,6 +141,7 @@ Packet::Packet ()
     m_byteTagList (),
     m_packetTagList (),
     m_metadata (m_globalUid, 0),
+    m_nixVector (0),
     m_refCount (1)
 {
   m_globalUid++;
@@ -149,7 +153,10 @@ Packet::Packet (const Packet &o)
     m_packetTagList (o.m_packetTagList),
     m_metadata (o.m_metadata),
     m_refCount (1)
-{}
+{
+  o.m_nixVector ? m_nixVector = o.m_nixVector->Copy () 
+                : m_nixVector = 0;
+}
 
 Packet &
 Packet::operator = (const Packet &o)
@@ -162,6 +169,8 @@ Packet::operator = (const Packet &o)
   m_byteTagList = o.m_byteTagList;
   m_packetTagList = o.m_packetTagList;
   m_metadata = o.m_metadata;
+  o.m_nixVector ? m_nixVector = o.m_nixVector->Copy () 
+                : m_nixVector = 0;
   return *this;
 }
 
@@ -170,6 +179,7 @@ Packet::Packet (uint32_t size)
     m_byteTagList (),
     m_packetTagList (),
     m_metadata (m_globalUid, size),
+    m_nixVector (0),
     m_refCount (1)
 {
   m_globalUid++;
@@ -179,6 +189,7 @@ Packet::Packet (uint8_t const*buffer, uint32_t size)
     m_byteTagList (),
     m_packetTagList (),
     m_metadata (m_globalUid, size),
+    m_nixVector (0),
     m_refCount (1)
 {
   m_globalUid++;
@@ -193,6 +204,7 @@ Packet::Packet (const Buffer &buffer,  const ByteTagList &byteTagList,
     m_byteTagList (byteTagList),
     m_packetTagList (packetTagList),
     m_metadata (metadata),
+    m_nixVector (0),
     m_refCount (1)
 {}
 
@@ -208,6 +220,18 @@ Packet::CreateFragment (uint32_t start, uint32_t length) const
   // through Create because it is private.
   return Ptr<Packet> (new Packet (buffer, m_byteTagList, m_packetTagList, metadata), false);
 }
+
+void
+Packet::SetNixVector (Ptr<NixVector> nixVector)
+{
+  m_nixVector = nixVector;
+}
+
+Ptr<NixVector>
+Packet::GetNixVector (void) const
+{
+  return m_nixVector;
+} 
 
 uint32_t 
 Packet::GetSize (void) const
@@ -677,24 +701,15 @@ Packet::GetPacketTagIterator (void) const
   return PacketTagIterator (m_packetTagList.Head ());
 }
 
-
 std::ostream& operator<< (std::ostream& os, const Packet &packet)
 {
   packet.Print (os);
   return os;
 }
 
-
-} // namespace ns3
-
-#ifdef RUN_SELF_TESTS
-
-#include "ns3/test.h"
-#include <string>
-#include <stdarg.h>
-
-using namespace ns3;
-
+//-----------------------------------------------------------------------------
+// Unit tests
+//-----------------------------------------------------------------------------
 namespace {
 
 class ATestTagBase : public Tag
@@ -868,28 +883,24 @@ struct Expected
 #define E(a,b,c) a,b,c
 
 #define CHECK(p, n, ...)                                \
-  NS_TEST_ASSERT (DoCheck (p, __FILE__, __LINE__, n, __VA_ARGS__))
+  DoCheck (p, __FILE__, __LINE__, n, __VA_ARGS__)
 
-namespace ns3 {
-
-
-static class PacketTest: public Test 
+class PacketTest: public TestCase 
 {
 public:
   PacketTest ();
-  virtual bool RunTests (void);
+  virtual bool DoRun (void);
 private:
-  bool DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n, ...);
-} g_packetTest;
+  void DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n, ...);
+};
 
 
 PacketTest::PacketTest ()
-  : Test ("Packet") {}
+  : TestCase ("Packet") {}
 
-bool
+void
 PacketTest::DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n, ...)
 {
-  bool result = true;
   std::vector<struct Expected> expected;
   va_list ap;
   va_start (ap, n);
@@ -910,37 +921,34 @@ PacketTest::DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n
       struct Expected e = expected[j];
       std::ostringstream oss;
       oss << "anon::ATestTag<" << e.n << ">";
-      NS_TEST_ASSERT_EQUAL_FILELINE (item.GetTypeId ().GetName (), oss.str (), file, line);
-      NS_TEST_ASSERT_EQUAL_FILELINE (item.GetStart (), e.start, file, line);
-      NS_TEST_ASSERT_EQUAL_FILELINE (item.GetEnd (), e.end, file, line);
+      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetTypeId ().GetName (), oss.str (), "trivial", file, line);
+      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetStart (), e.start, "trivial", file, line);
+      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetEnd (), e.end, "trivial", file, line);
       ATestTagBase *tag = dynamic_cast<ATestTagBase *> (item.GetTypeId ().GetConstructor () ());
-      NS_TEST_ASSERT (tag != 0);
+      NS_TEST_EXPECT_MSG_NE (tag, 0, "trivial");
       item.GetTag (*tag);
-      NS_TEST_ASSERT (!tag->m_error);
+      NS_TEST_EXPECT_MSG_EQ (tag->m_error, false, "trivial");
       delete tag;
       j++;
     }
-  NS_TEST_ASSERT (!i.HasNext ());
-  NS_TEST_ASSERT_EQUAL (j, expected.size ());
-  return result;
+  NS_TEST_EXPECT_MSG_EQ (i.HasNext (), false, "Nothing left");
+  NS_TEST_EXPECT_MSG_EQ (j, expected.size (), "Size match");
 }
 
 bool
-PacketTest::RunTests (void)
+PacketTest::DoRun (void)
 {
-  bool result = true;
-
   Ptr<Packet> pkt1 = Create<Packet> (reinterpret_cast<const uint8_t*> ("hello"), 5);
   Ptr<Packet> pkt2 = Create<Packet> (reinterpret_cast<const uint8_t*> (" world"), 6);
   Ptr<Packet> packet = Create<Packet> ();
   packet->AddAtEnd (pkt1);
   packet->AddAtEnd (pkt2);
   
-  NS_TEST_ASSERT_EQUAL (packet->GetSize (), 11);
+  NS_TEST_EXPECT_MSG_EQ (packet->GetSize (), 11, "trivial");
 
   std::string msg = std::string (reinterpret_cast<const char *>(packet->PeekData ()),
                                  packet->GetSize ());
-  NS_TEST_ASSERT_EQUAL (msg, "hello world");
+  NS_TEST_EXPECT_MSG_EQ (msg, "hello world", "trivial");
 
 
   Ptr<const Packet> p = Create<Packet> (1000);
@@ -1062,31 +1070,31 @@ PacketTest::RunTests (void)
     Packet p;
     ATestTag<10> a;
     p.AddPacketTag (a);
-    NS_TEST_ASSERT (p.PeekPacketTag (a));
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (a), true, "trivial");
     ATestTag<11> b;
     p.AddPacketTag (b);
-    NS_TEST_ASSERT (p.PeekPacketTag (b));
-    NS_TEST_ASSERT (p.PeekPacketTag (a));
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (b), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (a), true, "trivial");
     Packet copy = p;
-    NS_TEST_ASSERT (copy.PeekPacketTag (b));
-    NS_TEST_ASSERT (copy.PeekPacketTag (a));
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (b), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (a), true, "trivial");
     ATestTag<12> c;
-    NS_TEST_ASSERT (!copy.PeekPacketTag (c));
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (c), false, "trivial");
     copy.AddPacketTag (c);
-    NS_TEST_ASSERT (copy.PeekPacketTag (c));
-    NS_TEST_ASSERT (copy.PeekPacketTag (b));
-    NS_TEST_ASSERT (copy.PeekPacketTag (a));
-    NS_TEST_ASSERT (!p.PeekPacketTag (c));
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (c), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (b), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (a), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (c), false, "trivial");
     copy.RemovePacketTag (b);
-    NS_TEST_ASSERT (!copy.PeekPacketTag (b));
-    NS_TEST_ASSERT (p.PeekPacketTag (b));
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (b), false, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (b), true, "trivial");
     p.RemovePacketTag (a);
-    NS_TEST_ASSERT (!p.PeekPacketTag (a));
-    NS_TEST_ASSERT (copy.PeekPacketTag (a));
-    NS_TEST_ASSERT (!p.PeekPacketTag (c));
-    NS_TEST_ASSERT (copy.PeekPacketTag (c));
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (a), false, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (a), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (c), false, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (copy.PeekPacketTag (c), true, "trivial");
     p.RemoveAllPacketTags ();
-    NS_TEST_ASSERT (!p.PeekPacketTag (b));
+    NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (b), false, "trivial");
   }
 
   {
@@ -1102,9 +1110,22 @@ PacketTest::RunTests (void)
     CHECK (tmp, 1, E (20, 1, 1001));
   }
 
-  return result;
+  return GetErrorStatus ();
+}
+//-----------------------------------------------------------------------------
+class PacketTestSuite : public TestSuite
+{
+public:
+  PacketTestSuite ();
+};
+
+PacketTestSuite::PacketTestSuite ()
+  : TestSuite ("packet", UNIT)
+{
+  AddTestCase (new PacketTest);
 }
 
-} // namespace ns3
+PacketTestSuite g_packetTestSuite;
 
-#endif /* RUN_SELF_TESTS */
+
+} // namespace ns3

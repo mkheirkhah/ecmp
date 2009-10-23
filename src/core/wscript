@@ -46,21 +46,18 @@ int main ()
 def build(bld):
     core = bld.create_ns3_module('core')
     core.source = [
-        'callback-test.cc',
         'log.cc',
         'breakpoint.cc',
         'type-id.cc',
         'attribute-list.cc',
         'object-base.cc',
         'ref-count-base.cc',
-        'ptr.cc',
         'object.cc',
         'test.cc',
         'random-variable.cc',
         'rng-stream.cc',
         'command-line.cc',
         'type-name.cc',
-        'type-traits-test.cc',
         'attribute.cc',
         'boolean.cc',
         'integer.cc',
@@ -70,16 +67,19 @@ def build(bld):
         'string.cc',
         'pointer.cc',
         'object-vector.cc',
-        'attribute-test.cc',
         'object-factory.cc',
         'global-value.cc',
-        'traced-callback.cc',
         'trace-source-accessor.cc',
         'config.cc',
         'callback.cc',
         'names.cc',
         'vector.cc',
+        'attribute-test-suite.cc',
+        'callback-test-suite.cc',
         'names-test-suite.cc',
+        'type-traits-test-suite.cc',
+        'traced-callback-test-suite.cc',
+        'ptr-test-suite.cc',
         ]
 
     headers = bld.new_task_gen('ns3header')
@@ -151,4 +151,5 @@ def build(bld):
                 ])
 
     if bld.env['ENABLE_GSL']:
+        core.uselib = 'GSL GSLCBLAS M'
         core.source.extend(['rng-test-suite.cc'])

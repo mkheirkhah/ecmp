@@ -128,6 +128,7 @@ InterferenceHelper::InterferenceHelper ()
 {}
 InterferenceHelper::~InterferenceHelper ()
 {
+  EraseEvents ();
   m_errorRateModel = 0;
 }
 
@@ -428,7 +429,7 @@ InterferenceHelper::AppendEvent (Ptr<InterferenceHelper::Event> event)
         {
           i++;
         }
-      m_events.erase (m_events.begin (), i);
+      EraseEvents (m_events.begin (), i);
     } 
   m_events.push_back (event);
 }
@@ -460,17 +461,17 @@ InterferenceHelper::CalculateNoiseInterferenceW (Ptr<InterferenceHelper::Event> 
           i++;
           continue;
         }
-      if (event->Overlaps ((*i)->GetStartTime ())) 
+      if ((*i)->Overlaps (event->GetStartTime ())) 
+        {
+          noiseInterference += (*i)->GetRxPowerW ();
+        }
+      else if (event->Overlaps ((*i)->GetStartTime ())) 
         {
           ni->push_back (NiChange ((*i)->GetStartTime (), (*i)->GetRxPowerW ()));
         }
       if (event->Overlaps ((*i)->GetEndTime ())) 
         {
           ni->push_back (NiChange ((*i)->GetEndTime (), -(*i)->GetRxPowerW ()));
-        }
-      if ((*i)->Overlaps (event->GetStartTime ())) 
-        {
-          noiseInterference += (*i)->GetRxPowerW ();
         }
       i++;
     }
@@ -606,7 +607,21 @@ InterferenceHelper::CalculateSnrPer (Ptr<InterferenceHelper::Event> event)
 void
 InterferenceHelper::EraseEvents (void) 
 {  
-  m_events.erase (m_events.begin (), m_events.end ());
+  for (Events::iterator i = m_events.begin (); i != m_events.end (); ++i)
+    {
+      *i = 0;
+    }
+  m_events.clear ();
+}
+
+void
+InterferenceHelper::EraseEvents (Events::iterator start, Events::iterator end) 
+{  
+  for (Events::iterator i = start; i != end; ++i)
+    {
+      *i = 0;
+    }
+  m_events.erase (start, end);
 }
 
 } // namespace ns3

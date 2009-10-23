@@ -962,7 +962,8 @@ void Icmpv6L4Protocol::SendRedirection (Ptr<Packet> redirectedPacket, Ipv6Addres
 
   if ((redirectedPacketSize % 8) != 0)
   {
-    redirectedPacket->AddPaddingAtEnd (8 - (redirectedPacketSize % 8));
+    Ptr<Packet> pad = Create<Packet> (8 - (redirectedPacketSize % 8));
+    redirectedPacket->AddAtEnd (pad); 
   }
 
   if (redirHardwareTarget.GetLength ())
@@ -1131,7 +1132,6 @@ bool Icmpv6L4Protocol::Lookup (Ptr<Packet> p, Ipv6Address dst, Ptr<NetDevice> de
     }
     else if (entry->IsStale ())
     {
-      /* *hardwareDestination = entry->GetMacAddress (); */
       /* start delay timer */
       entry->StartDelayTimer ();
       entry->MarkDelay ();

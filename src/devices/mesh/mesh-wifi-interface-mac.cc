@@ -109,6 +109,10 @@ MeshWifiInterfaceMac::MeshWifiInterfaceMac ()
 MeshWifiInterfaceMac::~MeshWifiInterfaceMac ()
 {
   NS_LOG_FUNCTION (this);
+  m_beaconDca = 0;
+  m_stationManager = 0;
+  m_phy = 0;
+  m_low = 0;
 }
 //-----------------------------------------------------------------------------
 // WifiMac inherited
@@ -278,8 +282,10 @@ MeshWifiInterfaceMac::DoDispose ()
   m_rxMiddle = 0;
   m_low = 0;
   m_dcfManager = 0;
+  m_stationManager = 0;
   m_phy = 0;
   m_queues.clear ();
+  m_plugins.clear ();
   m_beaconSendEvent.Cancel ();
   m_beaconDca = 0;
 
@@ -394,6 +400,11 @@ MeshWifiInterfaceMac::ForwardDown (Ptr<const Packet> const_packet, Mac48Address 
   QosTag tag;
   if (packet->RemovePacketTag (tag))
     {
+      hdr.SetType (WIFI_MAC_QOSDATA);
+      hdr.SetQosTid (tag.Get ());
+      //Aftre setting type DsFrom and DsTo fields are reset.
+      hdr.SetDsFrom ();
+      hdr.SetDsTo ();
       ac = QosUtilsMapTidToAc (tag.Get ());
     }
   m_stats.sentFrames++;

@@ -18,6 +18,7 @@
 
 #include "point-to-point-channel.h"
 #include "point-to-point-net-device.h"
+#include "ns3/trace-source-accessor.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
@@ -38,6 +39,9 @@ PointToPointChannel::GetTypeId (void)
                    TimeValue (Seconds (0)),
                    MakeTimeAccessor (&PointToPointChannel::m_delay),
                    MakeTimeChecker ())
+    .AddTraceSource ("TxRxPointToPoint",
+                     "Trace source indicating transmission of packet from the PointToPointChannel, used by the Animation interface.",
+                     MakeTraceSourceAccessor (&PointToPointChannel::m_txrxPointToPoint))
     ;
   return tid;
 }
@@ -91,6 +95,9 @@ PointToPointChannel::TransmitStart(
 
   Simulator::Schedule (txTime + m_delay, &PointToPointNetDevice::Receive,
     m_link[wire].m_dst, p);
+
+  // Call the tx anim callback on the net device
+  m_txrxPointToPoint (p, src, m_link[wire].m_dst, txTime, txTime + m_delay);
   return true;
 }
 

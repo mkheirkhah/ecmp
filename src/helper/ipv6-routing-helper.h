@@ -29,7 +29,7 @@ class Ipv6RoutingProtocol;
 class Node;
 
 /**
- * \brief a factory to create ns3::Ipv6RoutingProtocol objects
+ * \brief A factory to create ns3::Ipv6RoutingProtocol objects
  *
  * For each new routing protocol created as a subclass of 
  * ns3::Ipv6RoutingProtocol, you need to create a subclass of 
@@ -40,7 +40,22 @@ class Node;
 class Ipv6RoutingHelper
 {
 public:
+
+  /**
+   * \internal
+   * Destroy an Ipv6 Ipv6RoutingHelper.
+   */
   virtual ~Ipv6RoutingHelper ();
+
+  /**
+   * \brief virtual constructor
+   * \returns pointer to clone of this Ipv6RoutingHelper 
+   * 
+   * This method is mainly for internal use by the other helpers;
+   * clients are expected to free the dynamic memory allocated by this method
+   */
+  virtual Ipv6RoutingHelper* Copy (void) const = 0;
+
   /**
    * \param node the node within which the new routing protocol will run
    * \returns a newly-created routing protocol
