@@ -120,78 +120,78 @@ uint32_t Ipv6ExtensionHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-OptionField::OptionField(uint32_t optionsOffset)
-: m_optionData(0),
-    m_optionsOffset(optionsOffset)
+OptionField::OptionField (uint32_t optionsOffset)
+  : m_optionData (0),
+  m_optionsOffset (optionsOffset)
 {
 }
 
-OptionField::~OptionField()
+OptionField::~OptionField ()
 {
 }
 
 uint32_t OptionField::GetSerializedSize () const
 {
-    return m_optionData.GetSize() + CalculatePad((Ipv6OptionHeader::Alignment) {8,0});
+  return m_optionData.GetSize () + CalculatePad ((Ipv6OptionHeader::Alignment) {8,0});
 }
 
 void OptionField::Serialize (Buffer::Iterator start) const
 {
-    start.Write(m_optionData.Begin(), m_optionData.End());
-    uint32_t fill = CalculatePad((Ipv6OptionHeader::Alignment) {8,0});
-    NS_LOG_LOGIC("fill with " << fill << " bytes padding");
-    switch(fill)
-    {
-        case 0: return;
-        case 1: Ipv6OptionPad1Header().Serialize(start);
-                        return;
-        default: Ipv6OptionPadnHeader(fill).Serialize(start);
-                        return;
-    }
+  start.Write (m_optionData.Begin (), m_optionData.End ());
+  uint32_t fill = CalculatePad ((Ipv6OptionHeader::Alignment) {8,0});
+  NS_LOG_LOGIC ("fill with " << fill << " bytes padding");
+  switch (fill)
+  {
+    case 0: return;
+    case 1: Ipv6OptionPad1Header ().Serialize (start);
+            return;
+    default: Ipv6OptionPadnHeader (fill).Serialize (start);
+             return;
+  }
 }
 
 uint32_t OptionField::Deserialize (Buffer::Iterator start, uint32_t length)
 {
-    uint8_t buf[length];
-    start.Read(buf,length);
-    m_optionData = Buffer();
-    m_optionData.AddAtEnd(length);
-    m_optionData.Begin().Write(buf,length);
-    return length;
+  uint8_t buf[length];
+  start.Read (buf,length);
+  m_optionData = Buffer ();
+  m_optionData.AddAtEnd (length);
+  m_optionData.Begin ().Write (buf,length);
+  return length;
 }
 
-void OptionField::AddOption(Ipv6OptionHeader const& option)
+void OptionField::AddOption (Ipv6OptionHeader const& option)
 {
-    NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION_NOARGS ();
 
-    uint32_t pad = CalculatePad(option.GetAlignment());
-    NS_LOG_LOGIC("need " << pad << " bytes padding");
-    switch(pad)
-    {
-        case 0: break; //no padding needed
-        case 1: AddOption(Ipv6OptionPad1Header());
-                        break;
-        default: AddOption(Ipv6OptionPadnHeader(pad));
-                        break;
-    }
+  uint32_t pad = CalculatePad (option.GetAlignment ());
+  NS_LOG_LOGIC ("need " << pad << " bytes padding");
+  switch (pad)
+  {
+    case 0: break; //no padding needed
+    case 1: AddOption (Ipv6OptionPad1Header ());
+      break;
+    default: AddOption (Ipv6OptionPadnHeader (pad));
+      break;
+  }
 
-    m_optionData.AddAtEnd(option.GetSerializedSize());
-    Buffer::Iterator it = m_optionData.End();
-    it.Prev(option.GetSerializedSize());
-    option.Serialize(it);
+  m_optionData.AddAtEnd (option.GetSerializedSize ());
+  Buffer::Iterator it = m_optionData.End ();
+  it.Prev (option.GetSerializedSize ());
+  option.Serialize (it);
 }
 
-uint32_t OptionField::CalculatePad(Ipv6OptionHeader::Alignment alignment) const
+uint32_t OptionField::CalculatePad (Ipv6OptionHeader::Alignment alignment) const
 {
-    return (alignment.offset - (m_optionData.GetSize() + m_optionsOffset)) % alignment.factor;
+  return (alignment.offset - (m_optionData.GetSize () + m_optionsOffset)) % alignment.factor;
 }
 
-uint32_t OptionField::GetOptionsOffset()
+uint32_t OptionField::GetOptionsOffset ()
 {
-    return m_optionsOffset;
+  return m_optionsOffset;
 }
 
-Buffer OptionField::GetOptionBuffer()
+Buffer OptionField::GetOptionBuffer ()
 {
   return m_optionData;
 }
@@ -214,7 +214,7 @@ TypeId Ipv6ExtensionHopByHopHeader::GetInstanceTypeId () const
 }
 
 Ipv6ExtensionHopByHopHeader::Ipv6ExtensionHopByHopHeader ()
-: OptionField(2)
+  : OptionField (2)
 {
 }
 
@@ -229,7 +229,7 @@ void Ipv6ExtensionHopByHopHeader::Print (std::ostream &os) const
 
 uint32_t Ipv6ExtensionHopByHopHeader::GetSerializedSize () const
 {
-  return 2 + OptionField::GetSerializedSize();
+  return 2 + OptionField::GetSerializedSize ();
 }
 
 void Ipv6ExtensionHopByHopHeader::Serialize (Buffer::Iterator start) const
@@ -238,7 +238,7 @@ void Ipv6ExtensionHopByHopHeader::Serialize (Buffer::Iterator start) const
 
   i.WriteU8 (GetNextHeader ());
   i.WriteU8 ((GetLength () >> 3) - 1);
-  OptionField::Serialize(i);
+  OptionField::Serialize (i);
 }
 
 uint32_t Ipv6ExtensionHopByHopHeader::Deserialize (Buffer::Iterator start) 
@@ -247,7 +247,7 @@ uint32_t Ipv6ExtensionHopByHopHeader::Deserialize (Buffer::Iterator start)
 
   SetNextHeader (i.ReadU8 ());
   SetLength ((i.ReadU8 () + 1) << 3);
-  OptionField::Deserialize(i, GetLength() - 2);
+  OptionField::Deserialize (i, GetLength () - 2);
 
   return GetSerializedSize ();
 }
@@ -269,7 +269,7 @@ TypeId Ipv6ExtensionDestinationHeader::GetInstanceTypeId () const
 }
 
 Ipv6ExtensionDestinationHeader::Ipv6ExtensionDestinationHeader ()
-: OptionField(2)
+  : OptionField (2)
 {
 }
 
@@ -284,7 +284,7 @@ void Ipv6ExtensionDestinationHeader::Print (std::ostream &os) const
 
 uint32_t Ipv6ExtensionDestinationHeader::GetSerializedSize () const
 {
-  return 2 + OptionField::GetSerializedSize();
+  return 2 + OptionField::GetSerializedSize ();
 }
 
 void Ipv6ExtensionDestinationHeader::Serialize (Buffer::Iterator start) const
@@ -294,7 +294,7 @@ void Ipv6ExtensionDestinationHeader::Serialize (Buffer::Iterator start) const
   i.WriteU8 (GetNextHeader ());
   i.WriteU8 ((GetLength () >> 3) - 1);
 
-  OptionField::Serialize(i);
+  OptionField::Serialize (i);
 }
 
 uint32_t Ipv6ExtensionDestinationHeader::Deserialize (Buffer::Iterator start) 
@@ -303,7 +303,7 @@ uint32_t Ipv6ExtensionDestinationHeader::Deserialize (Buffer::Iterator start)
 
   SetNextHeader (i.ReadU8 ());
   SetLength ((i.ReadU8 () + 1) << 3);
-  OptionField::Deserialize(i, GetLength() - 2);
+  OptionField::Deserialize (i, GetLength () - 2);
 
   return GetSerializedSize ();
 }

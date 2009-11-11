@@ -133,7 +133,7 @@ class Ipv6ExtensionHeader : public Header
  * Enables adding options to an IPv6ExtensionHeader
  *
  * Implementor's note: Make sure to add the result of
- * OptionField::GetSerializedSize() to your IPv6ExtensionHeader::GetSerializedSize()
+ * OptionField::GetSerializedSize () to your IPv6ExtensionHeader::GetSerializedSize ()
  * return value. Call OptionField::Serialize and OptionField::Deserialize at the
  * end of your corresponding IPv6ExtensionHeader methods.
  */
@@ -141,8 +141,8 @@ class Ipv6ExtensionHeader : public Header
 class OptionField
 {
   public:
-    OptionField(uint32_t opitonsOffset);
-    ~OptionField();
+    OptionField (uint32_t opitonsOffset);
+    ~OptionField ();
 
     /**
      * \brief Get the serialized size of the packet.
@@ -167,16 +167,16 @@ class OptionField
      * \brief Serialize the option, prepending pad1 or padn option as necessary
      * \param option the option header to serialize
      */
-    void AddOption(Ipv6OptionHeader const& option);
+    void AddOption (Ipv6OptionHeader const& option);
 
     /**
      * \brief Get the offset where the options begin, measured from the start of
      * the extension header.
      * \return the offset from the start of the extension header
      */
-    uint32_t GetOptionsOffset();
+    uint32_t GetOptionsOffset ();
 
-    Buffer GetOptionBuffer();
+    Buffer GetOptionBuffer ();
 
   private:
 

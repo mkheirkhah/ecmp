@@ -91,7 +91,7 @@ void Ipv6OptionHeader::Serialize (Buffer::Iterator start) const
   i.WriteU8 (m_type);
   i.WriteU8 (m_length);
 
-  i.Write(m_data.Begin(), m_data.End());
+  i.Write (m_data.Begin (), m_data.End ());
 }
 
 uint32_t Ipv6OptionHeader::Deserialize (Buffer::Iterator start) 
@@ -99,19 +99,19 @@ uint32_t Ipv6OptionHeader::Deserialize (Buffer::Iterator start)
   Buffer::Iterator i = start;
 
   m_type = i.ReadU8 ();
-  m_length = i.ReadU8();
+  m_length = i.ReadU8 ();
 
-  m_data = Buffer();
-  m_data.AddAtEnd(m_length);
+  m_data = Buffer ();
+  m_data.AddAtEnd (m_length);
   Buffer::Iterator dataStart = i;
-  i.Next(m_length);
+  i.Next (m_length);
   Buffer::Iterator dataEnd = i;
-  m_data.Begin().Write(dataStart, dataEnd);
+  m_data.Begin ().Write (dataStart, dataEnd);
 
   return GetSerializedSize ();
 }
 
-Ipv6OptionHeader::Alignment Ipv6OptionHeader::GetAlignment() const
+Ipv6OptionHeader::Alignment Ipv6OptionHeader::GetAlignment () const
 {
   return (Alignment){1,0};
 }
@@ -134,7 +134,7 @@ TypeId Ipv6OptionPad1Header::GetInstanceTypeId () const
 
 Ipv6OptionPad1Header::Ipv6OptionPad1Header ()
 {
-  SetType(0);
+  SetType (0);
 }
 
 Ipv6OptionPad1Header::~Ipv6OptionPad1Header ()
@@ -185,7 +185,7 @@ TypeId Ipv6OptionPadnHeader::GetInstanceTypeId () const
 
 Ipv6OptionPadnHeader::Ipv6OptionPadnHeader (uint32_t pad)
 {
-  SetType(1);
+  SetType (1);
   NS_ASSERT_MSG (pad >= 2, "PadN must be at least 2 bytes long");
   SetLength (pad - 2);
 }
@@ -293,7 +293,7 @@ uint32_t Ipv6OptionJumbogramHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-Ipv6OptionHeader::Alignment Ipv6OptionJumbogramHeader::GetAlignment() const
+Ipv6OptionHeader::Alignment Ipv6OptionJumbogramHeader::GetAlignment () const
 {
   return (Alignment){4,2}; //4n+2
 }
@@ -364,7 +364,7 @@ uint32_t Ipv6OptionRouterAlertHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-Ipv6OptionHeader::Alignment Ipv6OptionRouterAlertHeader::GetAlignment() const
+Ipv6OptionHeader::Alignment Ipv6OptionRouterAlertHeader::GetAlignment () const
 {
   return (Alignment){2,0}; //2n+0
 }

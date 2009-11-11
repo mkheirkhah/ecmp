@@ -128,7 +128,7 @@ class Ipv6OptionHeader : public Header
      * Subclasses should only implement this method, if special alignemt is
      * required. Default is no alignment (1n+0).
      */
-    virtual Alignment GetAlignment() const;
+    virtual Alignment GetAlignment () const;
 
   private:
     /**
@@ -144,9 +144,7 @@ class Ipv6OptionHeader : public Header
     /**
      * \brief The anonymous data of this option
      */
-
     Buffer m_data;
-
 };
 
 /**
@@ -333,7 +331,7 @@ class Ipv6OptionJumbogramHeader : public Ipv6OptionHeader
      * \brief Get the Alignment requirement of this option header
      * \return The required alignment
      */
-    virtual Alignment GetAlignment() const;
+    virtual Alignment GetAlignment () const;
 
   private:
     /**
@@ -412,7 +410,7 @@ class Ipv6OptionRouterAlertHeader : public Ipv6OptionHeader
      * \brief Get the Alignment requirement of this option header
      * \return The required alignment
      */
-    virtual Alignment GetAlignment() const;
+    virtual Alignment GetAlignment () const;
 
   private:
     /**
