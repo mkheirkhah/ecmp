@@ -17,6 +17,9 @@
  * Author: Florian Westphal <fw@strlen.de>
  */
 
+#define NS_LOG_APPEND_CONTEXT                                   \
+  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; } 
+
 #include "ns3/node.h"
 #include "ns3/inet-socket-address.h"
 #include "ns3/log.h"
@@ -218,22 +221,22 @@ NscTcpSocketImpl::Bind (const Address &address)
   if (ipv4 == Ipv4Address::GetAny () && port == 0)
     {
       m_endPoint = m_tcp->Allocate ();
-      NS_LOG_LOGIC ("TcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
+      NS_LOG_LOGIC ("NscTcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
     }
   else if (ipv4 == Ipv4Address::GetAny () && port != 0)
     {
       m_endPoint = m_tcp->Allocate (port);
-      NS_LOG_LOGIC ("TcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
+      NS_LOG_LOGIC ("NscTcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
     }
   else if (ipv4 != Ipv4Address::GetAny () && port == 0)
     {
       m_endPoint = m_tcp->Allocate (ipv4);
-      NS_LOG_LOGIC ("TcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
+      NS_LOG_LOGIC ("NscTcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
     }
   else if (ipv4 != Ipv4Address::GetAny () && port != 0)
     {
       m_endPoint = m_tcp->Allocate (ipv4, port);
-      NS_LOG_LOGIC ("TcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
+      NS_LOG_LOGIC ("NscTcpSocketImpl "<<this<<" got an endpoint: "<<m_endPoint);
     }
 
   m_localPort = port;
@@ -272,6 +275,7 @@ NscTcpSocketImpl::Close (void)
       return 0;
     }
 
+  NS_LOG_LOGIC("NscTcp socket " << this << " calling disconnect(); moving to CLOSED");
   m_nscTcpSocket->disconnect();
   m_state = CLOSED;
   ShutdownSend ();
@@ -568,7 +572,7 @@ bool NscTcpSocketImpl::ReadPendingData (void)
   if (err == 0 && len == 0)
     {
       NS_LOG_LOGIC ("ReadPendingData got EOF from socket");
-      m_state = CLOSED;
+      m_state = CLOSE_WAIT;
       return false;
     }
   m_errno = GetNativeNs3Errno(err);
