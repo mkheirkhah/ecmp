@@ -1,0 +1,425 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2008 INRIA
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ */
+#include "pcap-helper.h"
+#include "pcap-user-helper.h"
+#include "yans-wifi-helper.h"
+#include "ns3/error-rate-model.h"
+#include "ns3/propagation-loss-model.h"
+#include "ns3/propagation-delay-model.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/yans-wifi-phy.h"
+#include "ns3/wifi-net-device.h"
+#include "ns3/radiotap-header.h"
+#include "ns3/pcap-writer.h"
+#include "ns3/ascii-writer.h"
+#include "ns3/pcap-file-object.h"
+#include "ns3/simulator.h"
+#include "ns3/config.h"
+#include "ns3/names.h"
+#include "ns3/abort.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("YansWifiHelper");
+
+namespace ns3 {
+
+static void AsciiPhyTxEvent (Ptr<AsciiWriter> writer, std::string path,
+                             Ptr<const Packet> packet,
+                             WifiMode mode, WifiPreamble preamble,
+                             uint8_t txLevel)
+{
+  writer->WritePacket (AsciiWriter::TX, path, packet);
+}
+
+static void AsciiPhyRxOkEvent (Ptr<AsciiWriter> writer, std::string path,
+                               Ptr<const Packet> packet, double snr, WifiMode mode,
+                               enum WifiPreamble preamble)
+{
+  writer->WritePacket (AsciiWriter::RX, path, packet);
+}
+
+
+YansWifiChannelHelper::YansWifiChannelHelper ()
+{}
+
+YansWifiChannelHelper 
+YansWifiChannelHelper::Default (void)
+{
+  YansWifiChannelHelper helper;
+  helper.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  helper.AddPropagationLoss ("ns3::LogDistancePropagationLossModel");
+  return helper;
+}
+
+void 
+YansWifiChannelHelper::AddPropagationLoss (std::string type,
+					   std::string n0, const AttributeValue &v0,
+					   std::string n1, const AttributeValue &v1,
+					   std::string n2, const AttributeValue &v2,
+					   std::string n3, const AttributeValue &v3,
+					   std::string n4, const AttributeValue &v4,
+					   std::string n5, const AttributeValue &v5,
+					   std::string n6, const AttributeValue &v6,
+					   std::string n7, const AttributeValue &v7)
+{
+  ObjectFactory factory;
+  factory.SetTypeId (type);
+  factory.Set (n0, v0);
+  factory.Set (n1, v1);
+  factory.Set (n2, v2);
+  factory.Set (n3, v3);
+  factory.Set (n4, v4);
+  factory.Set (n5, v5);
+  factory.Set (n6, v6);
+  factory.Set (n7, v7);
+  m_propagationLoss.push_back (factory);
+}
+
+void 
+YansWifiChannelHelper::SetPropagationDelay (std::string type,
+					    std::string n0, const AttributeValue &v0,
+					    std::string n1, const AttributeValue &v1,
+					    std::string n2, const AttributeValue &v2,
+					    std::string n3, const AttributeValue &v3,
+					    std::string n4, const AttributeValue &v4,
+					    std::string n5, const AttributeValue &v5,
+					    std::string n6, const AttributeValue &v6,
+					    std::string n7, const AttributeValue &v7)
+{
+  ObjectFactory factory;
+  factory.SetTypeId (type);
+  factory.Set (n0, v0);
+  factory.Set (n1, v1);
+  factory.Set (n2, v2);
+  factory.Set (n3, v3);
+  factory.Set (n4, v4);
+  factory.Set (n5, v5);
+  factory.Set (n6, v6);
+  factory.Set (n7, v7);
+  m_propagationDelay = factory;
+}
+
+Ptr<YansWifiChannel> 
+YansWifiChannelHelper::Create (void) const
+{
+  Ptr<YansWifiChannel> channel = CreateObject<YansWifiChannel> ();
+  Ptr<PropagationLossModel> prev = 0;
+  for (std::vector<ObjectFactory>::const_iterator i = m_propagationLoss.begin (); i != m_propagationLoss.end (); ++i)
+    {
+      Ptr<PropagationLossModel> cur = (*i).Create<PropagationLossModel> ();
+      if (prev != 0)
+	{
+	  prev->SetNext (cur);
+	}
+      if (m_propagationLoss.begin () == i)
+	{
+	  channel->SetPropagationLossModel (cur);
+	}
+      prev = cur;
+    }
+  Ptr<PropagationDelayModel> delay = m_propagationDelay.Create<PropagationDelayModel> ();
+  channel->SetPropagationDelayModel (delay);
+  return channel;
+}
+
+
+YansWifiPhyHelper::YansWifiPhyHelper ()
+  : m_channel (0),
+    m_pcapDlt(PcapHelper::DLT_IEEE802_11)
+{
+  m_phy.SetTypeId ("ns3::YansWifiPhy");
+}
+
+YansWifiPhyHelper 
+YansWifiPhyHelper::Default (void)
+{
+  YansWifiPhyHelper helper;
+  helper.SetErrorRateModel ("ns3::YansErrorRateModel");
+  return helper;
+}
+
+void 
+YansWifiPhyHelper::SetChannel (Ptr<YansWifiChannel> channel)
+{
+  m_channel = channel;
+}
+void 
+YansWifiPhyHelper::SetChannel (std::string channelName)
+{
+  Ptr<YansWifiChannel> channel = Names::Find<YansWifiChannel> (channelName);
+  m_channel = channel;
+}
+void 
+YansWifiPhyHelper::Set (std::string name, const AttributeValue &v)
+{
+  m_phy.Set (name, v);
+}
+
+void 
+YansWifiPhyHelper::SetErrorRateModel (std::string name,
+                                     std::string n0, const AttributeValue &v0,
+                                     std::string n1, const AttributeValue &v1,
+                                     std::string n2, const AttributeValue &v2,
+                                     std::string n3, const AttributeValue &v3,
+                                     std::string n4, const AttributeValue &v4,
+                                     std::string n5, const AttributeValue &v5,
+                                     std::string n6, const AttributeValue &v6,
+                                     std::string n7, const AttributeValue &v7)
+{
+  m_errorRateModel = ObjectFactory ();
+  m_errorRateModel.SetTypeId (name);
+  m_errorRateModel.Set (n0, v0);
+  m_errorRateModel.Set (n1, v1);
+  m_errorRateModel.Set (n2, v2);
+  m_errorRateModel.Set (n3, v3);
+  m_errorRateModel.Set (n4, v4);
+  m_errorRateModel.Set (n5, v5);
+  m_errorRateModel.Set (n6, v6);
+  m_errorRateModel.Set (n7, v7);
+}
+
+Ptr<WifiPhy> 
+YansWifiPhyHelper::Create (Ptr<Node> node, Ptr<WifiNetDevice> device) const
+{
+  Ptr<YansWifiPhy> phy = m_phy.Create<YansWifiPhy> ();
+  Ptr<ErrorRateModel> error = m_errorRateModel.Create<ErrorRateModel> ();
+  phy->SetErrorRateModel (error);
+  phy->SetChannel (m_channel);
+  phy->SetMobility (node);
+  phy->SetDevice (device);
+  return phy;
+}
+
+static void 
+PcapSniffTxEvent (
+  Ptr<PcapFileObject> file,
+  Ptr<const Packet>   packet,
+  uint16_t            channelFreqMhz,
+  uint16_t            channelNumber,
+  uint32_t            rate,
+  bool                isShortPreamble)
+{
+  uint32_t dlt = file->GetDataLinkType ();
+
+  switch (dlt)
+    {
+    case PcapHelper::DLT_IEEE802_11:
+      file->Write (Simulator::Now (), packet);
+      return;
+    case PcapHelper::DLT_PRISM_HEADER:
+      {
+        NS_FATAL_ERROR ("PcapSniffTxEvent(): DLT_PRISM_HEADER not implemented");
+        return;
+      }
+    case PcapHelper::DLT_IEEE802_11_RADIO:
+      {
+        Ptr<Packet> p = packet->Copy ();
+        RadiotapHeader header;
+        header.SetTsft (Simulator::Now ().GetMicroSeconds ());
+
+        if (isShortPreamble)
+          {
+            header.SetFrameFlags (RadiotapHeader::FRAME_FLAG_SHORT_PREAMBLE);
+          }
+        else
+          {
+            header.SetFrameFlags (RadiotapHeader::FRAME_FLAG_NONE);
+          }
+
+        header.SetRate (rate);
+
+        if (channelFreqMhz < 2500)
+          {
+            header.SetChannelFrequencyAndFlags (channelFreqMhz, 
+              RadiotapHeader::CHANNEL_FLAG_SPECTRUM_2GHZ | RadiotapHeader::CHANNEL_FLAG_CCK);
+          }
+        else
+          {
+            header.SetChannelFrequencyAndFlags (channelFreqMhz, 
+              RadiotapHeader::CHANNEL_FLAG_SPECTRUM_5GHZ | RadiotapHeader::CHANNEL_FLAG_OFDM);
+          }
+
+        p->AddHeader (header);
+        file->Write (Simulator::Now (), p);
+        return;
+      }
+    default:
+      NS_ABORT_MSG ("PcapSniffTxEvent(): Unexpected data link type " << dlt);
+    }
+}
+
+static void 
+PcapSniffRxEvent (
+  Ptr<PcapFileObject> file,
+  Ptr<const Packet> packet,
+  uint16_t channelFreqMhz,
+  uint16_t channelNumber,
+  uint32_t rate,
+  bool isShortPreamble,
+  double signalDbm,
+  double noiseDbm)
+{
+  uint32_t dlt = file->GetDataLinkType ();
+
+  switch (dlt)
+    {
+    case PcapHelper::DLT_IEEE802_11:
+      file->Write (Simulator::Now (), packet);
+      return;
+    case PcapHelper::DLT_PRISM_HEADER:
+      {
+        NS_FATAL_ERROR ("PcapSniffRxEvent(): DLT_PRISM_HEADER not implemented");
+        return;
+      }
+    case PcapHelper::DLT_IEEE802_11_RADIO:
+      {
+        Ptr<Packet> p = packet->Copy ();
+        RadiotapHeader header;
+        header.SetTsft (Simulator::Now ().GetMicroSeconds ());
+
+        if (isShortPreamble)
+          {
+            header.SetFrameFlags (RadiotapHeader::FRAME_FLAG_SHORT_PREAMBLE);
+          }
+        else
+          {
+            header.SetFrameFlags (RadiotapHeader::FRAME_FLAG_NONE);
+          }
+
+        header.SetRate (rate);
+
+        if (channelFreqMhz < 2500)
+          {
+            header.SetChannelFrequencyAndFlags (channelFreqMhz, 
+              RadiotapHeader::CHANNEL_FLAG_SPECTRUM_2GHZ | RadiotapHeader::CHANNEL_FLAG_CCK);
+          }
+        else
+          {
+            header.SetChannelFrequencyAndFlags (channelFreqMhz, 
+              RadiotapHeader::CHANNEL_FLAG_SPECTRUM_5GHZ | RadiotapHeader::CHANNEL_FLAG_OFDM);
+          }
+
+        header.SetAntennaSignalPower (signalDbm);
+        header.SetAntennaNoisePower (noiseDbm);
+
+        p->AddHeader (header);
+        file->Write (Simulator::Now (), p);
+        return;
+      }
+    default:
+      NS_ABORT_MSG ("PcapSniffRxEvent(): Unexpected data link type " << dlt);
+    }
+}
+
+void 
+YansWifiPhyHelper::SetPcapFormat (enum PcapFormat format)
+{
+  switch (format)
+    {
+    case PCAP_FORMAT_80211:
+      m_pcapDlt = PcapHelper::DLT_IEEE802_11;
+      return;
+    case PCAP_FORMAT_80211_PRISM:
+      m_pcapDlt = PcapHelper::DLT_PRISM_HEADER;
+      return;
+    case PCAP_FORMAT_80211_RADIOTAP:
+      m_pcapDlt = PcapHelper::DLT_IEEE802_11_RADIO;
+      return;
+    default:
+      NS_ABORT_MSG ("YansWifiPhyHelper::SetPcapFormat(): Unexpected format");
+    }
+}
+
+void 
+YansWifiPhyHelper::SetPcapDataLinkType (uint32_t dlt)
+{
+  m_pcapDlt = dlt;
+}
+
+void 
+YansWifiPhyHelper::EnablePcapInternal (std::string prefix, Ptr<NetDevice> nd, bool promiscuous)
+{
+  //
+  // All of the Pcap enable functions vector through here including the ones
+  // that are wandering through all of devices on perhaps all of the nodes in
+  // the system.  We can only deal with devices of type WifiNetDevice.
+  //
+  Ptr<WifiNetDevice> device = nd->GetObject<WifiNetDevice> ();
+  if (device == 0)
+    {
+      NS_LOG_INFO ("YansWifiHelper::EnablePcapInternal(): Device " << &device << " not of type ns3::WifiNetDevice");
+      return;
+    }
+
+  Ptr<WifiPhy> phy = device->GetPhy ();
+  NS_ABORT_MSG_IF (phy == 0, "YansWifiPhyHelper::EnablePcapInternal(): Phy layer in WifiNetDevice must be set");
+
+  PcapHelper pcapHelper;
+  std::string filename = pcapHelper.GetFilename (prefix, device);
+
+  Ptr<PcapFileObject> file = pcapHelper.CreateFile (filename, "w", m_pcapDlt);
+
+  phy->TraceConnectWithoutContext ("PromiscSnifferTx", MakeBoundCallback (&PcapSniffTxEvent, file));
+  phy->TraceConnectWithoutContext ("PromiscSnifferRx", MakeBoundCallback (&PcapSniffRxEvent, file));
+}
+
+void 
+YansWifiPhyHelper::EnableAscii (std::ostream &os, uint32_t nodeid, uint32_t deviceid)
+{
+  Ptr<AsciiWriter> writer = AsciiWriter::Get (os);
+  Packet::EnablePrinting ();
+  std::ostringstream oss;
+  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::WifiNetDevice/Phy/State/RxOk";
+  Config::Connect (oss.str (), MakeBoundCallback (&AsciiPhyRxOkEvent, writer));
+  oss.str ("");
+  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::WifiNetDevice/Phy/State/Tx";
+  Config::Connect (oss.str (), MakeBoundCallback (&AsciiPhyTxEvent, writer));
+}
+void 
+YansWifiPhyHelper::EnableAscii (std::ostream &os, NetDeviceContainer d)
+{
+  for (NetDeviceContainer::Iterator i = d.Begin (); i != d.End (); ++i)
+    {
+      Ptr<NetDevice> dev = *i;
+      EnableAscii (os, dev->GetNode ()->GetId (), dev->GetIfIndex ());
+    }
+}
+void
+YansWifiPhyHelper::EnableAscii (std::ostream &os, NodeContainer n)
+{
+  NetDeviceContainer devs;
+  for (NodeContainer::Iterator i = n.Begin (); i != n.End (); ++i)
+    {
+      Ptr<Node> node = *i;
+      for (uint32_t j = 0; j < node->GetNDevices (); ++j)
+        {
+          devs.Add (node->GetDevice (j));
+        }
+    }
+  EnableAscii (os, devs);
+}
+
+void
+YansWifiPhyHelper::EnableAsciiAll (std::ostream &os)
+{
+  EnableAscii (os, NodeContainer::GetGlobal ());
+}
+
+} // namespace ns3
