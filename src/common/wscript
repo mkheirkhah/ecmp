@@ -1,0 +1,53 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    common = bld.create_ns3_module('common', ['core', 'simulator'])
+    common.source = [
+        'buffer.cc',
+        'packet-metadata.cc',
+        'packet-metadata-test.cc',
+        'packet.cc',
+        'chunk.cc',
+        'header.cc',
+        'trailer.cc',
+        'pcap-writer.cc',
+        'data-rate.cc',
+        'error-model.cc',
+        'tag.cc',
+        'byte-tag-list.cc',
+        'tag-buffer.cc',
+        'packet-tag-list.cc',
+        'nix-vector.cc',
+        'ascii-writer.cc',
+        'pcap-file.cc',
+        'pcap-file-test-suite.cc',
+        'propagation-delay-model.cc',
+        'propagation-loss-model.cc',
+        'propagation-loss-model-test-suite.cc',
+        'jakes-propagation-loss-model.cc',
+        ]
+
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'common'
+    headers.source = [
+        'buffer.h',
+        'chunk.h',
+        'header.h',
+        'trailer.h',
+        'packet.h',
+        'packet-metadata.h',
+        'pcap-writer.h',
+        'data-rate.h',
+        'error-model.h',
+        'tag.h',
+        'byte-tag-list.h',
+        'tag-buffer.h',
+        'packet-tag-list.h',
+        'nix-vector.h',
+        'ascii-writer.h',
+        'sgi-hashmap.h',
+        'pcap-file.h',
+        'propagation-delay-model.h',
+        'propagation-loss-model.h',
+        'jakes-propagation-loss-model.h',
+        ]
