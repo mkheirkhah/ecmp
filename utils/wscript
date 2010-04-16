@@ -1,0 +1,21 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+import os.path
+
+def build(bld):
+    env = bld.env
+
+    test_runner = bld.create_ns3_program('test-runner', ['core'])
+    test_runner.install_path = None # do not install
+    test_runner.source = 'test-runner.cc'
+    test_runner.uselib_local = 'ns3'
+    
+    obj = bld.create_ns3_program('bench-simulator', ['simulator'])
+    obj.source = 'bench-simulator.cc'
+
+    obj = bld.create_ns3_program('bench-packets', ['common'])
+    obj.source = 'bench-packets.cc'
+
+    obj = bld.create_ns3_program('print-introspected-doxygen',
+                                 ['internet-stack', 'csma-cd', 'point-to-point'])
+    obj.source = 'print-introspected-doxygen.cc'
+
