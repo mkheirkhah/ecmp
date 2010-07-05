@@ -21,6 +21,7 @@
 #define HIGH_PRECISION_128_H
 
 #include "ns3/simulator-config.h"
+#include <math.h>
 #include <stdint.h>
 
 #if defined(HAVE___UINT128_T) and !defined(HAVE_UINT128_T)
@@ -35,7 +36,7 @@ class HighPrecision
 public:
   inline HighPrecision ();
   inline HighPrecision (int64_t value, bool dummy);
-  HighPrecision (double value);
+  inline HighPrecision (double value);
 
   inline int64_t GetInteger (void) const;
   inline double GetDouble (void) const;
@@ -64,22 +65,6 @@ HighPrecision::HighPrecision (int64_t value, bool dummy)
 }
 
 
-double 
-HighPrecision::GetDouble (void) const
-{
-#define HP128_MAX_64 18446744073709551615.0
-  bool is_negative = m_value < 0;
-  uint128_t value = is_negative ? -m_value:m_value;
-  uint64_t hi = value >> 64;
-  uint64_t lo = value;
-  double flo = lo;
-  flo /= HP128_MAX_64;
-  double retval = hi;
-  retval += flo;
-  retval = is_negative ? -retval : retval;
-  return retval;
-#undef HP128_MAX_64
-}
 
 int64_t HighPrecision::GetInteger (void) const
 {
@@ -109,6 +94,34 @@ HighPrecision::Zero (void)
 {
   return HighPrecision ();
 }
+
+#define HP128_MAX_64 18446744073709551615.0
+double 
+HighPrecision::GetDouble (void) const
+{
+  bool is_negative = m_value < 0;
+  uint128_t value = is_negative ? -m_value:m_value;
+  uint64_t hi = value >> 64;
+  uint64_t lo = value;
+  double flo = lo;
+  flo /= HP128_MAX_64;
+  double retval = hi;
+  retval += flo;
+  retval = is_negative ? -retval : retval;
+  return retval;
+}
+HighPrecision::HighPrecision (double value)
+{
+  bool is_negative = value < 0;
+  value = is_negative?-value:value;
+  double hi = floor (value);
+  double lo = (value - hi) * HP128_MAX_64;
+  m_value = (int128_t)hi;
+  m_value <<= 64;
+  m_value += (int128_t)lo;
+  m_value = is_negative?-m_value:m_value;
+}
+#undef HP128_MAX_64
 
 } // namespace ns3
 
