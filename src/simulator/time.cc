@@ -1,0 +1,233 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2005,2006 INRIA
+ * Copyright (c) 2007 Emmanuelle Laprise
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ * TimeStep support by Emmanuelle Laprise <emmanuelle.laprise@bluekazoo.ca>
+ */
+#include "nstime.h"
+#include "ns3/abort.h"
+#include "ns3/global-value.h"
+#include "ns3/enum.h"
+#include "ns3/string.h"
+#include "ns3/object.h"
+#include "ns3/config.h"
+#include <math.h>
+
+namespace ns3 {
+
+TimeUnit<1>::TimeUnit (const std::string& s)
+{
+  std::string::size_type n = s.find_first_not_of ("0123456789.");
+  if (n != std::string::npos)
+    { // Found non-numeric
+      std::istringstream iss;
+      iss.str (s.substr (0, n));
+      double r;
+      iss >> r;
+      std::string trailer = s.substr (n, std::string::npos);
+      if (trailer == std::string ("s"))
+        {
+          *this = Time::FromDouble (r, Time::S);
+          return;
+        }
+      if (trailer == std::string ("ms"))
+        {
+          *this = Time::FromDouble (r, Time::MS);
+          return;
+        }
+      if (trailer == std::string ("us"))
+        {
+          *this = Time::FromDouble (r, Time::US);
+          return;
+        }
+      if (trailer == std::string ("ns"))
+        {
+          *this = Time::FromDouble (r, Time::NS);
+          return;
+        }
+      if (trailer == std::string ("ps"))
+        {
+          *this = Time::FromDouble (r, Time::PS);
+          return;
+        }
+      if (trailer == std::string ("fs"))
+        {
+          *this = Time::FromDouble (r, Time::FS);
+          return;
+        }
+      NS_ABORT_MSG ("Can't Parse Time " << s);
+    }
+  // else
+  // they didn't provide units, assume seconds
+  std::istringstream iss;
+  iss.str (s);
+  double v;
+  iss >> v;
+  *this = Time::FromDouble (v, Time::S);
+}
+
+std::ostream&
+operator<< (std::ostream& os, const Time & time)
+{
+  std::string unit;
+  switch (TimeBase::GetResolution ())
+    {
+    case TimeBase::S:
+      unit = "s";
+      break;
+    case TimeBase::MS:
+      unit = "ms";
+      break;
+    case TimeBase::US:
+      unit = "us";
+      break;
+    case TimeBase::NS:
+      unit = "ns";
+      break;
+    case TimeBase::PS:
+      unit = "ps";
+      break;
+    case TimeBase::FS:
+      unit = "fs";
+      break;
+    case TimeBase::LAST:
+      NS_ABORT_MSG ("can't be reached");
+      unit = "unreachable";
+      break;
+    }
+  double v = Time::ToDouble (time, Time::GetResolution ());
+  os << v << unit;
+  return os;
+}
+std::istream& operator>> (std::istream& is, Time & time)
+{
+  std::string value;
+  is >> value;
+  time = Time (value);
+  return is;
+}
+
+ATTRIBUTE_VALUE_IMPLEMENT (Time);
+ATTRIBUTE_CHECKER_IMPLEMENT (Time);
+
+TimeUnit<0>::TimeUnit ()
+  : TimeBase (HighPrecision ())
+{}
+
+TimeUnit<0>::TimeUnit (const TimeUnit &o)
+  : TimeBase (o)
+{}
+
+TimeUnit<0>::TimeUnit (double scalar)
+  : TimeBase (HighPrecision (scalar))
+{}
+
+TimeUnit<0>::TimeUnit (const HighPrecision &o)
+  : TimeBase (o) {}
+
+
+double
+TimeUnit<0>::GetDouble (void) const
+{
+  return GetHighPrecision ().GetDouble ();
+}
+
+} // namespace ns3
+
+#include "ns3/test.h"
+
+namespace ns3 {
+
+class Bug863TestCase : public TestCase
+{
+public:
+  Bug863TestCase ();
+  virtual bool DoRun (void);
+};
+
+Bug863TestCase::Bug863TestCase ()
+  : TestCase ("Bug 863")
+{
+}
+
+bool Bug863TestCase::DoRun (void)
+{
+  Scalar result = Scalar (0.9) / Scalar (1.0);
+  NS_TEST_ASSERT_MSG_EQ ((result == Scalar (0.9)), true, "Invalid arithmetic result");
+  return false;
+}
+
+class TimeSimpleTestCase : public TestCase
+{
+public:
+  TimeSimpleTestCase (enum TimeBase::Unit resolution);
+private:
+  virtual bool DoRun (void);
+  virtual void DoTearDown (void);
+  enum TimeBase::Unit m_originalResolution;
+  enum TimeBase::Unit m_resolution;
+};
+
+TimeSimpleTestCase::TimeSimpleTestCase (enum TimeBase::Unit resolution)
+  : TestCase ("Sanity check of common time operations"),
+    m_resolution (resolution)
+{}
+bool
+TimeSimpleTestCase::DoRun (void)
+{
+  m_originalResolution = Time::GetResolution ();
+  Time::SetResolution (m_resolution);
+  NS_TEST_ASSERT_MSG_EQ_TOL (Seconds (1.0).GetSeconds (), 1.0, TimeStep (1).GetSeconds (), 
+                             "is 1 really 1 ?");
+  NS_TEST_ASSERT_MSG_EQ_TOL (Seconds (10.0).GetSeconds (), 10.0, TimeStep (1).GetSeconds (), 
+                             "is 10 really 10 ?");
+  NS_TEST_ASSERT_MSG_EQ (MilliSeconds (1).GetMilliSeconds (), 1, 
+                         "is 1ms really 1ms ?");
+  NS_TEST_ASSERT_MSG_EQ (MicroSeconds (1).GetMicroSeconds (), 1, 
+                         "is 1us really 1us ?");
+#if 0
+  Time ns = NanoSeconds (1);
+  ns.GetNanoSeconds ();
+  NS_TEST_ASSERT_MSG_EQ (NanoSeconds (1).GetNanoSeconds (), 1, 
+                         "is 1ns really 1ns ?");
+  NS_TEST_ASSERT_MSG_EQ (PicoSeconds (1).GetPicoSeconds (), 1, 
+                         "is 1ps really 1ps ?");
+  NS_TEST_ASSERT_MSG_EQ (FemtoSeconds (1).GetFemtoSeconds (), 1, 
+                         "is 1fs really 1fs ?");
+#endif
+  return false;
+}
+
+void 
+TimeSimpleTestCase::DoTearDown (void)
+{
+  Time::SetResolution (m_originalResolution);
+}
+
+static class TimeTestSuite : public TestSuite
+{
+public:
+  TimeTestSuite ()
+    : TestSuite ("time", UNIT)
+  {
+    AddTestCase (new Bug863TestCase ());
+    AddTestCase (new TimeSimpleTestCase (TimeBase::US));
+  }
+} g_timeTestSuite;
+
+} // namespace ns3
