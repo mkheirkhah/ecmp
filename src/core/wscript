@@ -1,0 +1,159 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+import sys
+import Options
+
+def configure(conf):
+    if conf.check(header_name='stdlib.h'):
+        conf.define('HAVE_STDLIB_H', 1)
+        conf.define('HAVE_GETENV', 1)
+
+    conf.check(header_name='signal.h', define_name='HAVE_SIGNAL_H')
+
+    # Check for POSIX threads
+    test_env = conf.env.copy()
+    if Options.platform != 'darwin' and Options.platform != 'cygwin':
+        test_env.append_value('LINKFLAGS', '-pthread')
+        test_env.append_value('CXXFLAGS', '-pthread')
+        test_env.append_value('CCFLAGS', '-pthread')
+    fragment = r"""
+#include <pthread.h>
+int main ()
+{
+   pthread_mutex_t m;
+   pthread_mutex_init (&m, NULL);
+   return 0;
+}
+"""
+    have_pthread = conf.check(header_name='pthread.h', define_name='HAVE_PTHREAD_H',
+                              env=test_env, fragment=fragment,
+                              errmsg='Could not find pthread support (build/config.log for details)',
+                              mandatory=False)
+    if have_pthread:
+        # darwin accepts -pthread but prints a warning saying it is ignored
+        if Options.platform != 'darwin' and Options.platform != 'cygwin':
+            conf.env['CXXFLAGS_PTHREAD'] = '-pthread'
+            conf.env['CCFLAGS_PTHREAD'] = '-pthread'
+            conf.env['LINKFLAGS_PTHREAD'] = '-pthread'
+
+    conf.env['ENABLE_THREADING'] = have_pthread
+
+    conf.report_optional_feature("Threading", "Threading Primitives",
+                                 conf.env['ENABLE_THREADING'],
+                                 "<pthread.h> include not detected")
+
+    conf.write_config_header('ns3/core-config.h', top=True)
+
+def build(bld):
+    core = bld.create_ns3_module('core')
+    core.source = [
+        'log.cc',
+        'breakpoint.cc',
+        'type-id.cc',
+        'attribute-list.cc',
+        'object-base.cc',
+        'ref-count-base.cc',
+        'object.cc',
+        'test.cc',
+        'random-variable.cc',
+        'rng-stream.cc',
+        'command-line.cc',
+        'type-name.cc',
+        'attribute.cc',
+        'boolean.cc',
+        'integer.cc',
+        'uinteger.cc',
+        'enum.cc',
+        'double.cc',
+        'string.cc',
+        'pointer.cc',
+        'object-vector.cc',
+        'object-factory.cc',
+        'global-value.cc',
+        'trace-source-accessor.cc',
+        'config.cc',
+        'callback.cc',
+        'names.cc',
+        'vector.cc',
+        'attribute-test-suite.cc',
+        'callback-test-suite.cc',
+        'names-test-suite.cc',
+        'type-traits-test-suite.cc',
+        'traced-callback-test-suite.cc',
+        'ptr-test-suite.cc',
+        'fatal-impl.cc',
+        ]
+
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'core'
+    headers.source = [
+        'system-wall-clock-ms.h',
+        'empty.h',
+        'callback.h',
+        'object-base.h',
+        'ref-count-base.h',
+        'simple-ref-count.h',
+        'type-id.h',
+        'attribute-list.h',
+        'ptr.h',
+        'object.h',
+        'log.h',
+        'assert.h',
+        'breakpoint.h',
+        'fatal-error.h',
+        'test.h',
+        'random-variable.h',
+        'rng-stream.h',
+        'command-line.h',
+        'type-name.h',
+        'type-traits.h',
+        'int-to-type.h',
+        'attribute.h',
+        'attribute-accessor-helper.h',
+        'boolean.h',
+        'integer.h',
+        'uinteger.h',
+        'double.h',
+        'enum.h',
+        'string.h',
+        'pointer.h',
+        'object-factory.h',
+        'attribute-helper.h',
+        'global-value.h',
+        'traced-callback.h',
+        'traced-value.h',
+        'trace-source-accessor.h',
+        'config.h',
+        'object-vector.h',
+        'deprecated.h',
+        'abort.h',
+        'names.h',
+        'vector.h',
+        'default-deleter.h',
+        'fatal-impl.h',
+        ]
+
+    if sys.platform == 'win32':
+        core.source.extend([
+            'win32-system-wall-clock-ms.cc',
+            ])
+    else:
+        core.source.extend([
+            'unix-system-wall-clock-ms.cc',
+            ])
+
+    if bld.env['ENABLE_THREADING']:
+        core.source.extend([
+            'unix-system-thread.cc',
+            'unix-system-mutex.cc',
+            'unix-system-condition.cc',
+            ])
+        core.uselib = 'PTHREAD'
+        headers.source.extend([
+                'system-mutex.h',
+                'system-thread.h',
+                'system-condition.h',
+                ])
+
+    if bld.env['ENABLE_GSL']:
+        core.uselib = 'GSL GSLCBLAS M'
+        core.source.extend(['rng-test-suite.cc'])
