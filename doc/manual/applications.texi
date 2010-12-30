@@ -1,0 +1,6 @@
+@node Applications Overview
+@chapter Applications Overview
+
+@cartouche
+Placeholder chapter
+@end cartouche
