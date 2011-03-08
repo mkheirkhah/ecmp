@@ -3,6 +3,10 @@ from pybindgen import Module, FileCodeSink, param, retval, cppclass, typehandler
 def register_types(module):
     root_module = module.get_root()
     
+    ## mesh-helper.h: ns3::MeshHelper [class]
+    module.add_class('MeshHelper')
+    ## mesh-helper.h: ns3::MeshHelper::ChannelPolicy [enumeration]
+    module.add_enum('ChannelPolicy', ['SPREAD_CHANNELS', 'ZERO_CHANNEL'], outer_class=root_module['ns3::MeshHelper'])
     ## mesh-wifi-beacon.h: ns3::MeshWifiBeacon [class]
     module.add_class('MeshWifiBeacon')
     ## simple-ref-count.h: ns3::SimpleRefCount<ns3::MeshWifiInterfaceMacPlugin, ns3::empty, ns3::DefaultDeleter<ns3::MeshWifiInterfaceMacPlugin> > [class]
@@ -11,12 +15,14 @@ def register_types(module):
     module.add_class('MeshInformationElementVector', parent=root_module['ns3::WifiInformationElementVector'])
     ## mesh-l2-routing-protocol.h: ns3::MeshL2RoutingProtocol [class]
     module.add_class('MeshL2RoutingProtocol', parent=root_module['ns3::Object'])
-    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac [class]
-    module.add_class('MeshWifiInterfaceMac', parent=root_module['ns3::WifiMac'])
+    ## mesh-stack-installer.h: ns3::MeshStack [class]
+    module.add_class('MeshStack', parent=root_module['ns3::Object'])
     ## mesh-wifi-interface-mac-plugin.h: ns3::MeshWifiInterfaceMacPlugin [class]
     module.add_class('MeshWifiInterfaceMacPlugin', parent=root_module['ns3::SimpleRefCount< ns3::MeshWifiInterfaceMacPlugin, ns3::empty, ns3::DefaultDeleter<ns3::MeshWifiInterfaceMacPlugin> >'])
     ## mesh-point-device.h: ns3::MeshPointDevice [class]
     module.add_class('MeshPointDevice', parent=root_module['ns3::NetDevice'])
+    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac [class]
+    module.add_class('MeshWifiInterfaceMac', parent=root_module['ns3::RegularWifiMac'])
     
     ## Register a nested module for the namespace Config
     
@@ -46,6 +52,12 @@ def register_types(module):
     
     nested_module = module.add_cpp_namespace('dot11s')
     register_types_ns3_dot11s(nested_module)
+    
+    
+    ## Register a nested module for the namespace dsdv
+    
+    nested_module = module.add_cpp_namespace('dsdv')
+    register_types_ns3_dsdv(nested_module)
     
     
     ## Register a nested module for the namespace flame
@@ -86,6 +98,10 @@ def register_types_ns3_dot11s(module):
     root_module = module.get_root()
     
 
+def register_types_ns3_dsdv(module):
+    root_module = module.get_root()
+    
+
 def register_types_ns3_flame(module):
     root_module = module.get_root()
     
@@ -99,12 +115,63 @@ def register_types_ns3_olsr(module):
     
 
 def register_methods(root_module):
+    register_Ns3MeshHelper_methods(root_module, root_module['ns3::MeshHelper'])
     register_Ns3MeshWifiBeacon_methods(root_module, root_module['ns3::MeshWifiBeacon'])
     register_Ns3MeshInformationElementVector_methods(root_module, root_module['ns3::MeshInformationElementVector'])
     register_Ns3MeshL2RoutingProtocol_methods(root_module, root_module['ns3::MeshL2RoutingProtocol'])
-    register_Ns3MeshWifiInterfaceMac_methods(root_module, root_module['ns3::MeshWifiInterfaceMac'])
+    register_Ns3MeshStack_methods(root_module, root_module['ns3::MeshStack'])
     register_Ns3MeshWifiInterfaceMacPlugin_methods(root_module, root_module['ns3::MeshWifiInterfaceMacPlugin'])
     register_Ns3MeshPointDevice_methods(root_module, root_module['ns3::MeshPointDevice'])
+    register_Ns3MeshWifiInterfaceMac_methods(root_module, root_module['ns3::MeshWifiInterfaceMac'])
+    return
+
+def register_Ns3MeshHelper_methods(root_module, cls):
+    ## mesh-helper.h: ns3::MeshHelper::MeshHelper(ns3::MeshHelper const & arg0) [copy constructor]
+    cls.add_constructor([param('ns3::MeshHelper const &', 'arg0')])
+    ## mesh-helper.h: ns3::MeshHelper::MeshHelper() [constructor]
+    cls.add_constructor([])
+    ## mesh-helper.h: static ns3::MeshHelper ns3::MeshHelper::Default() [member function]
+    cls.add_method('Default', 
+                   'ns3::MeshHelper', 
+                   [], 
+                   is_static=True)
+    ## mesh-helper.h: ns3::NetDeviceContainer ns3::MeshHelper::Install(ns3::WifiPhyHelper const & phyHelper, ns3::NodeContainer c) const [member function]
+    cls.add_method('Install', 
+                   'ns3::NetDeviceContainer', 
+                   [param('ns3::WifiPhyHelper const &', 'phyHelper'), param('ns3::NodeContainer', 'c')], 
+                   is_const=True)
+    ## mesh-helper.h: void ns3::MeshHelper::Report(ns3::Ptr<ns3::NetDevice> const & arg0, std::ostream & arg1) [member function]
+    cls.add_method('Report', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::NetDevice > const &', 'arg0'), param('std::ostream &', 'arg1')])
+    ## mesh-helper.h: void ns3::MeshHelper::ResetStats(ns3::Ptr<ns3::NetDevice> const & arg0) [member function]
+    cls.add_method('ResetStats', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::NetDevice > const &', 'arg0')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetMacType(std::string n0="", ns3::AttributeValue const & v0=ns3::EmptyAttributeValue(), std::string n1="", ns3::AttributeValue const & v1=ns3::EmptyAttributeValue(), std::string n2="", ns3::AttributeValue const & v2=ns3::EmptyAttributeValue(), std::string n3="", ns3::AttributeValue const & v3=ns3::EmptyAttributeValue(), std::string n4="", ns3::AttributeValue const & v4=ns3::EmptyAttributeValue(), std::string n5="", ns3::AttributeValue const & v5=ns3::EmptyAttributeValue(), std::string n6="", ns3::AttributeValue const & v6=ns3::EmptyAttributeValue(), std::string n7="", ns3::AttributeValue const & v7=ns3::EmptyAttributeValue()) [member function]
+    cls.add_method('SetMacType', 
+                   'void', 
+                   [param('std::string', 'n0', default_value='""'), param('ns3::AttributeValue const &', 'v0', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n1', default_value='""'), param('ns3::AttributeValue const &', 'v1', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n2', default_value='""'), param('ns3::AttributeValue const &', 'v2', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n3', default_value='""'), param('ns3::AttributeValue const &', 'v3', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n4', default_value='""'), param('ns3::AttributeValue const &', 'v4', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n5', default_value='""'), param('ns3::AttributeValue const &', 'v5', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n6', default_value='""'), param('ns3::AttributeValue const &', 'v6', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n7', default_value='""'), param('ns3::AttributeValue const &', 'v7', default_value='ns3::EmptyAttributeValue()')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetNumberOfInterfaces(uint32_t nInterfaces) [member function]
+    cls.add_method('SetNumberOfInterfaces', 
+                   'void', 
+                   [param('uint32_t', 'nInterfaces')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetRemoteStationManager(std::string type, std::string n0="", ns3::AttributeValue const & v0=ns3::EmptyAttributeValue(), std::string n1="", ns3::AttributeValue const & v1=ns3::EmptyAttributeValue(), std::string n2="", ns3::AttributeValue const & v2=ns3::EmptyAttributeValue(), std::string n3="", ns3::AttributeValue const & v3=ns3::EmptyAttributeValue(), std::string n4="", ns3::AttributeValue const & v4=ns3::EmptyAttributeValue(), std::string n5="", ns3::AttributeValue const & v5=ns3::EmptyAttributeValue(), std::string n6="", ns3::AttributeValue const & v6=ns3::EmptyAttributeValue(), std::string n7="", ns3::AttributeValue const & v7=ns3::EmptyAttributeValue()) [member function]
+    cls.add_method('SetRemoteStationManager', 
+                   'void', 
+                   [param('std::string', 'type'), param('std::string', 'n0', default_value='""'), param('ns3::AttributeValue const &', 'v0', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n1', default_value='""'), param('ns3::AttributeValue const &', 'v1', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n2', default_value='""'), param('ns3::AttributeValue const &', 'v2', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n3', default_value='""'), param('ns3::AttributeValue const &', 'v3', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n4', default_value='""'), param('ns3::AttributeValue const &', 'v4', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n5', default_value='""'), param('ns3::AttributeValue const &', 'v5', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n6', default_value='""'), param('ns3::AttributeValue const &', 'v6', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n7', default_value='""'), param('ns3::AttributeValue const &', 'v7', default_value='ns3::EmptyAttributeValue()')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetSpreadInterfaceChannels(ns3::MeshHelper::ChannelPolicy arg0) [member function]
+    cls.add_method('SetSpreadInterfaceChannels', 
+                   'void', 
+                   [param('ns3::MeshHelper::ChannelPolicy', 'arg0')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetStackInstaller(std::string type, std::string n0="", ns3::AttributeValue const & v0=ns3::EmptyAttributeValue(), std::string n1="", ns3::AttributeValue const & v1=ns3::EmptyAttributeValue(), std::string n2="", ns3::AttributeValue const & v2=ns3::EmptyAttributeValue(), std::string n3="", ns3::AttributeValue const & v3=ns3::EmptyAttributeValue(), std::string n4="", ns3::AttributeValue const & v4=ns3::EmptyAttributeValue(), std::string n5="", ns3::AttributeValue const & v5=ns3::EmptyAttributeValue(), std::string n6="", ns3::AttributeValue const & v6=ns3::EmptyAttributeValue(), std::string n7="", ns3::AttributeValue const & v7=ns3::EmptyAttributeValue()) [member function]
+    cls.add_method('SetStackInstaller', 
+                   'void', 
+                   [param('std::string', 'type'), param('std::string', 'n0', default_value='""'), param('ns3::AttributeValue const &', 'v0', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n1', default_value='""'), param('ns3::AttributeValue const &', 'v1', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n2', default_value='""'), param('ns3::AttributeValue const &', 'v2', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n3', default_value='""'), param('ns3::AttributeValue const &', 'v3', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n4', default_value='""'), param('ns3::AttributeValue const &', 'v4', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n5', default_value='""'), param('ns3::AttributeValue const &', 'v5', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n6', default_value='""'), param('ns3::AttributeValue const &', 'v6', default_value='ns3::EmptyAttributeValue()'), param('std::string', 'n7', default_value='""'), param('ns3::AttributeValue const &', 'v7', default_value='ns3::EmptyAttributeValue()')])
+    ## mesh-helper.h: void ns3::MeshHelper::SetStandard(ns3::WifiPhyStandard standard) [member function]
+    cls.add_method('SetStandard', 
+                   'void', 
+                   [param('ns3::WifiPhyStandard', 'standard')])
     return
 
 def register_Ns3MeshWifiBeacon_methods(root_module, cls):
@@ -179,258 +246,26 @@ def register_Ns3MeshL2RoutingProtocol_methods(root_module, cls):
                    [param('ns3::Ptr< ns3::MeshPointDevice >', 'mp')])
     return
 
-def register_Ns3MeshWifiInterfaceMac_methods(root_module, cls):
-    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac::MeshWifiInterfaceMac(ns3::MeshWifiInterfaceMac const & arg0) [copy constructor]
-    cls.add_constructor([param('ns3::MeshWifiInterfaceMac const &', 'arg0')])
-    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac::MeshWifiInterfaceMac() [constructor]
+def register_Ns3MeshStack_methods(root_module, cls):
+    ## mesh-stack-installer.h: ns3::MeshStack::MeshStack() [constructor]
     cls.add_constructor([])
-    ## mesh-wifi-interface-mac.h: bool ns3::MeshWifiInterfaceMac::CheckSupportedRates(ns3::SupportedRates rates) const [member function]
-    cls.add_method('CheckSupportedRates', 
+    ## mesh-stack-installer.h: ns3::MeshStack::MeshStack(ns3::MeshStack const & arg0) [copy constructor]
+    cls.add_constructor([param('ns3::MeshStack const &', 'arg0')])
+    ## mesh-stack-installer.h: bool ns3::MeshStack::InstallStack(ns3::Ptr<ns3::MeshPointDevice> mp) [member function]
+    cls.add_method('InstallStack', 
                    'bool', 
-                   [param('ns3::SupportedRates', 'rates')], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Enqueue(ns3::Ptr<ns3::Packet const> packet, ns3::Mac48Address to, ns3::Mac48Address from) [member function]
-    cls.add_method('Enqueue', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::Packet const >', 'packet'), param('ns3::Mac48Address', 'to'), param('ns3::Mac48Address', 'from')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Enqueue(ns3::Ptr<ns3::Packet const> packet, ns3::Mac48Address to) [member function]
-    cls.add_method('Enqueue', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::Packet const >', 'packet'), param('ns3::Mac48Address', 'to')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::FinishConfigureStandard(ns3::WifiPhyStandard standard) [member function]
-    cls.add_method('FinishConfigureStandard', 
-                   'void', 
-                   [param('ns3::WifiPhyStandard', 'standard')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetAckTimeout() const [member function]
-    cls.add_method('GetAckTimeout', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Mac48Address ns3::MeshWifiInterfaceMac::GetAddress() const [member function]
-    cls.add_method('GetAddress', 
-                   'ns3::Mac48Address', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetBeaconInterval() const [member function]
-    cls.add_method('GetBeaconInterval', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: ns3::Mac48Address ns3::MeshWifiInterfaceMac::GetBssid() const [member function]
-    cls.add_method('GetBssid', 
-                   'ns3::Mac48Address', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetCtsTimeout() const [member function]
-    cls.add_method('GetCtsTimeout', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetEifsNoDifs() const [member function]
-    cls.add_method('GetEifsNoDifs', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: uint16_t ns3::MeshWifiInterfaceMac::GetFrequencyChannel() const [member function]
-    cls.add_method('GetFrequencyChannel', 
-                   'uint16_t', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: uint32_t ns3::MeshWifiInterfaceMac::GetLinkMetric(ns3::Mac48Address peerAddress) [member function]
-    cls.add_method('GetLinkMetric', 
-                   'uint32_t', 
-                   [param('ns3::Mac48Address', 'peerAddress')])
-    ## mesh-wifi-interface-mac.h: ns3::Mac48Address ns3::MeshWifiInterfaceMac::GetMeshPointAddress() const [member function]
-    cls.add_method('GetMeshPointAddress', 
-                   'ns3::Mac48Address', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: ns3::WifiPhyStandard ns3::MeshWifiInterfaceMac::GetPhyStandard() const [member function]
-    cls.add_method('GetPhyStandard', 
-                   'ns3::WifiPhyStandard', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetPifs() const [member function]
-    cls.add_method('GetPifs', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetSifs() const [member function]
-    cls.add_method('GetSifs', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetSlot() const [member function]
-    cls.add_method('GetSlot', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Ssid ns3::MeshWifiInterfaceMac::GetSsid() const [member function]
-    cls.add_method('GetSsid', 
-                   'ns3::Ssid', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: ns3::Ptr<ns3::WifiRemoteStationManager> ns3::MeshWifiInterfaceMac::GetStationManager() [member function]
-    cls.add_method('GetStationManager', 
-                   'ns3::Ptr< ns3::WifiRemoteStationManager >', 
-                   [])
-    ## mesh-wifi-interface-mac.h: ns3::SupportedRates ns3::MeshWifiInterfaceMac::GetSupportedRates() const [member function]
-    cls.add_method('GetSupportedRates', 
-                   'ns3::SupportedRates', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetTbtt() const [member function]
-    cls.add_method('GetTbtt', 
-                   'ns3::Time', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: static ns3::TypeId ns3::MeshWifiInterfaceMac::GetTypeId() [member function]
-    cls.add_method('GetTypeId', 
-                   'ns3::TypeId', 
-                   [], 
-                   is_static=True)
-    ## mesh-wifi-interface-mac.h: ns3::Ptr<ns3::WifiPhy> ns3::MeshWifiInterfaceMac::GetWifiPhy() const [member function]
-    cls.add_method('GetWifiPhy', 
-                   'ns3::Ptr< ns3::WifiPhy >', 
-                   [], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::InstallPlugin(ns3::Ptr<ns3::MeshWifiInterfaceMacPlugin> plugin) [member function]
-    cls.add_method('InstallPlugin', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::MeshWifiInterfaceMacPlugin >', 'plugin')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Report(std::ostream & arg0) const [member function]
+                   [param('ns3::Ptr< ns3::MeshPointDevice >', 'mp')], 
+                   is_pure_virtual=True, is_virtual=True)
+    ## mesh-stack-installer.h: void ns3::MeshStack::Report(ns3::Ptr<ns3::MeshPointDevice> const mp, std::ostream & arg1) [member function]
     cls.add_method('Report', 
                    'void', 
-                   [param('std::ostream &', 'arg0')], 
-                   is_const=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::ResetStats() [member function]
+                   [param('ns3::Ptr< ns3::MeshPointDevice > const', 'mp'), param('std::ostream &', 'arg1')], 
+                   is_pure_virtual=True, is_virtual=True)
+    ## mesh-stack-installer.h: void ns3::MeshStack::ResetStats(ns3::Ptr<ns3::MeshPointDevice> const mp) [member function]
     cls.add_method('ResetStats', 
                    'void', 
-                   [])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SendManagementFrame(ns3::Ptr<ns3::Packet> frame, ns3::WifiMacHeader const & hdr) [member function]
-    cls.add_method('SendManagementFrame', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::Packet >', 'frame'), param('ns3::WifiMacHeader const &', 'hdr')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetAckTimeout(ns3::Time ackTimeout) [member function]
-    cls.add_method('SetAckTimeout', 
-                   'void', 
-                   [param('ns3::Time', 'ackTimeout')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetAddress(ns3::Mac48Address address) [member function]
-    cls.add_method('SetAddress', 
-                   'void', 
-                   [param('ns3::Mac48Address', 'address')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetBeaconGeneration(bool enable) [member function]
-    cls.add_method('SetBeaconGeneration', 
-                   'void', 
-                   [param('bool', 'enable')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetBeaconInterval(ns3::Time interval) [member function]
-    cls.add_method('SetBeaconInterval', 
-                   'void', 
-                   [param('ns3::Time', 'interval')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetCtsTimeout(ns3::Time ctsTimeout) [member function]
-    cls.add_method('SetCtsTimeout', 
-                   'void', 
-                   [param('ns3::Time', 'ctsTimeout')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetEifsNoDifs(ns3::Time eifsNoDifs) [member function]
-    cls.add_method('SetEifsNoDifs', 
-                   'void', 
-                   [param('ns3::Time', 'eifsNoDifs')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetForwardUpCallback(ns3::Callback<void, ns3::Ptr<ns3::Packet>, ns3::Mac48Address, ns3::Mac48Address, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> upCallback) [member function]
-    cls.add_method('SetForwardUpCallback', 
-                   'void', 
-                   [param('ns3::Callback< void, ns3::Ptr< ns3::Packet >, ns3::Mac48Address, ns3::Mac48Address, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'upCallback')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetLinkDownCallback(ns3::Callback<void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> linkDown) [member function]
-    cls.add_method('SetLinkDownCallback', 
-                   'void', 
-                   [param('ns3::Callback< void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'linkDown')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetLinkMetricCallback(ns3::Callback<unsigned int, ns3::Mac48Address, ns3::Ptr<ns3::MeshWifiInterfaceMac>, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> cb) [member function]
-    cls.add_method('SetLinkMetricCallback', 
-                   'void', 
-                   [param('ns3::Callback< unsigned int, ns3::Mac48Address, ns3::Ptr< ns3::MeshWifiInterfaceMac >, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'cb')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetLinkUpCallback(ns3::Callback<void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> linkUp) [member function]
-    cls.add_method('SetLinkUpCallback', 
-                   'void', 
-                   [param('ns3::Callback< void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'linkUp')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetMeshPointAddress(ns3::Mac48Address arg0) [member function]
-    cls.add_method('SetMeshPointAddress', 
-                   'void', 
-                   [param('ns3::Mac48Address', 'arg0')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetPifs(ns3::Time pifs) [member function]
-    cls.add_method('SetPifs', 
-                   'void', 
-                   [param('ns3::Time', 'pifs')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetQueue(ns3::AcIndex ac) [member function]
-    cls.add_method('SetQueue', 
-                   'void', 
-                   [param('ns3::AcIndex', 'ac')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetRandomStartDelay(ns3::Time interval) [member function]
-    cls.add_method('SetRandomStartDelay', 
-                   'void', 
-                   [param('ns3::Time', 'interval')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetSifs(ns3::Time sifs) [member function]
-    cls.add_method('SetSifs', 
-                   'void', 
-                   [param('ns3::Time', 'sifs')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetSlot(ns3::Time slotTime) [member function]
-    cls.add_method('SetSlot', 
-                   'void', 
-                   [param('ns3::Time', 'slotTime')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetSsid(ns3::Ssid ssid) [member function]
-    cls.add_method('SetSsid', 
-                   'void', 
-                   [param('ns3::Ssid', 'ssid')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetWifiPhy(ns3::Ptr<ns3::WifiPhy> phy) [member function]
-    cls.add_method('SetWifiPhy', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::WifiPhy >', 'phy')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetWifiRemoteStationManager(ns3::Ptr<ns3::WifiRemoteStationManager> stationManager) [member function]
-    cls.add_method('SetWifiRemoteStationManager', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::WifiRemoteStationManager >', 'stationManager')], 
-                   is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::ShiftTbtt(ns3::Time shift) [member function]
-    cls.add_method('ShiftTbtt', 
-                   'void', 
-                   [param('ns3::Time', 'shift')])
-    ## mesh-wifi-interface-mac.h: bool ns3::MeshWifiInterfaceMac::SupportsSendFrom() const [member function]
-    cls.add_method('SupportsSendFrom', 
-                   'bool', 
-                   [], 
-                   is_const=True, is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SwitchFrequencyChannel(uint16_t new_id) [member function]
-    cls.add_method('SwitchFrequencyChannel', 
-                   'void', 
-                   [param('uint16_t', 'new_id')])
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::DoDispose() [member function]
-    cls.add_method('DoDispose', 
-                   'void', 
-                   [], 
-                   visibility='private', is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::DoStart() [member function]
-    cls.add_method('DoStart', 
-                   'void', 
-                   [], 
-                   visibility='private', is_virtual=True)
-    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::ForwardUp(ns3::Ptr<ns3::Packet> packet, ns3::Mac48Address src, ns3::Mac48Address dst) [member function]
-    cls.add_method('ForwardUp', 
-                   'void', 
-                   [param('ns3::Ptr< ns3::Packet >', 'packet'), param('ns3::Mac48Address', 'src'), param('ns3::Mac48Address', 'dst')], 
-                   visibility='private', is_virtual=True)
+                   [param('ns3::Ptr< ns3::MeshPointDevice > const', 'mp')], 
+                   is_pure_virtual=True, is_virtual=True)
     return
 
 def register_Ns3MeshWifiInterfaceMacPlugin_methods(root_module, cls):
@@ -634,6 +469,137 @@ def register_Ns3MeshPointDevice_methods(root_module, cls):
                    is_const=True, is_virtual=True)
     return
 
+def register_Ns3MeshWifiInterfaceMac_methods(root_module, cls):
+    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac::MeshWifiInterfaceMac(ns3::MeshWifiInterfaceMac const & arg0) [copy constructor]
+    cls.add_constructor([param('ns3::MeshWifiInterfaceMac const &', 'arg0')])
+    ## mesh-wifi-interface-mac.h: ns3::MeshWifiInterfaceMac::MeshWifiInterfaceMac() [constructor]
+    cls.add_constructor([])
+    ## mesh-wifi-interface-mac.h: bool ns3::MeshWifiInterfaceMac::CheckSupportedRates(ns3::SupportedRates rates) const [member function]
+    cls.add_method('CheckSupportedRates', 
+                   'bool', 
+                   [param('ns3::SupportedRates', 'rates')], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Enqueue(ns3::Ptr<ns3::Packet const> packet, ns3::Mac48Address to, ns3::Mac48Address from) [member function]
+    cls.add_method('Enqueue', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::Packet const >', 'packet'), param('ns3::Mac48Address', 'to'), param('ns3::Mac48Address', 'from')], 
+                   is_virtual=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Enqueue(ns3::Ptr<ns3::Packet const> packet, ns3::Mac48Address to) [member function]
+    cls.add_method('Enqueue', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::Packet const >', 'packet'), param('ns3::Mac48Address', 'to')], 
+                   is_virtual=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::FinishConfigureStandard(ns3::WifiPhyStandard standard) [member function]
+    cls.add_method('FinishConfigureStandard', 
+                   'void', 
+                   [param('ns3::WifiPhyStandard', 'standard')], 
+                   is_virtual=True)
+    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetBeaconInterval() const [member function]
+    cls.add_method('GetBeaconInterval', 
+                   'ns3::Time', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: uint16_t ns3::MeshWifiInterfaceMac::GetFrequencyChannel() const [member function]
+    cls.add_method('GetFrequencyChannel', 
+                   'uint16_t', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: uint32_t ns3::MeshWifiInterfaceMac::GetLinkMetric(ns3::Mac48Address peerAddress) [member function]
+    cls.add_method('GetLinkMetric', 
+                   'uint32_t', 
+                   [param('ns3::Mac48Address', 'peerAddress')])
+    ## mesh-wifi-interface-mac.h: ns3::Mac48Address ns3::MeshWifiInterfaceMac::GetMeshPointAddress() const [member function]
+    cls.add_method('GetMeshPointAddress', 
+                   'ns3::Mac48Address', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: ns3::WifiPhyStandard ns3::MeshWifiInterfaceMac::GetPhyStandard() const [member function]
+    cls.add_method('GetPhyStandard', 
+                   'ns3::WifiPhyStandard', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: ns3::SupportedRates ns3::MeshWifiInterfaceMac::GetSupportedRates() const [member function]
+    cls.add_method('GetSupportedRates', 
+                   'ns3::SupportedRates', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: ns3::Time ns3::MeshWifiInterfaceMac::GetTbtt() const [member function]
+    cls.add_method('GetTbtt', 
+                   'ns3::Time', 
+                   [], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: static ns3::TypeId ns3::MeshWifiInterfaceMac::GetTypeId() [member function]
+    cls.add_method('GetTypeId', 
+                   'ns3::TypeId', 
+                   [], 
+                   is_static=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::InstallPlugin(ns3::Ptr<ns3::MeshWifiInterfaceMacPlugin> plugin) [member function]
+    cls.add_method('InstallPlugin', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::MeshWifiInterfaceMacPlugin >', 'plugin')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Report(std::ostream & arg0) const [member function]
+    cls.add_method('Report', 
+                   'void', 
+                   [param('std::ostream &', 'arg0')], 
+                   is_const=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::ResetStats() [member function]
+    cls.add_method('ResetStats', 
+                   'void', 
+                   [])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SendManagementFrame(ns3::Ptr<ns3::Packet> frame, ns3::WifiMacHeader const & hdr) [member function]
+    cls.add_method('SendManagementFrame', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::Packet >', 'frame'), param('ns3::WifiMacHeader const &', 'hdr')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetBeaconGeneration(bool enable) [member function]
+    cls.add_method('SetBeaconGeneration', 
+                   'void', 
+                   [param('bool', 'enable')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetBeaconInterval(ns3::Time interval) [member function]
+    cls.add_method('SetBeaconInterval', 
+                   'void', 
+                   [param('ns3::Time', 'interval')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetLinkMetricCallback(ns3::Callback<unsigned int, ns3::Mac48Address, ns3::Ptr<ns3::MeshWifiInterfaceMac>, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> cb) [member function]
+    cls.add_method('SetLinkMetricCallback', 
+                   'void', 
+                   [param('ns3::Callback< unsigned int, ns3::Mac48Address, ns3::Ptr< ns3::MeshWifiInterfaceMac >, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'cb')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetLinkUpCallback(ns3::Callback<void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty> linkUp) [member function]
+    cls.add_method('SetLinkUpCallback', 
+                   'void', 
+                   [param('ns3::Callback< void, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty, ns3::empty >', 'linkUp')], 
+                   is_virtual=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetMeshPointAddress(ns3::Mac48Address arg0) [member function]
+    cls.add_method('SetMeshPointAddress', 
+                   'void', 
+                   [param('ns3::Mac48Address', 'arg0')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SetRandomStartDelay(ns3::Time interval) [member function]
+    cls.add_method('SetRandomStartDelay', 
+                   'void', 
+                   [param('ns3::Time', 'interval')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::ShiftTbtt(ns3::Time shift) [member function]
+    cls.add_method('ShiftTbtt', 
+                   'void', 
+                   [param('ns3::Time', 'shift')])
+    ## mesh-wifi-interface-mac.h: bool ns3::MeshWifiInterfaceMac::SupportsSendFrom() const [member function]
+    cls.add_method('SupportsSendFrom', 
+                   'bool', 
+                   [], 
+                   is_const=True, is_virtual=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::SwitchFrequencyChannel(uint16_t new_id) [member function]
+    cls.add_method('SwitchFrequencyChannel', 
+                   'void', 
+                   [param('uint16_t', 'new_id')])
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::DoDispose() [member function]
+    cls.add_method('DoDispose', 
+                   'void', 
+                   [], 
+                   visibility='private', is_virtual=True)
+    ## mesh-wifi-interface-mac.h: void ns3::MeshWifiInterfaceMac::Receive(ns3::Ptr<ns3::Packet> packet, ns3::WifiMacHeader const * hdr) [member function]
+    cls.add_method('Receive', 
+                   'void', 
+                   [param('ns3::Ptr< ns3::Packet >', 'packet'), param('ns3::WifiMacHeader const *', 'hdr')], 
+                   visibility='private', is_virtual=True)
+    return
+
 def register_functions(root_module):
     module = root_module
     register_functions_ns3_Config(module.get_submodule('Config'), root_module)
@@ -641,6 +607,7 @@ def register_functions(root_module):
     register_functions_ns3_addressUtils(module.get_submodule('addressUtils'), root_module)
     register_functions_ns3_aodv(module.get_submodule('aodv'), root_module)
     register_functions_ns3_dot11s(module.get_submodule('dot11s'), root_module)
+    register_functions_ns3_dsdv(module.get_submodule('dsdv'), root_module)
     register_functions_ns3_flame(module.get_submodule('flame'), root_module)
     register_functions_ns3_internal(module.get_submodule('internal'), root_module)
     register_functions_ns3_olsr(module.get_submodule('olsr'), root_module)
@@ -659,6 +626,9 @@ def register_functions_ns3_aodv(module, root_module):
     return
 
 def register_functions_ns3_dot11s(module, root_module):
+    return
+
+def register_functions_ns3_dsdv(module, root_module):
     return
 
 def register_functions_ns3_flame(module, root_module):

@@ -15,7 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Authors: He Wu <mdzz@u.washington.edu>
+ * Author: He Wu <mdzz@u.washington.edu>
  */
 
 #include "ns3/basic-energy-source.h"
@@ -50,7 +50,7 @@ public:
   virtual ~BasicEnergyUpdateTest ();
 
 private:
-  bool DoRun (void);
+  void DoRun (void);
 
   /**
    * \param state Radio state to switch to.
@@ -59,7 +59,7 @@ private:
    * Runs simulation for a while, check if final state & remaining energy is
    * correctly updated.
    */
-  bool StateSwitchTest (WifiRadioEnergyModel::WifiRadioState state);
+  bool StateSwitchTest (WifiPhy::State state);
 
 private:
   double m_timeS;     // in seconds
@@ -80,7 +80,7 @@ BasicEnergyUpdateTest::~BasicEnergyUpdateTest ()
 {
 }
 
-bool
+void
 BasicEnergyUpdateTest::DoRun (void)
 {
   // set types
@@ -88,30 +88,15 @@ BasicEnergyUpdateTest::DoRun (void)
   m_deviceEnergyModel.SetTypeId ("ns3::WifiRadioEnergyModel");
 
   // run state switch tests
-  if (StateSwitchTest (WifiRadioEnergyModel::TX))
-    {
-      return true;
-    }
-  if (StateSwitchTest (WifiRadioEnergyModel::RX))
-    {
-      return true;
-    }
-  if (StateSwitchTest (WifiRadioEnergyModel::IDLE))
-    {
-      return true;
-    }
-  if (StateSwitchTest (WifiRadioEnergyModel::SLEEP))
-    {
-      return true;
-    }
-
-  // error free
-  return false;
+  NS_TEST_ASSERT_MSG_EQ (StateSwitchTest (WifiPhy::IDLE), false, "Problem with state switch test (WifiPhy idle).");
+  NS_TEST_ASSERT_MSG_EQ (StateSwitchTest (WifiPhy::CCA_BUSY), false, "Problem with state switch test (WifiPhy cca busy).");
+  NS_TEST_ASSERT_MSG_EQ (StateSwitchTest (WifiPhy::TX), false, "Problem with state switch test (WifiPhy tx).");
+  NS_TEST_ASSERT_MSG_EQ (StateSwitchTest (WifiPhy::RX), false, "Problem with state switch test (WifiPhy rx).");
+  NS_TEST_ASSERT_MSG_EQ (StateSwitchTest (WifiPhy::SWITCHING), false, "Problem with state switch test (WifiPhy switching).");
 }
 
 bool
-BasicEnergyUpdateTest::StateSwitchTest (
-    WifiRadioEnergyModel::WifiRadioState state)
+BasicEnergyUpdateTest::StateSwitchTest (WifiPhy::State state)
 {
   // create node
   Ptr<Node> node = CreateObject<Node> ();
@@ -120,8 +105,6 @@ BasicEnergyUpdateTest::StateSwitchTest (
   Ptr<BasicEnergySource> source = m_energySource.Create<BasicEnergySource> ();
   // aggregate energy source to node
   node->AggregateObject (source);
-  // set update interval in source
-  source->SetEnergyUpdateInterval (Seconds (1.0));
 
   // create device energy model
   Ptr<WifiRadioEnergyModel> model =
@@ -135,12 +118,12 @@ BasicEnergyUpdateTest::StateSwitchTest (
   DeviceEnergyModelContainer models =
     source->FindDeviceEnergyModels ("ns3::WifiRadioEnergyModel");
   // check list
-  NS_TEST_ASSERT_MSG_EQ (false, (models.GetN () == 0), "Model list is empty!");
+  NS_TEST_ASSERT_MSG_EQ_RETURNS_BOOL (false, (models.GetN () == 0), "Model list is empty!");
   // get pointer
   Ptr<WifiRadioEnergyModel> devModel =
       DynamicCast<WifiRadioEnergyModel> (models.Get (0));
   // check pointer
-  NS_TEST_ASSERT_MSG_NE (0, devModel, "NULL pointer to device model!");
+  NS_TEST_ASSERT_MSG_NE_RETURNS_BOOL (0, devModel, "NULL pointer to device model!");
 
   /*
    * The radio will stay IDLE for m_timeS seconds. Then it will switch into a
@@ -151,10 +134,14 @@ BasicEnergyUpdateTest::StateSwitchTest (
   Simulator::Schedule (Seconds (m_timeS),
                        &WifiRadioEnergyModel::ChangeState, devModel, state);
 
-  // run simulation
-  Simulator::Stop (Seconds (m_timeS * 2));
+  // Calculate remaining energy at simulation stop time
+  Simulator::Schedule (Seconds (m_timeS * 2), 
+                       &BasicEnergySource::UpdateEnergySource, source);
+
+  double timeDelta = 0.000000001; // 1 nanosecond
+  // run simulation; stop just after last scheduled event
+  Simulator::Stop (Seconds (m_timeS * 2 + timeDelta));
   Simulator::Run ();
-  Simulator::Destroy ();
 
   // energy = current * voltage * time
 
@@ -176,17 +163,20 @@ BasicEnergyUpdateTest::StateSwitchTest (
   double current = 0.0;
   switch (state)
     {
-    case WifiRadioEnergyModel::TX:
-      current = devModel->GetTxCurrentA ();
-      break;
-    case WifiRadioEnergyModel::RX:
-      current = devModel->GetRxCurrentA ();
-      break;
-    case WifiRadioEnergyModel::IDLE:
+    case WifiPhy::IDLE:
       current = devModel->GetIdleCurrentA ();
       break;
-    case WifiRadioEnergyModel::SLEEP:
-      current = devModel->GetSleepCurrentA ();
+    case WifiPhy::CCA_BUSY:
+      current = devModel->GetCcaBusyCurrentA ();
+      break;
+    case WifiPhy::TX:
+      current = devModel->GetTxCurrentA ();
+      break;
+    case WifiPhy::RX:
+      current = devModel->GetRxCurrentA ();
+      break;
+    case WifiPhy::SWITCHING:
+      current = devModel->GetSwitchingCurrentA ();
       break;
     default:
       NS_FATAL_ERROR ("Undefined radio state: " << state);
@@ -200,14 +190,14 @@ BasicEnergyUpdateTest::StateSwitchTest (
   NS_LOG_UNCOND ("Estimated remaining energy is " << estRemainingEnergy);
   NS_LOG_UNCOND ("Difference is " << estRemainingEnergy - remainingEnergy);
   // check remaining energy
-  NS_TEST_ASSERT_MSG_EQ_TOL (remainingEnergy, estRemainingEnergy, m_tolerance,
+  NS_TEST_ASSERT_MSG_EQ_TOL_RETURNS_BOOL (remainingEnergy, estRemainingEnergy, m_tolerance,
                              "Incorrect remaining energy!");
 
   // obtain radio state
-  WifiRadioEnergyModel::WifiRadioState endState = devModel->GetCurrentState ();
+  WifiPhy::State endState = devModel->GetCurrentState ();
   NS_LOG_UNCOND ("Radio state is " << endState);
   // check end state
-  NS_TEST_ASSERT_MSG_EQ (endState, state,  "Incorrect end state!");
+  NS_TEST_ASSERT_MSG_EQ_RETURNS_BOOL (endState, state,  "Incorrect end state!");
   Simulator::Destroy ();
 
   return false; // no error
@@ -226,7 +216,7 @@ public:
   virtual ~BasicEnergyDepletionTest ();
 
 private:
-  bool DoRun (void);
+  void DoRun (void);
 
   /**
    * Callback invoked when energy is drained from source.
@@ -265,7 +255,7 @@ BasicEnergyDepletionTest::~BasicEnergyDepletionTest ()
 {
 }
 
-bool
+void
 BasicEnergyDepletionTest::DoRun (void)
 {
   /*
@@ -276,16 +266,11 @@ BasicEnergyDepletionTest::DoRun (void)
       for (double updateIntervalS = 0.5; updateIntervalS <= m_updateIntervalS;
            updateIntervalS += m_timeStepS)
         {
-          if (DepletionTestCase (simTimeS, updateIntervalS))
-            {
-              return true;
-            }
+          NS_TEST_ASSERT_MSG_EQ (DepletionTestCase (simTimeS, updateIntervalS), false, "Depletion test case problem.");
           // reset callback count
           m_callbackCount = 0;
         }
     }
-  // error free
-  return false;
 }
 
 void
@@ -362,8 +347,7 @@ BasicEnergyDepletionTest::DepletionTestCase (double simTimeS,
     MakeCallback (&BasicEnergyDepletionTest::DepletionHandler, this);
   radioEnergyHelper.SetDepletionCallback (callback);
   // install on node
-  DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices,
-                                                                       sources);
+  DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices, sources);
 
   // run simulation
   Simulator::Stop (Seconds (simTimeS));
@@ -376,8 +360,7 @@ BasicEnergyDepletionTest::DepletionTestCase (double simTimeS,
   NS_LOG_UNCOND ("Actual callback count is " << m_callbackCount);
 
   // check result, call back should only be invoked once
-  NS_TEST_ASSERT_MSG_EQ (m_numOfNodes, m_callbackCount,
-                         "Not all callbacks are invoked!");
+  NS_TEST_ASSERT_MSG_EQ_RETURNS_BOOL (m_numOfNodes, m_callbackCount, "Not all callbacks are invoked!");
 
   return false;
 }
@@ -399,9 +382,9 @@ BasicEnergyModelTestSuite::BasicEnergyModelTestSuite ()
   : TestSuite ("basic-energy-model", UNIT)
 {
   AddTestCase (new BasicEnergyUpdateTest);
-  //AddTestCase (new BasicEnergyDepletionTest);
+  AddTestCase (new BasicEnergyDepletionTest);
 }
 
 // create an instance of the test suite
-BasicEnergyModelTestSuite g_energyModelTestSuite;
+static BasicEnergyModelTestSuite g_energyModelTestSuite;
 

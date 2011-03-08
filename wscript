@@ -7,6 +7,7 @@ import types
 import optparse
 import os.path
 import re
+import shlex
 
 # WAF modules
 import pproc as subprocess
@@ -26,6 +27,14 @@ import Utils
 import Build
 import Configure
 import Scripting
+
+from util import read_config_file
+
+# By default, all modules will be enabled.
+modules_enabled = ['all_modules']
+
+# Get the list of enabled modules out of the NS-3 configuration file.
+modules_enabled = read_config_file()
 
 sys.path.insert(0, os.path.abspath('waf-tools'))
 try:
@@ -123,6 +132,9 @@ def set_options(opt):
                    help=('Run a locally built program; argument can be a program name,'
                          ' or a command starting with the program name.'),
                    type="string", default='', dest='run')
+    opt.add_option('--visualize',
+                   help=('Modify --run arguments to enable the visualizer'),
+                   action="store_true", default=False, dest='visualize')
     opt.add_option('--command-template',
                    help=('Template of the command used to run the program given by --run;'
                          ' It should be a shell command string containing %s inside,'
@@ -172,7 +184,7 @@ def set_options(opt):
     # options provided in subdirectories
     opt.sub_options('src')
     opt.sub_options('bindings/python')
-    opt.sub_options('src/internet-stack')
+    opt.sub_options('src/internet')
 
 
 def _check_compilation_flag(conf, flag, mode='cxx'):
@@ -270,9 +282,21 @@ def configure(conf):
     conf.sub_config('src')
     conf.sub_config('bindings/python')
 
+    # Set the list of enabled modules.
     if Options.options.enable_modules:
+        # Use the modules explicitly enabled. 
         conf.env['NS3_ENABLED_MODULES'] = ['ns3-'+mod for mod in
                                            Options.options.enable_modules.split(',')]
+    else:
+        # Use the enabled modules list from the ns3 configuration file.
+        if modules_enabled[0] == 'all_modules':
+            # Enable all modules if requested.
+            conf.env['NS3_ENABLED_MODULES'] = conf.env['NS3_MODULES']
+        else:
+            # Enable the modules from the list.
+            conf.env['NS3_ENABLED_MODULES'] = ['ns3-'+mod for mod in
+                                               modules_enabled]
+
     # for MPI
     conf.find_program('mpic++', var='MPI')
     if Options.options.enable_mpi and conf.env['MPI']:
@@ -316,6 +340,13 @@ def configure(conf):
     else:
         env['ENABLE_EXAMPLES'] = False
         why_not_examples = "option --disable-examples selected"
+
+    env['EXAMPLE_DIRECTORIES'] = []
+    for dir in os.listdir('examples'):
+        if dir.startswith('.') or dir == 'CVS':
+            continue
+        if os.path.isdir(os.path.join('examples', dir)):
+            env['EXAMPLE_DIRECTORIES'].append(dir)
 
     conf.report_optional_feature("ENABLE_EXAMPLES", "Build examples and samples", env['ENABLE_EXAMPLES'], 
                                  why_not_examples)
@@ -377,6 +408,7 @@ def configure(conf):
     add_gcc_flag('-fstrict-aliasing')
     add_gcc_flag('-Wstrict-aliasing')
 
+    conf.find_program('doxygen', var='DOXYGEN')
 
     # append user defined flags after all our ones
     for (confvar, envvar) in [['CCFLAGS', 'CCFLAGS_EXTRA'],
@@ -384,7 +416,8 @@ def configure(conf):
                               ['LINKFLAGS', 'LINKFLAGS_EXTRA'],
                               ['LINKFLAGS', 'LDFLAGS_EXTRA']]:
         if envvar in os.environ:
-            conf.env.append_value(confvar, os.environ[envvar])
+            value = shlex.split(os.environ[envvar])
+            conf.env.append_value(confvar, value)
 
     # Write a summary of optional features status
     print "---- Summary of optional NS-3 features:"
@@ -444,7 +477,7 @@ def create_suid_program(bld, name):
 
     return program
 
-def create_ns3_program(bld, name, dependencies=('simulator',)):
+def create_ns3_program(bld, name, dependencies=('core',)):
     program = bld.new_task_gen('cxx', 'program')
     program.is_ns3_program = True
     program.name = name
@@ -636,11 +669,13 @@ def shutdown(ctx):
         lcov_report()
 
     if Options.options.run:
-        wutils.run_program(Options.options.run, env, wutils.get_command_template(env))
+        wutils.run_program(Options.options.run, env, wutils.get_command_template(env),
+                           visualize=Options.options.visualize)
         raise SystemExit(0)
 
     if Options.options.pyrun:
-        wutils.run_python_program(Options.options.pyrun, env)
+        wutils.run_python_program(Options.options.pyrun, env,
+                                  visualize=Options.options.visualize)
         raise SystemExit(0)
 
     if Options.options.shell:
@@ -749,6 +784,11 @@ def _doxygen(bld):
     env = wutils.bld.env
     proc_env = wutils.get_proc_env()
 
+    if not env['DOXYGEN']:
+        Logs.error("waf configure did not detect doxygen in the system -> cannot build api docs.")
+        raise SystemExit(1)
+        return
+
     try:
         program_obj = wutils.find_program('print-introspected-doxygen', env)
     except ValueError: 
@@ -771,7 +811,7 @@ def _doxygen(bld):
     out.close()
 
     doxygen_config = os.path.join('doc', 'doxygen.conf')
-    if subprocess.Popen(['doxygen', doxygen_config]).wait():
+    if subprocess.Popen([env['DOXYGEN'], doxygen_config]).wait():
         raise SystemExit(1)
 
 def doxygen(bld):

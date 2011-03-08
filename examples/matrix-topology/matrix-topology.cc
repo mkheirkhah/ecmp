@@ -47,9 +47,10 @@
 #include <time.h>
 
 #include "ns3/core-module.h"
-#include "ns3/simulator-module.h"
-#include "ns3/node-module.h"
-#include "ns3/helper-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/applications-module.h"
 #include "ns3/global-route-manager.h"
 #include "ns3/mobility-module.h"
 #include "ns3/assert.h"
@@ -155,8 +156,6 @@ int main (int argc, char *argv[])
 
   uint32_t linkCount = 0;
 
-  Ipv4InterfaceContainer n_ic[n_nodes][n_nodes];   // Create an array of interface containers for links
-
   for (size_t i = 0; i < Adj_Matrix.size (); i++)
     {
       for (size_t j = 0; j < Adj_Matrix[i].size (); j++)
@@ -166,7 +165,7 @@ int main (int argc, char *argv[])
             {
               NodeContainer n_links = NodeContainer (nodes.Get (i), nodes.Get (j));
               NetDeviceContainer n_devs = p2p.Install (n_links);
-              n_ic[i][j] = ipv4_n.Assign (n_devs);
+              ipv4_n.Assign (n_devs);
               ipv4_n.NewNetwork ();
               linkCount++;
               NS_LOG_INFO ("matrix element [" << i << "][" << j << "] is 1");

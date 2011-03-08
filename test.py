@@ -46,11 +46,13 @@ interesting_config_items = [
     "ENABLE_REAL_TIME",
     "ENABLE_EXAMPLES",
     "ENABLE_PYTHON_BINDINGS",
+    "ENABLE_CLICK",
 ]
 
 NSC_ENABLED = False
 ENABLE_REAL_TIME = False
 ENABLE_EXAMPLES = True
+ENABLE_CLICK = False
 
 #
 # If the user has constrained us to run certain kinds of tests, we can tell waf
@@ -89,18 +91,20 @@ core_nsc_missing_skip_tests = [
 # hardcoded.
 #
 example_tests = [
-    ("src/devices/bridge/examples/csma-bridge", "True", "True"),
-    ("src/devices/bridge/examples/csma-bridge-one-hop", "True", "True"),
-    ("examples/csma/csma-broadcast", "True", "True"),
-    ("examples/csma/csma-multicast", "True", "True"),
-    ("examples/csma/csma-one-subnet", "True", "True"),
-    ("examples/csma/csma-packet-socket", "True", "True"),
-    ("examples/csma/csma-ping", "True", "True"),
-    ("examples/csma/csma-raw-ip-socket", "True", "True"),
-    ("examples/csma/csma-star", "True", "True"),
+    ("src/bridge/examples/csma-bridge", "True", "True"),
+    ("src/bridge/examples/csma-bridge-one-hop", "True", "True"),
+    ("src/csma/examples/csma-broadcast", "True", "True"),
+    ("src/csma/examples/csma-multicast", "True", "True"),
+    ("src/csma/examples/csma-one-subnet", "True", "True"),
+    ("src/csma/examples/csma-packet-socket", "True", "True"),
+    ("src/csma/examples/csma-ping", "True", "True"),
+    ("src/csma/examples/csma-raw-ip-socket", "True", "True"),
+    ("src/csma/examples/csma-star", "True", "True"),
 
-    ("examples/emulation/emu-ping", "False", "True"),
-    ("examples/emulation/emu-udp-echo", "False", "True"),
+    ("src/emu/examples/emu-ping", "False", "True"),
+    ("src/emu/examples/emu-udp-echo", "False", "True"),
+
+    ("examples/energy/energy-model-example", "True", "True"),
 
     ("examples/error-model/simple-error-model", "True", "True"),
 
@@ -110,7 +114,7 @@ example_tests = [
     ("examples/ipv6/radvd-two-prefix", "True", "True"),    
     ("examples/ipv6/test-ipv6", "True", "True"),
 
-    ("examples/mesh/mesh", "True", "True"),
+    ("src/mesh/examples/mesh", "True", "True"),
 
     ("examples/naming/object-names", "True", "True"),
 
@@ -120,17 +124,17 @@ example_tests = [
     ("examples/routing/global-injection-slash32", "True", "True"),
     ("examples/routing/global-routing-slash32", "True", "True"),
     ("examples/routing/mixed-global-routing", "True", "True"),
-    ("examples/routing/nix-simple", "True", "True"),
-    ("examples/routing/nms-p2p-nix", "False", "True"), # Takes too long to run
+    ("src/nix-vector-routing/examples/nix-simple", "True", "True"),
+    ("src/nix-vector-routing/examples/nms-p2p-nix", "False", "True"), # Takes too long to run
     ("examples/routing/simple-alternate-routing", "True", "True"),
     ("examples/routing/simple-global-routing", "True", "True"),
-    ("src/routing/olsr/examples/simple-point-to-point-olsr", "True", "True"),
+    ("src/olsr/examples/simple-point-to-point-olsr", "True", "True"),
     ("examples/routing/simple-routing-ping6", "True", "True"),
     ("examples/routing/static-routing-slash32", "True", "True"),
-    ("examples/routing/aodv", "True", "True"),
+    ("src/aodv/examples/aodv", "True", "True"),
 
-    ("examples/spectrum/adhoc-aloha-ideal-phy", "True", "True"),
-    ("examples/spectrum/adhoc-aloha-ideal-phy-with-microwave-oven", "True", "True"),
+    ("src/spectrum/examples/adhoc-aloha-ideal-phy", "True", "True"),
+    ("src/spectrum/examples/adhoc-aloha-ideal-phy-with-microwave-oven", "True", "True"),
 
     ("examples/stats/wifi-example-sim", "True", "True"),
 
@@ -142,10 +146,10 @@ example_tests = [
     ("examples/tcp/tcp-nsc-zoo", "NSC_ENABLED == True", "False"),
     ("examples/tcp/tcp-star-server", "True", "True"),
 
-    ("examples/topology-read/topology-read --input=../../examples/topology-read/Inet_small_toposample.txt", "True", "True"),
-    ("examples/topology-read/topology-read --format=Rocketfuel --input=../../examples/topology-read/RocketFuel_toposample_1239_weights.txt", "True", "True"),
+    ("src/topology-read/examples/topology-read --input=../../src/topology-read/examples/Inet_small_toposample.txt", "True", "True"),
+    ("src/topology-read/examples/topology-read --format=Rocketfuel --input=../../src/topology-read/examples/RocketFuel_toposample_1239_weights.txt", "True", "True"),
 
-    ("src/devices/virtual-net-device/examples/virtual-net-device", "True", "True"),
+    ("src/virtual-net-device/examples/virtual-net-device", "True", "True"),
 
     ("examples/tutorial/first", "True", "True"),
     ("examples/tutorial/hello-simulator", "True", "True"),
@@ -175,9 +179,11 @@ example_tests = [
     ("examples/wireless/wifi-simple-interference", "True", "True"),
     ("examples/wireless/wifi-wired-bridging", "True", "True"),
 
-    ("examples/wimax/wimax-simple", "True", "True"),
-    ("examples/wimax/wimax-ipv4", "True", "True"),
-    ("examples/wimax/wimax-multicast", "True", "True"),
+    ("src/click/examples/nsclick-simple-lan", "ENABLE_CLICK == True", "True"),
+
+    ("src/wimax/examples/wimax-simple", "True", "True"),
+    ("src/wimax/examples/wimax-ipv4", "True", "True"),
+    ("src/wimax/examples/wimax-multicast", "True", "True"),
 ]
 
 #
@@ -189,7 +195,7 @@ example_tests = [
 # hardcoded.
 #
 python_tests = [
-    ("src/devices/bridge/examples/csma-bridge.py", "True"),
+    ("src/bridge/examples/csma-bridge.py", "True"),
 
     ("src/contrib/flow-monitor/examples/wifi-olsr-flowmon.py", "True"),
 
