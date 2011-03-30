@@ -1,0 +1,25 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+import sys
+
+import Options
+
+
+def build(bld):
+  env = bld.env_of_name('default')
+  sim = bld.create_ns3_module('mpi', ['core', 'network'])
+  sim.source = [
+      'model/distributed-simulator-impl.cc',
+      'model/mpi-interface.cc',
+      'model/mpi-net-device.cc',
+      ]
+
+  headers = bld.new_task_gen('ns3header')
+  headers.module = 'mpi'
+  headers.source = [
+      'model/distributed-simulator-impl.h',
+      'model/mpi-interface.h',
+      'model/mpi-net-device.h',
+      ]
+
+  if env['ENABLE_MPI']:
+      sim.uselib = 'MPI'
