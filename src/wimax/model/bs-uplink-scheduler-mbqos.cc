@@ -313,10 +313,10 @@ UplinkSchedulerMBQoS::Schedule (void)
                       Time
                       uInterval =
                         MilliSeconds ((*(ssRecord->GetServiceFlows (ServiceFlow::SF_TYPE_UGS).begin ()))->GetUnsolicitedGrantInterval ());
+                      
+                      Time frame = Time ((timestamp - Simulator::Now ()) / frame_duration);
 
-                      Scalar frame = ((timestamp - Simulator::Now ()) / frame_duration);
-
-                      if (frame.GetDouble () <= 1)
+                      if (frame <= 1)
                         {
                           // UGS Grants
                           // It is not necessary to enqueue UGS grants once it is periodically served
@@ -668,15 +668,15 @@ UplinkSchedulerMBQoS::CheckDeadline (uint32_t &availableSymbols)
               Time deadline = job->GetDeadline ();
               Time frame_duration = GetBs ()->GetPhy ()->GetFrameDuration ();
 
-              Scalar frame = ((deadline - Simulator::Now ()) / frame_duration);
-
+              Time frame = Time ((deadline - Simulator::Now ()) / frame_duration);
+              
               NS_LOG_DEBUG ("At " << Simulator::Now ().GetSeconds () << " reserved traffic rate: "
                                 << job->GetServiceFlow ()->GetMinReservedTrafficRate ()
                                 <<" deadline: "<<job->GetDeadline ().GetSeconds () << " frame start: "<<GetBs ()->m_frameStartTime.GetSeconds ()
                                 <<" frame duration: "<< frame_duration );
 
               // should be schedule in this frame to max latency
-              if (frame.GetDouble () >= 3)
+              if (frame >= 3)
                 {
 
                   if (availableSymbols)

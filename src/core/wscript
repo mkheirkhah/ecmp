@@ -3,18 +3,42 @@ import sys
 
 import Options
 
-
 def set_options(opt):
-    opt.add_option('--high-precision-as-double',
+    opt.add_option('--int64x64-as-double',
                    help=('Whether to use a double floating point'
-                         ' type for high precision time values'
+                         ' type for int64x64 values'
                          ' WARNING: this option only has effect '
                          'with the configure command.'),
                    action="store_true", default=False,
-                   dest='high_precision_as_double')
+                   dest='int64x64_as_double')
+
 
 
 def configure(conf):
+    a = conf.check(type_name='uint128_t', define_name='HAVE_UINT128_T')
+    b = conf.check(type_name='__uint128_t', define_name='HAVE___UINT128_T')
+
+
+    if Options.options.int64x64_as_double:
+        conf.define('INT64X64_USE_DOUBLE', 1)
+        conf.env['INT64X64_USE_DOUBLE'] = 1
+        highprec = 'long double'
+    elif a or b:
+        conf.define('INT64X64_USE_128', 1)
+        conf.env['INT64X64_USE_128'] = 1
+        highprec = '128-bit integer'
+    else:
+        conf.define('INT64X64_USE_CAIRO', 1)
+        conf.env['INT64X64_USE_CAIRO'] = 1
+        highprec = 'cairo 128-bit integer'
+
+    conf.check_message_custom('high precision time', 'implementation', highprec)
+
+    conf.check(header_name='stdint.h', define_name='HAVE_STDINT_H')
+    conf.check(header_name='inttypes.h', define_name='HAVE_INTTYPES_H')
+
+    conf.check(header_name='sys/inttypes.h', define_name='HAVE_SYS_INT_TYPES_H')
+
     if conf.check(header_name='stdlib.h'):
         conf.define('HAVE_STDLIB_H', 1)
         conf.define('HAVE_GETENV', 1)
@@ -53,25 +77,6 @@ int main ()
                                  conf.env['ENABLE_THREADING'],
                                  "<pthread.h> include not detected")
 
-    a = conf.check(type_name='uint128_t', define_name='HAVE_UINT128_T')
-    b = conf.check(type_name='__uint128_t', define_name='HAVE___UINT128_T')
-
-
-    if Options.options.high_precision_as_double:
-        conf.define('USE_HIGH_PRECISION_DOUBLE', 1)
-        conf.env['USE_HIGH_PRECISION_DOUBLE'] = 1
-        highprec = 'long double'
-    elif a or b:
-        conf.define('USE_HIGH_PRECISION_128', 1)
-        conf.env['USE_HIGH_PRECISION_128'] = 1
-        highprec = '128-bit integer'
-    else:
-        conf.define('USE_HIGH_PRECISION_CAIRO', 1)
-        conf.env['USE_HIGH_PRECISION_CAIRO'] = 1
-        highprec = 'cairo 128-bit integer'
-
-    conf.check_message_custom('high precision time', 'implementation', highprec)
-
     conf.check(header_name='stdint.h', define_name='HAVE_STDINT_H')
     conf.check(header_name='inttypes.h', define_name='HAVE_INTTYPES_H')
 
@@ -91,8 +96,6 @@ int main ()
 def build(bld):
     core = bld.create_ns3_module('core')
     core.source = [
-        'model/high-precision.cc',
-        'model/time-base.cc',
         'model/time.cc',
         'model/event-id.cc',
         'model/scheduler.cc',
@@ -127,6 +130,7 @@ def build(bld):
         'model/uinteger.cc',
         'model/enum.cc',
         'model/double.cc',
+        'model/int64x64.cc',
         'model/string.cc',
         'model/pointer.cc',
         'model/object-vector.cc',
@@ -147,7 +151,7 @@ def build(bld):
         'test/command-line-test-suite.cc',
         'test/config-test-suite.cc',
         'test/global-value-test-suite.cc',
-        'test/high-precision-test-suite.cc',
+        'test/int64x64-test-suite.cc',
         'test/names-test-suite.cc',
         'test/object-test-suite.cc',
         'test/ptr-test-suite.cc',
@@ -163,8 +167,6 @@ def build(bld):
     headers = bld.new_task_gen('ns3header')
     headers.module = 'core'
     headers.source = [
-        'model/high-precision.h',
-        'model/time-base.h',
         'model/nstime.h',
         'model/event-id.h',
         'model/event-impl.h',
@@ -208,6 +210,8 @@ def build(bld):
         'model/attribute.h',
         'model/attribute-accessor-helper.h',
         'model/boolean.h',
+        'model/int64x64.h',
+        'model/int64x64-double.h',
         'model/integer.h',
         'model/uinteger.h',
         'model/double.h',
@@ -239,20 +243,19 @@ def build(bld):
             'model/unix-system-wall-clock-ms.cc',
             ])
 
+
     env = bld.env_of_name('default')
-    if env['USE_HIGH_PRECISION_DOUBLE']:
-        headers.source.extend(['model/high-precision-double.h'])
-    elif env['USE_HIGH_PRECISION_128']:
-        headers  .source.extend(['model/high-precision-128.h'])
-        core     .source.extend(['model/high-precision-128.cc'])
-        core_test.source.extend(['test/high-precision-128-test-suite.cc'])
-    elif env['USE_HIGH_PRECISION_CAIRO']:
+    if env['INT64X64_USE_DOUBLE']:
+        headers.source.extend(['model/int64x64-double.h'])
+    elif env['INT64X64_USE_128']:
+        headers.source.extend(['model/int64x64-128.h'])
+        core.source.extend(['model/int64x64-128.cc'])
+    elif env['INT64X64_USE_CAIRO']:
         core.source.extend([
-            'model/high-precision-cairo.cc',
-#            'model/cairo-wideint.c',
+            'model/int64x64-cairo.cc',
             ])
         headers.source.extend([
-            'model/high-precision-cairo.h',
+            'model/int64x64-cairo.h',
             'model/cairo-wideint-private.h',
             ])
 
