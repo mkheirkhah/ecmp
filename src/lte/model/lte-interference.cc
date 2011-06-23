@@ -77,7 +77,7 @@ LteInterference::StartRx (Ptr<const SpectrumValue> rxPsd)
       for (std::list<Ptr<LteSinrChunkProcessor> >::const_iterator it = m_sinrChunkProcessorList.begin (); it != m_sinrChunkProcessorList.end (); ++it)
         {
           (*it)->Start (); 
-        }      
+        }
     }
   else
     {
@@ -85,7 +85,7 @@ LteInterference::StartRx (Ptr<const SpectrumValue> rxPsd)
       // receiving multiple simultaneous signals, make sure they are synchronized
       NS_ASSERT (m_lastChangeTime == Now ());
       // make sure they use orthogonal resource blocks
-      NS_ASSERT (Sum((*rxPsd)*(*m_rxSignal)) == 0.0);
+      NS_ASSERT (Sum ((*rxPsd) * (*m_rxSignal)) == 0.0);
       (*m_rxSignal) += (*rxPsd);
     }
 }
@@ -141,10 +141,15 @@ void
 LteInterference::ConditionallyEvaluateChunk ()
 {
   NS_LOG_FUNCTION (this);
-  if (m_receiving) NS_LOG_DEBUG (this << " Receiving");
+  if (m_receiving)
+    {
+      NS_LOG_DEBUG (this << " Receiving");
+    }
   NS_LOG_DEBUG (this << " now "  << Now () << " last " << m_lastChangeTime);
   if (m_receiving && (Now () > m_lastChangeTime))
     {
+      NS_LOG_LOGIC (this << " signal = " << *m_rxSignal << " allSignals = " << *m_allSignals << " noise = " << *m_noise);
+
       SpectrumValue sinr = (*m_rxSignal) / ((*m_allSignals) - (*m_rxSignal) + (*m_noise));
       Time duration = Now () - m_lastChangeTime;
       for (std::list<Ptr<LteSinrChunkProcessor> >::const_iterator it = m_sinrChunkProcessorList.begin (); it != m_sinrChunkProcessorList.end (); ++it)
@@ -152,7 +157,7 @@ LteInterference::ConditionallyEvaluateChunk ()
           (*it)->EvaluateSinrChunk (sinr, duration);
         }
     }
-    else
+  else
     {
       NS_LOG_DEBUG (this << " NO EV");
     }
@@ -161,7 +166,7 @@ LteInterference::ConditionallyEvaluateChunk ()
 void
 LteInterference::SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd)
 {
-  NS_LOG_FUNCTION (this << noisePsd);
+  NS_LOG_FUNCTION (this << *noisePsd);
   m_noise = noisePsd;
   // we can initialize m_allSignal only now, because earlier we
   // didn't know what spectrum model was going to be used.

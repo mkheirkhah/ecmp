@@ -32,7 +32,7 @@
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/contrib-module.h"
+#include "ns3/config-store-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/dsdv-helper.h"
@@ -285,7 +285,7 @@ DsdvManetExample::InstallInternetStack (std::string tr_name)
   dsdv.Set ("PeriodicUpdateInterval", TimeValue (Seconds (m_periodicUpdateInterval)));
   dsdv.Set ("SettlingTime", TimeValue (Seconds (m_settlingTime)));
   InternetStackHelper stack;
-  stack.SetRoutingHelper (dsdv);
+  stack.SetRoutingHelper (dsdv); // has effect on the next Install ()
   stack.Install (nodes);
   Ipv4AddressHelper address;
   address.SetBase ("10.1.1.0", "255.255.255.0");

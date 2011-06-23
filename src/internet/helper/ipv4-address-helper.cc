@@ -55,8 +55,8 @@ Ipv4AddressHelper::Ipv4AddressHelper (
   NS_LOG_FUNCTION_NOARGS ();
   SetBase (network, mask, address);
 }
-  
-  void
+
+void
 Ipv4AddressHelper::SetBase (
   const Ipv4Address network, 
   const Ipv4Mask mask,
@@ -72,7 +72,7 @@ Ipv4AddressHelper::SetBase (
 // Some quick reasonableness testing.
 //
   NS_ASSERT_MSG((m_network & ~m_mask) == 0,
-    "Ipv4AddressHelper::SetBase(): Inconsistent network and mask");
+                "Ipv4AddressHelper::SetBase(): Inconsistent network and mask");
 
 //
 // Figure out how much to shift network numbers to get them aligned, and what
@@ -82,7 +82,7 @@ Ipv4AddressHelper::SetBase (
   m_max = (1 << m_shift) - 2;
 
   NS_ASSERT_MSG(m_shift <= 32,
-    "Ipv4AddressHelper::SetBase(): Unreasonable address length");
+                "Ipv4AddressHelper::SetBase(): Unreasonable address length");
 
 //
 // Shift the network down into the normalized position.
@@ -94,7 +94,7 @@ Ipv4AddressHelper::SetBase (
   NS_LOG_LOGIC ("m_address == " << m_address);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressHelper::NewAddress (void)
 {
 //
@@ -105,7 +105,7 @@ Ipv4AddressHelper::NewAddress (void)
 // This implies that this operation is a post-increment.
 //
   NS_ASSERT_MSG (m_address <= m_max,
-    "Ipv4AddressHelper::NewAddress(): Address overflow");
+                 "Ipv4AddressHelper::NewAddress(): Address overflow");
 
   Ipv4Address addr ((m_network << m_shift) | m_address);
   ++m_address;
@@ -118,7 +118,7 @@ Ipv4AddressHelper::NewAddress (void)
   return addr;
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressHelper::NewNetwork (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -133,37 +133,37 @@ Ipv4AddressHelper::Assign (const NetDeviceContainer &c)
   NS_LOG_FUNCTION_NOARGS ();
   Ipv4InterfaceContainer retval;
   for (uint32_t i = 0; i < c.GetN (); ++i) {
-    Ptr<NetDevice> device = c.Get (i);
+      Ptr<NetDevice> device = c.Get (i);
 
-    Ptr<Node> node = device->GetNode ();
-    NS_ASSERT_MSG (node, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
-                   "with any node -> fail");
+      Ptr<Node> node = device->GetNode ();
+      NS_ASSERT_MSG (node, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
+                     "with any node -> fail");
 
-    Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
-    NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
-                   " with a node without IPv4 stack installed -> fail "
-                   "(maybe need to use InternetStackHelper?)");
+      Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+      NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
+                     " with a node without IPv4 stack installed -> fail "
+                     "(maybe need to use InternetStackHelper?)");
 
-    int32_t interface = ipv4->GetInterfaceForDevice (device);
-    if (interface == -1)
-      {
-        interface = ipv4->AddInterface (device);
-      }
-    NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
-      "Interface index not found");
+      int32_t interface = ipv4->GetInterfaceForDevice (device);
+      if (interface == -1)
+        {
+          interface = ipv4->AddInterface (device);
+        }
+      NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
+                     "Interface index not found");
 
-    Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (NewAddress (), m_mask);
-    ipv4->AddAddress (interface, ipv4Addr);
-    ipv4->SetMetric (interface, 1);
-    ipv4->SetUp (interface);
-    retval.Add (ipv4, interface);
-  }
+      Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (NewAddress (), m_mask);
+      ipv4->AddAddress (interface, ipv4Addr);
+      ipv4->SetMetric (interface, 1);
+      ipv4->SetUp (interface);
+      retval.Add (ipv4, interface);
+    }
   return retval;
 }
 
 const uint32_t N_BITS = 32;
 
-  uint32_t
+uint32_t
 Ipv4AddressHelper::NumAddressBits (uint32_t maskbits) const
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -180,177 +180,6 @@ Ipv4AddressHelper::NumAddressBits (uint32_t maskbits) const
   NS_ASSERT_MSG(false, "Ipv4AddressHelper::NumAddressBits(): Bad Mask");
   return 0;
 }
-
-} // namespace ns3
-
-#include "ns3/test.h"
-
-namespace ns3 {
-
-class NetworkAllocatorHelperTestCase : public TestCase
-{
-public:
-  NetworkAllocatorHelperTestCase ();
-private:
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-NetworkAllocatorHelperTestCase::NetworkAllocatorHelperTestCase ()
-  : TestCase ("Make sure the network allocator part is working on some common network prefixes.")
-{}
-
-void
-NetworkAllocatorHelperTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-void
-NetworkAllocatorHelperTestCase::DoRun (void)
-{
-  Ipv4Address address;
-  Ipv4Address network;
-  Ipv4AddressHelper h;
-
-  h.SetBase ("1.0.0.0", "255.0.0.0");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("2.0.0.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("2.0.0.1"), "XXX");
-
-  h.SetBase ("0.1.0.0", "255.255.0.0");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.2.0.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.2.0.1"), "XXX");
-
-  h.SetBase ("0.0.1.0", "255.255.255.0");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.2.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.2.1"), "XXX");
-}
-
-class AddressAllocatorHelperTestCase : public TestCase
-{
-public:
-  AddressAllocatorHelperTestCase ();
-private:
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-AddressAllocatorHelperTestCase::AddressAllocatorHelperTestCase ()
-  : TestCase ("Make sure the address allocator part is working")
-{}
-
-void
-AddressAllocatorHelperTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-
-void
-AddressAllocatorHelperTestCase::DoRun (void)
-{
-  Ipv4Address network;
-  Ipv4Address address;
-  Ipv4AddressHelper h;
-
-  h.SetBase ("1.0.0.0", "255.0.0.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.4"), "XXX");
-
-  h.SetBase ("0.1.0.0", "255.255.0.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.4"), "XXX");
-
-  h.SetBase ("0.0.1.0", "255.255.255.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.4"), "XXX");
-}
-
-class ResetAllocatorHelperTestCase : public TestCase
-{
-public:
-  ResetAllocatorHelperTestCase ();
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-ResetAllocatorHelperTestCase::ResetAllocatorHelperTestCase ()
-  : TestCase ("Make sure the reset to base behavior is working")
-{}
-
-void
-ResetAllocatorHelperTestCase::DoRun (void)
-{
-  Ipv4Address network;
-  Ipv4Address address;
-  Ipv4AddressHelper h;
-
-  //
-  // We're going to use some of the same addresses allocated above, 
-  // so reset the Ipv4AddressGenerator to make it forget we did.
-  //
-
-  h.SetBase ("1.0.0.0", "255.0.0.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.4"), "XXX");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("2.0.0.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("2.0.0.3"), "XXX");
-
-  h.SetBase ("0.1.0.0", "255.255.0.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.4"), "XXX");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.2.0.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.2.0.3"), "XXX");
-
-  h.SetBase ("0.0.1.0", "255.255.255.0", "0.0.0.3");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.3"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.4"), "XXX");
-  network = h.NewNetwork();
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.2.0"), "XXX");
-  address = h.NewAddress();
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.2.3"), "XXX");
-}
-
-void
-ResetAllocatorHelperTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-
-static class Ipv4AddressHelperTestSuite : public TestSuite
-{
-public:
-  Ipv4AddressHelperTestSuite ()
-    : TestSuite ("ipv4-address-helper", UNIT) 
-  {
-    AddTestCase (new NetworkAllocatorHelperTestCase ());
-    AddTestCase (new AddressAllocatorHelperTestCase ());
-    AddTestCase (new ResetAllocatorHelperTestCase ());
-  }
-} g_ipv4AddressHelperTestSuite;
 
 } // namespace ns3
 

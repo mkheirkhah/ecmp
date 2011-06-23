@@ -37,7 +37,7 @@ class Channel;
 class Packet;
 
 /**
- * \ingroup node
+ * \ingroup network
  * \defgroup netdevice NetDevice
  */
 /**
@@ -167,8 +167,7 @@ public:
    * encapsulated in an abstract Address to avoid dependencies on the exact
    * MAC address format.
    *
-   * A default implementation of GetMulticast is provided, but this
-   * method simply NS_ASSERTS.  In the case of net devices that do not support
+   * In the case of net devices that do not support
    * multicast, clients are expected to test NetDevice::IsMulticast and avoid
    * attempting to map multicast packets.  Subclasses of NetDevice that do
    * support multicasting are expected to override this method and provide an
@@ -185,14 +184,14 @@ public:
    * \see NetDevice::IsMulticast
    */
   virtual Address GetMulticast (Ipv4Address multicastGroup) const = 0;
-  
-	/**
-   * \brief Get the MAC multicast address corresponding
-   * to the IPv6 address provided.
-   * \param addr IPv6 address
-   * \return the MAC multicast address
-   * \warning Calling this method is invalid if IsMulticast returns not true.
-   */
+
+  /**
+* \brief Get the MAC multicast address corresponding
+* to the IPv6 address provided.
+* \param addr IPv6 address
+* \return the MAC multicast address
+* \warning Calling this method is invalid if IsMulticast returns not true.
+*/
   virtual Address GetMulticast (Ipv6Address addr) const = 0;
 
   /**
@@ -269,16 +268,16 @@ public:
    * which we do here.
    */
   enum PacketType
-    {
-      PACKET_HOST = 1, /**< Packet addressed oo us */
-      NS3_PACKET_HOST = PACKET_HOST,
-      PACKET_BROADCAST, /**< Packet addressed to all */
-      NS3_PACKET_BROADCAST = PACKET_BROADCAST,
-      PACKET_MULTICAST, /**< Packet addressed to multicast group */
-      NS3_PACKET_MULTICAST = PACKET_MULTICAST,
-      PACKET_OTHERHOST, /**< Packet addressed to someone else */
-      NS3_PACKET_OTHERHOST = PACKET_OTHERHOST,
-    };
+  {
+    PACKET_HOST = 1,   /**< Packet addressed oo us */
+    NS3_PACKET_HOST = PACKET_HOST,
+    PACKET_BROADCAST,   /**< Packet addressed to all */
+    NS3_PACKET_BROADCAST = PACKET_BROADCAST,
+    PACKET_MULTICAST,   /**< Packet addressed to multicast group */
+    NS3_PACKET_MULTICAST = PACKET_MULTICAST,
+    PACKET_OTHERHOST,   /**< Packet addressed to someone else */
+    NS3_PACKET_OTHERHOST = PACKET_OTHERHOST,
+  };
 
   /**
    * \param device a pointer to the net device which is calling this callback

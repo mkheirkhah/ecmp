@@ -31,7 +31,7 @@
 #include "ns3/simulator.h"
 #include "ns3/double.h"
 
-namespace ns3{
+namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (RttEstimator);
 
@@ -49,41 +49,67 @@ RttEstimator::GetTypeId (void)
     .AddAttribute ("InitialEstimation", 
                    "XXX",
                    TimeValue (Seconds (1.0)),
-                   MakeTimeAccessor (&RttEstimator::est),
+                   MakeTimeAccessor (&RttEstimator::SetEstimate,
+                                     &RttEstimator::GetEstimate),
                    MakeTimeChecker ())
     .AddAttribute ("MinRTO", 
                    "Minimum retransmit timeout value",
                    TimeValue (Seconds (0.2)),
-                   MakeTimeAccessor (&RttEstimator::minrto),
+                   MakeTimeAccessor (&RttEstimator::SetMinRto,
+                                     &RttEstimator::GetMinRto),
                    MakeTimeChecker ())
-    ;
+  ;
   return tid;
 }
+
+void 
+RttEstimator::SetMinRto (Time minRto)
+{
+  minrto = minRto;
+}
+Time 
+RttEstimator::GetMinRto (void) const
+{
+  return Time (minrto);
+}
+void 
+RttEstimator::SetEstimate (Time estimate)
+{
+  est = estimate;
+}
+Time 
+RttEstimator::GetEstimate (void) const
+{
+  return Time (est);
+}
+
 
 //RttHistory methods
 RttHistory::RttHistory (SequenceNumber32 s, uint32_t c, Time t)
   : seq (s), count (c), time (t), retx (false)
-  {
-  }
+{
+}
 
 RttHistory::RttHistory (const RttHistory& h)
   : seq (h.seq), count (h.count), time (h.time), retx (h.retx)
-  {
-  }
+{
+}
 
 // Base class methods
 
 RttEstimator::RttEstimator () : next (1), history (),
-    nSamples (0), multiplier (1.0) 
+                                nSamples (0), multiplier (1.0)
 { 
   //note next=1 everywhere since first segment will have sequence 1
 }
 
 RttEstimator::RttEstimator(const RttEstimator& c)
   : Object (c), next(c.next), history(c.history), 
-    m_maxMultiplier (c.m_maxMultiplier), est(c.est), nSamples(c.nSamples),
+    m_maxMultiplier (c.m_maxMultiplier), est(c.est),
+    minrto(c.minrto), nSamples(c.nSamples),
     multiplier(c.multiplier)
-{}
+{
+}
 
 RttEstimator::~RttEstimator ()
 {
@@ -146,10 +172,6 @@ void RttEstimator::ClearSent ()
 
 void RttEstimator::IncreaseMultiplier ()
 {
-  double a;
-  a = multiplier * 2.0;
-  double b;
-  b = m_maxMultiplier * 2.0;
   multiplier = std::min (multiplier * 2.0, m_maxMultiplier);
 }
 
@@ -161,7 +183,7 @@ void RttEstimator::ResetMultiplier ()
 void RttEstimator::Reset ()
 { // Reset to initial state
   next = 1;
-  est = Seconds (1.0); // XXX: we should go back to the 'initial value' here. Need to add support in Object for this.
+  est = 1; // XXX: we should go back to the 'initial value' here. Need to add support in Object for this.
   history.clear ();         // Remove all info from the history
   nSamples = 0;
   ResetMultiplier ();
@@ -186,12 +208,12 @@ RttMeanDeviation::GetTypeId (void)
                    DoubleValue (0.1),
                    MakeDoubleAccessor (&RttMeanDeviation::gain),
                    MakeDoubleChecker<double> ())
-    ;
+  ;
   return tid;
 }
 
 RttMeanDeviation::RttMeanDeviation() :
-  variance (ns3::Seconds(0)) 
+  variance (0) 
 { 
 }
 
@@ -204,15 +226,14 @@ void RttMeanDeviation::Measurement (Time m)
 {
   if (nSamples)
     { // Not first
-      Time err = m - est;
-      est = est + Scalar (gain) * err;         // estimated rtt
-      err = Abs (err);        // absolute value of error
-      variance = variance + Scalar (gain) * (err - variance); // variance of rtt
+      int64x64_t err = m - est;
+      est = est + gain * err;         // estimated rtt
+      variance = variance + gain * (Abs (err) - variance); // variance of rtt
     }
   else
     { // First sample
       est = m;                        // Set estimate to current
-      //variance = m / 2;               // And variance to current / 2
+      //variance = sample / 2;               // And variance to current / 2
       variance = m; // try this
     }
   nSamples++;
@@ -220,19 +241,19 @@ void RttMeanDeviation::Measurement (Time m)
 
 Time RttMeanDeviation::RetransmitTimeout ()
 {
-  // If not enough samples, justjust return 2 times estimate   
+  // If not enough samples, justjust return 2 times estimate
   //if (nSamples < 2) return est * 2;
-  Time retval;
-  if (variance < est / Scalar (4.0))
+  int64x64_t retval;
+  if (variance < est / 4.0)
     {
-      retval = est * Scalar (2 * multiplier);            // At least twice current est
+      retval = est * 2 * multiplier;            // At least twice current est
     }
   else
     {
-      retval = (est + Scalar (4) * variance) * Scalar (multiplier); // As suggested by Jacobson
+      retval = (est + 4 * variance) * multiplier; // As suggested by Jacobson
     }
   retval = Max (retval, minrto);
-  return retval;
+  return Time (retval);
 }
 
 Ptr<RttEstimator> RttMeanDeviation::Copy () const
@@ -242,7 +263,7 @@ Ptr<RttEstimator> RttMeanDeviation::Copy () const
 
 void RttMeanDeviation::Reset ()
 { // Reset to initial state
-  variance = Seconds (0.0);
+  variance = 0;
   RttEstimator::Reset ();
 }
-}//namepsace ns3
+} //namepsace ns3

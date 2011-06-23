@@ -21,7 +21,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/point-to-point-layout-module.h"
 
 // Network topology (default)
 //
@@ -75,7 +75,7 @@ main (int argc, char *argv[])
 
   NS_LOG_INFO ("Create applications.");
   //
-  // Create a packet sink on the star "hub" to receive packets.  
+  // Create a packet sink on the star "hub" to receive packets.
   // 
   uint16_t port = 50000;
   Address hubLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
@@ -98,7 +98,7 @@ main (int argc, char *argv[])
       AddressValue remoteAddress (InetSocketAddress (star.GetHubIpv4Address (i), port));
       onOffHelper.SetAttribute ("Remote", remoteAddress);
       spokeApps.Add (onOffHelper.Install (star.GetSpokeNode (i)));
-  }
+    }
   spokeApps.Start (Seconds (1.0));
   spokeApps.Stop (Seconds (10.0));
 

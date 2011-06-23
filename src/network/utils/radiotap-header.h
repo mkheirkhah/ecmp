@@ -25,7 +25,7 @@
 #include <ns3/header.h> 
 
 namespace ns3 {
-    
+
 /**
  * @brief Radiotap header implementation
  *
@@ -43,7 +43,7 @@ namespace ns3 {
  * fields will end up aligned without the need of inserting padding space.  By 
  * the term "gap" I mean not using a field which would appear between two used 
  * fields.  Moral: don't leave gaps, or if you do be careful about how you
- * do it.  
+ * do it.
  */
 class RadiotapHeader : public Header
 {
@@ -96,7 +96,7 @@ public:
    * @param os The output stream
    */
   virtual void Print (std::ostream &os) const;
-    
+
   /**
    * @brief Set the Time Synchronization Function Timer (TSFT) value.  Valid for
    * received frames only. 
@@ -179,22 +179,13 @@ public:
    * @returns The transmit/receive data rate in units of 500 kbps.
    */
   uint16_t GetChannelFrequency (void) const;
-    
+
   /**
    * @brief Get the channel flags of the transmitted or received frame.
    * @returns The frame flags.
    * @see ChannelFlags.
    */
   uint16_t GetChannelFlags (void) const;
-
-  /**
-   * @brief Set the RF signal power at the antenna as a decibel difference
-   * from an arbitrary, fixed reference. 
-   *
-   * @param signal The RF signal power at the antenna as a decibel difference
-   *               from an arbitrary, fixed reference. 
-   */
-  void SetAntennaSignalPower (int8_t signal);
 
   /**
    * @brief Set the RF signal power at the antenna as a decibel difference
@@ -213,15 +204,6 @@ public:
    *          from an arbitrary, fixed reference. 
    */
   uint8_t GetAntennaSignalPower (void) const;
-
-  /**
-   * @brief Set the RF noise power at the antenna as a decibel difference
-   * from an arbitrary, fixed reference. 
-   *
-   * @param noise The RF noise power at the antenna as a decibel difference
-   *              from an arbitrary, fixed reference. 
-   */
-  void SetAntennaNoisePower (int8_t noise);
 
   /**
    * @brief Set the RF noise power at the antenna as a decibel difference
@@ -260,18 +242,18 @@ private:
     RADIOTAP_EXT               = 0x10000000
   };
  
-    void CheckAddChannelField();
-    
-    uint16_t m_length;
-    uint32_t m_present;
-    
-    uint64_t m_tsft;
-    uint8_t m_flags;
-    uint8_t m_rate;
-    uint16_t m_channelFreq;
-    uint16_t m_channelFlags;
-    int8_t m_antennaSignal;
-    int8_t m_antennaNoise;
+  void CheckAddChannelField();
+
+  uint16_t m_length;
+  uint32_t m_present;
+
+  uint64_t m_tsft;
+  uint8_t m_flags;
+  uint8_t m_rate;
+  uint16_t m_channelFreq;
+  uint16_t m_channelFlags;
+  int8_t m_antennaSignal;
+  int8_t m_antennaNoise;
 };
 
 } // namespace ns3

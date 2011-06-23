@@ -62,7 +62,6 @@ public:
   virtual Time AckSeq(SequenceNumber32);
   virtual void ClearSent();
   virtual void   Measurement(Time t) = 0;
-  virtual Time Estimate() = 0;
   virtual Time RetransmitTimeout() = 0;
   void Init(SequenceNumber32 s) { next = s;}
   virtual Ptr<RttEstimator> Copy() const = 0;
@@ -70,25 +69,30 @@ public:
   virtual void ResetMultiplier();
   virtual void Reset();
 
+  void SetMinRto (Time minRto);
+  Time GetMinRto (void) const;
+  void SetEstimate (Time estimate);
+  Time GetEstimate (void) const;
+
 private:
   SequenceNumber32        next;    // Next expected sequence to be sent
   RttHistory_t history; // List of sent packet
   double m_maxMultiplier;
 public:
-  Time       est;     // Current estimate
-  Time       minrto; // minimum value of the timeout
-  uint32_t      nSamples;// Number of samples
+  int64x64_t       est;     // Current estimate
+  int64x64_t       minrto; // minimum value of the timeout
+  uint32_t      nSamples; // Number of samples
   double       multiplier;   // RTO Multiplier
 };
 
 // The "Mean-Deviation" estimator, as discussed by Van Jacobson
 // "Congestion Avoidance and Control", SIGCOMM 88, Appendix A
 
-  //Doc:Class Class {\tt RttMeanDeviation} implements the "Mean--Deviation" estimator
-  //Doc:Class as described by Van Jacobson 
-  //Doc:Class "Congestion Avoidance and Control", SIGCOMM 88, Appendix A
+//Doc:Class Class {\tt RttMeanDeviation} implements the "Mean--Deviation" estimator
+//Doc:Class as described by Van Jacobson
+//Doc:Class "Congestion Avoidance and Control", SIGCOMM 88, Appendix A
 class RttMeanDeviation : public RttEstimator {
-public :
+public:
   static TypeId GetTypeId (void);
 
   RttMeanDeviation ();
@@ -96,12 +100,10 @@ public :
 
   //Doc:Method
   RttMeanDeviation (const RttMeanDeviation&); // Copy constructor
-    //Doc:Desc Copy constructor.
-    //Doc:Arg1 {\tt RttMeanDeviation} object to copy.
+  //Doc:Desc Copy constructor.
+  //Doc:Arg1 {\tt RttMeanDeviation} object to copy.
 
   void Measurement (Time);
-  Time Estimate () { return est;}
-  Time Variance () { return variance;}
   Time RetransmitTimeout ();
   Ptr<RttEstimator> Copy () const;
   void Reset ();
@@ -109,9 +111,9 @@ public :
 
 public:
   double       gain;       // Filter gain
-  Time       variance;   // Current variance
+  int64x64_t   variance;   // Current variance
 };
-}//namespace ns3
+} //namespace ns3
 #endif
 
 

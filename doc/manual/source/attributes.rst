@@ -278,7 +278,7 @@ Default values and command-line arguments
 +++++++++++++++++++++++++++++++++++++++++
 
 Let's look at how a user script might access these values.  
-This is based on the script found at ``samples/main-attribute-value.cc``,
+This is based on the script found at ``src/core/examples/main-attribute-value.cc``,
 with some details stripped out.::
 
     //
@@ -575,7 +575,7 @@ From the perspective of the user who writes a new class in the system and wants
 to hook it in to the attribute system, there is mainly the matter of writing the
 conversions to/from strings and attribute values.  Most of this can be
 copy/pasted with macro-ized code.  For instance, consider class declaration for
-Rectangle in the ``src/mobility/`` directory:
+Rectangle in the ``src/mobility/model`` directory:
 
 Header file
 +++++++++++
@@ -641,14 +641,14 @@ ConfigStore
 ***********
 
 **Feedback requested:**  This is an experimental feature of |ns3|.  It is found
-in ``src/contrib`` and not in the main tree.  If you like this feature and
+in ``src/config-store``.  If you like this feature and
 would like to provide feedback on it, please email us.
 
-Values for |ns3| attributes can be stored in an ASCII or XML text file and
-loaded into a future simulation.  This feature is known as the |ns3|
-ConfigStore.  The ConfigStore code is in ``src/contrib/``.  It is not yet
-main-tree code, because we are seeking some user feedback and experience with
-this. 
+Values for |ns3| attributes can be stored in an ASCII or XML text file
+and loaded into a future simulation.  This feature is known as the
+|ns3| ConfigStore.  The ConfigStore code is in ``src/config-store/model``.  
+It is still considered as unstable code, because we are seeking some
+user feedback and experience with this.
 
 We can explore this system by using an example. Copy the ``csma-bridge.cc``
 file to the scratch directory:::
@@ -659,7 +659,7 @@ file to the scratch directory:::
 Let's edit it to add the ConfigStore feature. First, add an include statement to
 include the contrib module, and then add these lines:::
 
-    #include "contrib-module.h"
+    #include "ns3/config-store-module.h"
     ...
     int main (...)
     {
@@ -725,7 +725,7 @@ write out the resulting attributes to a separate file called
 is sometimes helpful to run the program to generate an output xml file first,
 then hand-edit that file and re-input it for the next simulation run).::
 
-    #include "contrib-module.h"
+    #include "ns3/config-store-module.h"
     ...
     int main (...)
     {
@@ -768,7 +768,7 @@ Ubuntu installation command is:::
     sudo apt-get install libgtk2.0-0 libgtk2.0-dev
 
 To check whether it is configured or not, check the output of the
-./waf configure step:::
+./waf configure --enable-examples --enable-tests step:::
 
     ---- Summary of optional NS-3 features:
     Threading Primitives          : enabled
@@ -776,7 +776,7 @@ To check whether it is configured or not, check the output of the
     GtkConfigStore                : not enabled (library 'gtk+-2.0 >= 2.12' not found)
 
 In the above example, it was not enabled, so it cannot be used until a suitable
-version is installed and ./waf configure; ./waf is rerun.
+version is installed and ./waf configure --enable-examples --enable-tests; ./waf is rerun.
 
 Usage is almost the same as the non-GTK-based version, but there
 are no ConfigStore attributes involved:::

@@ -33,7 +33,7 @@
 #include <ns3/spectrum-type.h>
 #include <ns3/spectrum-interference.h>
 #include <ns3/data-rate.h>
-#include <ns3/phy-mac.h>
+#include <ns3/generic-phy.h>
 #include <ns3/packet-burst.h>
 #include <ns3/lte-interference.h>
 
@@ -42,6 +42,8 @@ namespace ns3 {
 class LteNetDevice;
 
 /**
+ * \ingroup lte
+ *
  * The LteSpectrumPhy models the physical layer of LTE
  */
 class LteSpectrumPhy : public SpectrumPhy
@@ -71,7 +73,7 @@ public:
   Ptr<Object> GetDevice ();
   Ptr<const SpectrumModel> GetRxSpectrumModel () const;
   void StartRx (Ptr<PacketBurst> pb, Ptr <const SpectrumValue> rxPsd, SpectrumType st, Time duration);
-  
+
 
   /**
    * Get the SpectrumType used by this PHY
@@ -113,7 +115,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacTxEndCallback (PhyMacTxEndCallback c);
+  void SetGenericPhyTxEndCallback (GenericPhyTxEndCallback c);
 
   /**
    * set the callback for the end of a RX in error, as part of the
@@ -121,7 +123,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacRxEndErrorCallback (PhyMacRxEndErrorCallback c);
+  void SetGenericPhyRxEndErrorCallback (GenericPhyRxEndErrorCallback c);
 
   /**
    * set the callback for the successful end of a RX, as part of the
@@ -129,7 +131,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacRxEndOkCallback (PhyMacRxEndOkCallback c);
+  void SetGenericPhyRxEndOkCallback (GenericPhyRxEndOkCallback c);
 
   /**
    * \brief Set the state of the phy layer
@@ -144,14 +146,14 @@ public:
    */
   void SetCellId (uint16_t cellId);
 
-  
+
   /** 
    * 
    * 
    * \param p the new LteSinrChunkProcessor to be added to the processing chain
    */
   void AddSinrChunkProcessor (Ptr<LteSinrChunkProcessor> p);
-  
+
 private:
   void ChangeState (State newState);
   void EndTx ();
@@ -177,9 +179,9 @@ private:
   TracedCallback<Ptr<const PacketBurst> > m_phyRxEndOkTrace;
   TracedCallback<Ptr<const PacketBurst> > m_phyRxEndErrorTrace;
 
-  PhyMacTxEndCallback        m_phyMacTxEndCallback;
-  PhyMacRxEndErrorCallback   m_phyMacRxEndErrorCallback;
-  PhyMacRxEndOkCallback      m_phyMacRxEndOkCallback;
+  GenericPhyTxEndCallback        m_genericPhyTxEndCallback;
+  GenericPhyRxEndErrorCallback   m_genericPhyRxEndErrorCallback;
+  GenericPhyRxEndOkCallback      m_genericPhyRxEndOkCallback;
 
   Ptr<LteInterference> m_interference;
 

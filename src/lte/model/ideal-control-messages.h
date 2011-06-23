@@ -32,6 +32,8 @@ class LteNetDevice;
 
 
 /**
+ * \ingroup lte
+ *
  * The IdealControlMessage provides a basic implementations for
  * control messages (such as PDCCH allocation map, CQI feedbacks)
  * that are exchanged among eNodeB and UEs.
@@ -45,8 +47,8 @@ public:
   enum MessageType
   {
     CQI_FEEDBACKS, ALLOCATION_MAP,
-    DL_DCI, UL_DCI, // Downlink/Uplink Data Control Indicator 
-    DL_CQI, UL_CQI, // Downlink/Uplink Channel Quality Indicator 
+    DL_DCI, UL_DCI, // Downlink/Uplink Data Control Indicator
+    DL_CQI, UL_CQI, // Downlink/Uplink Channel Quality Indicator
     BSR // Buffer Status Report
   };
 
@@ -112,6 +114,8 @@ namespace ns3 {
 class LteNetDevice;
 
 /**
+ * \ingroup lte
+ *
  * \brief The PdcchMapIdealControlMessage defines an ideal allocation map
  * for both UL and DL sends by the eNodeB to all UE,
  * using an ideal PDCCH control channel.
@@ -199,6 +203,8 @@ namespace ns3 {
 class LteNetDevice;
 
 /**
+ * \ingroup lte
+ *
  * The CqiIdealControlMessage defines an ideal list of feedback about
  * the channel quality sent by the UE to the eNodeB.
  */
@@ -298,33 +304,33 @@ private:
 #include <ns3/ff-mac-common.h>
 
 namespace ns3 {
-  
+
+/**
+* The Uplink Data Control Indicator messages defines the RB allocation for the
+* users
+*/
+class UlDciIdealControlMessage : public IdealControlMessage
+{
+public:
+  UlDciIdealControlMessage (void);
+  virtual ~UlDciIdealControlMessage (void);
+
   /**
-  * The Uplink Data Control Indicator messages defines the RB allocation for the
-  * users
+  * \brief add a DCI into the message
+  * \param dci the dci
   */
-  class UlDciIdealControlMessage : public IdealControlMessage
-  {
-    public:
-      UlDciIdealControlMessage (void);
-      virtual ~UlDciIdealControlMessage (void);
-      
-      /**
-      * \brief add a DCI into the message
-      * \param dci the dci
-      */
-      void SetDci (UlDciListElement_s dci);
-      
-      /**
-      * \brief Get dic informations
-      * \return dci messages
-      */
-      UlDciListElement_s GetDci (void);
-      
-      
-    private:
-      UlDciListElement_s m_dci;
-  };
+  void SetDci (UlDciListElement_s dci);
+
+  /**
+  * \brief Get dic informations
+  * \return dci messages
+  */
+  UlDciListElement_s GetDci (void);
+
+
+private:
+  UlDciListElement_s m_dci;
+};
 } // namespace ns3
 
 #endif /* UL_DCI_IDEAL_CONTROL_MESSAGES_H */

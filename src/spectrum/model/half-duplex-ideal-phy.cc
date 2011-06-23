@@ -71,7 +71,7 @@ HalfDuplexIdealPhy::DoDispose ()
 
 std::ostream& operator<< (std::ostream& os, HalfDuplexIdealPhy::State s)
 {
-  switch (s)     
+  switch (s)
     {
     case HalfDuplexIdealPhy::IDLE:
       os << "IDLE";
@@ -165,7 +165,7 @@ HalfDuplexIdealPhy::SetChannel (Ptr<SpectrumChannel> c)
   m_channel = c;
 }
 
-Ptr<const SpectrumModel> 
+Ptr<const SpectrumModel>
 HalfDuplexIdealPhy::GetRxSpectrumModel () const
 {
   if (m_txPsd)
@@ -220,14 +220,14 @@ HalfDuplexIdealPhy::GetRate () const
 
 
 void
-HalfDuplexIdealPhy::SetPhyMacTxEndCallback (PhyMacTxEndCallback c)
+HalfDuplexIdealPhy::SetGenericPhyTxEndCallback (GenericPhyTxEndCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_phyMacTxEndCallback = c;
 }
 
 void
-HalfDuplexIdealPhy::SetPhyMacRxStartCallback (PhyMacRxStartCallback c)
+HalfDuplexIdealPhy::SetGenericPhyRxStartCallback (GenericPhyRxStartCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_phyMacRxStartCallback = c;
@@ -235,7 +235,7 @@ HalfDuplexIdealPhy::SetPhyMacRxStartCallback (PhyMacRxStartCallback c)
 
 
 void
-HalfDuplexIdealPhy::SetPhyMacRxEndErrorCallback (PhyMacRxEndErrorCallback c)
+HalfDuplexIdealPhy::SetGenericPhyRxEndErrorCallback (GenericPhyRxEndErrorCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_phyMacRxEndErrorCallback = c;
@@ -243,13 +243,13 @@ HalfDuplexIdealPhy::SetPhyMacRxEndErrorCallback (PhyMacRxEndErrorCallback c)
 
 
 void
-HalfDuplexIdealPhy::SetPhyMacRxEndOkCallback (PhyMacRxEndOkCallback c)
+HalfDuplexIdealPhy::SetGenericPhyRxEndOkCallback (GenericPhyRxEndOkCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_phyMacRxEndOkCallback = c;
 }
 
-void 
+void
 HalfDuplexIdealPhy::ChangeState (State newState)
 {
   NS_LOG_LOGIC (this << " state: " << m_state << " -> " << newState);
@@ -268,7 +268,7 @@ HalfDuplexIdealPhy::StartTx (Ptr<Packet> p)
     {
     case RX:
       AbortRx ();
-      // fall through
+    // fall through
 
     case IDLE:
       {
@@ -278,7 +278,7 @@ HalfDuplexIdealPhy::StartTx (Ptr<Packet> p)
         Ptr<PacketBurst> pb = Create<PacketBurst> ();
         pb->AddPacket (p);
         m_channel->StartTx (pb, m_txPsd, GetSpectrumType (), Seconds (txTimeSeconds), GetObject<SpectrumPhy> ());
-        Simulator::Schedule(Seconds (txTimeSeconds), &HalfDuplexIdealPhy::EndTx, this);
+        Simulator::Schedule (Seconds (txTimeSeconds), &HalfDuplexIdealPhy::EndTx, this);
       }
       break;
 
@@ -341,7 +341,7 @@ HalfDuplexIdealPhy::StartRx (Ptr<PacketBurst> pb, Ptr <const SpectrumValue> rxPs
 
         case IDLE:
           // preamble detection and synchronization is supposed to be always successful.
-          NS_LOG_LOGIC (this << " receiving " << pb->GetNPackets () << "  packet(s)" );          
+          NS_LOG_LOGIC (this << " receiving " << pb->GetNPackets () << "  packet(s)" );
           NS_ASSERT (pb->GetNPackets () == 1); // this PHY only supports a single packet per waveform
           Ptr<Packet> p = pb->GetPackets ().front ();
           m_phyRxStartTrace (p);
@@ -365,7 +365,7 @@ HalfDuplexIdealPhy::StartRx (Ptr<PacketBurst> pb, Ptr <const SpectrumValue> rxPs
 
         }
     }
-  
+
   NS_LOG_LOGIC (this << "state: " << m_state);
 }
 

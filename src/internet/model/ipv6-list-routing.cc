@@ -36,7 +36,7 @@ Ipv6ListRouting::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Ipv6ListRouting")
     .SetParent<Ipv6RoutingProtocol> ()
     .AddConstructor<Ipv6ListRouting> ()
-    ;
+  ;
   return tid;
 }
 
@@ -116,16 +116,16 @@ Ipv6ListRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
 #ifdef NOTYET
       if (m_ipv6->MulticastCheckGroup (iif, dst))
 #endif
-        if (true)
-          {
-            NS_LOG_LOGIC ("Multicast packet for me-- local deliver");
-            Ptr<Packet> packetCopy = p->Copy ();
-            // Here may want to disable lcb callback in recursive RouteInput
-            // call below
-            lcb (packetCopy, header, iif);
-            // Fall through-- we may also need to forward this
-            retVal = true;
-          }
+      if (true)
+        {
+          NS_LOG_LOGIC ("Multicast packet for me-- local deliver");
+          Ptr<Packet> packetCopy = p->Copy ();
+          // Here may want to disable lcb callback in recursive RouteInput
+          // call below
+          lcb (packetCopy, header, iif);
+          // Fall through-- we may also need to forward this
+          retVal = true;
+        }
 
       /* do not forward link-local multicast address */
       if (dst == Ipv6Address::GetAllNodesMulticast () || dst == Ipv6Address::GetAllRoutersMulticast () || dst == Ipv6Address::GetAllHostsMulticast ())
@@ -134,7 +134,7 @@ Ipv6ListRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
         }
 
       for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-           m_routingProtocols.begin (); rprotoIter != m_routingProtocols.end ();
+             m_routingProtocols.begin (); rprotoIter != m_routingProtocols.end ();
            rprotoIter++)
         {
           NS_LOG_LOGIC ("Multicast packet for me-- trying to forward");
@@ -183,7 +183,7 @@ Ipv6ListRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
     }
   // Next, try to find a route
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
@@ -192,7 +192,7 @@ Ipv6ListRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<
           return true;
         }
     }
-  // No routing protocol has found a route.  
+  // No routing protocol has found a route.
   return retVal;
 }
 
@@ -201,55 +201,55 @@ Ipv6ListRouting::NotifyInterfaceUp (uint32_t interface)
 {
   NS_LOG_FUNCTION (this << interface);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyInterfaceUp (interface);
-    }  
+    }
 }
 void 
 Ipv6ListRouting::NotifyInterfaceDown (uint32_t interface)
 {
   NS_LOG_FUNCTION (this << interface);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyInterfaceDown (interface);
-    }  
+    }
 }
 void 
 Ipv6ListRouting::NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
   NS_LOG_FUNCTION (this << interface << address);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyAddAddress (interface, address);
-    }  
+    }
 }
 void 
 Ipv6ListRouting::NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address)
 {
   NS_LOG_FUNCTION (this << interface << address);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyRemoveAddress (interface, address);
-    }  
+    }
 }
 
 void Ipv6ListRouting::NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse)
 {
   NS_LOG_FUNCTION (this << dst << mask << nextHop << interface);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
@@ -261,7 +261,7 @@ void Ipv6ListRouting::NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6A
 {
   NS_LOG_FUNCTION (this << dst << mask << nextHop << interface);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
@@ -275,12 +275,12 @@ Ipv6ListRouting::SetIpv6 (Ptr<Ipv6> ipv6)
   NS_LOG_FUNCTION (this << ipv6);
   NS_ASSERT (m_ipv6 == 0);
   for (Ipv6RoutingProtocolList::const_iterator rprotoIter =
-       m_routingProtocols.begin ();
+         m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end ();
        rprotoIter++)
     {
       (*rprotoIter).second->SetIpv6 (ipv6);
-    }  
+    }
   m_ipv6 = ipv6;
 }
 
@@ -333,114 +333,3 @@ Ipv6ListRouting::Compare (const Ipv6RoutingProtocolEntry& a, const Ipv6RoutingPr
 
 } // namespace ns3
 
-
-#include "ns3/test.h"
-#include "ipv6-list-routing.h"
-#include "ns3/ipv6-routing-protocol.h"
-
-namespace ns3 {
-
-    class Ipv6ARouting : public Ipv6RoutingProtocol {
-    public:
-      Ptr<Ipv6Route> RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)  { return 0;}
-      bool RouteInput  (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
-                        UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                        LocalDeliverCallback lcb, ErrorCallback ecb) {return false;}
-      void NotifyInterfaceUp (uint32_t interface) {}
-      void NotifyInterfaceDown (uint32_t interface) {}
-      void NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address) {}
-      void NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address) {}
-      void NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse = Ipv6Address::
-                           GetZero ()) {}
-      void NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse) {}
-      void SetIpv6 (Ptr<Ipv6> ipv6) {}
-    };
-
-    class Ipv6BRouting : public Ipv6RoutingProtocol {
-    public:
-      Ptr<Ipv6Route> RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)  { return 0;}
-      bool RouteInput  (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const NetDevice> idev,
-                        UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                        LocalDeliverCallback lcb, ErrorCallback ecb) {return false;}
-      void NotifyInterfaceUp (uint32_t interface) {}
-      void NotifyInterfaceDown (uint32_t interface) {}
-      void NotifyAddAddress (uint32_t interface, Ipv6InterfaceAddress address) {}
-      void NotifyRemoveAddress (uint32_t interface, Ipv6InterfaceAddress address) {}
-      void NotifyAddRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse = Ipv6Address::
-                           GetZero ()) {}
-      void NotifyRemoveRoute (Ipv6Address dst, Ipv6Prefix mask, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse) {}
-      void SetIpv6 (Ptr<Ipv6> ipv6) {}
-    };
-
-    class Ipv6ListRoutingNegativeTestCase : public TestCase
-    {
-  public:
-    Ipv6ListRoutingNegativeTestCase();
-    virtual void DoRun (void);
-    };
-
-    Ipv6ListRoutingNegativeTestCase::Ipv6ListRoutingNegativeTestCase()
-      : TestCase("Check negative priorities")
-      {}
-    void
-      Ipv6ListRoutingNegativeTestCase::DoRun (void)
-        {
-          Ptr<Ipv6ListRouting> lr = CreateObject<Ipv6ListRouting> ();
-          Ptr<Ipv6RoutingProtocol> aRouting = CreateObject<Ipv6ARouting> ();
-          Ptr<Ipv6RoutingProtocol> bRouting = CreateObject<Ipv6BRouting> ();
-          // The Ipv6BRouting should be added with higher priority (larger integer value)
-          lr->AddRoutingProtocol (aRouting, -10);
-          lr->AddRoutingProtocol (bRouting, -5);
-          int16_t first = 3;
-          uint32_t num = lr->GetNRoutingProtocols ();
-          NS_TEST_ASSERT_MSG_EQ (num, 2, "XXX");
-          Ptr<Ipv6RoutingProtocol> firstRp = lr->GetRoutingProtocol (0, first);
-          NS_TEST_ASSERT_MSG_EQ (-5, first, "XXX");
-          NS_TEST_ASSERT_MSG_EQ (firstRp, bRouting, "XXX");
-        }
-
-    class Ipv6ListRoutingPositiveTestCase : public TestCase
-    {
-  public:
-    Ipv6ListRoutingPositiveTestCase();
-    virtual void DoRun (void);
-    };
-
-    Ipv6ListRoutingPositiveTestCase::Ipv6ListRoutingPositiveTestCase()
-      : TestCase("Check positive priorities")
-      {}
-    void
-      Ipv6ListRoutingPositiveTestCase::DoRun (void)
-        {
-          Ptr<Ipv6ListRouting> lr = CreateObject<Ipv6ListRouting> ();
-          Ptr<Ipv6RoutingProtocol> aRouting = CreateObject<Ipv6ARouting> ();
-          Ptr<Ipv6RoutingProtocol> bRouting = CreateObject<Ipv6BRouting> ();
-          // The Ipv6ARouting should be added with higher priority (larger integer 
-          // value) and will be fetched first below
-          lr->AddRoutingProtocol (aRouting, 10);
-          lr->AddRoutingProtocol (bRouting, 5);
-          int16_t first = 3;
-          int16_t second = 3;
-          uint32_t num = lr->GetNRoutingProtocols ();
-          NS_TEST_ASSERT_MSG_EQ (num, 2, "XXX");
-          Ptr<Ipv6RoutingProtocol> firstRp = lr->GetRoutingProtocol (0, first);
-          NS_TEST_ASSERT_MSG_EQ (10, first, "XXX");
-          NS_TEST_ASSERT_MSG_EQ (firstRp, aRouting, "XXX");
-          Ptr<Ipv6RoutingProtocol> secondRp = lr->GetRoutingProtocol (1, second);
-          NS_TEST_ASSERT_MSG_EQ (5, second, "XXX");
-          NS_TEST_ASSERT_MSG_EQ (secondRp, bRouting, "XXX");
-        }
-
-    static class Ipv6ListRoutingTestSuite : public TestSuite
-    {
-  public:
-    Ipv6ListRoutingTestSuite()
-      : TestSuite("ipv6-list-routing", UNIT)
-      {
-        AddTestCase(new Ipv6ListRoutingPositiveTestCase());
-        AddTestCase(new Ipv6ListRoutingNegativeTestCase());
-      }
-
-    } g_ipv6ListRoutingTestSuite;
-
-} // namespace ns3

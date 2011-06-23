@@ -30,6 +30,8 @@
 #include <ns3/node.h>
 #include <ns3/node-container.h>
 #include <ns3/eps-bearer.h>
+#include <ns3/mac-stats-calculator.h>
+#include <ns3/rlc-stats-calculator.h>
 
 namespace ns3 {
 
@@ -43,12 +45,14 @@ class SpectrumChannel;
  * Creation and configuration of LTE entities
  *
  */
-class LenaHelper
+class LenaHelper : public Object
 {
 public:
   LenaHelper (void);
-  ~LenaHelper (void);
+  virtual ~LenaHelper (void);
 
+  static TypeId GetTypeId (void);
+  virtual void DoDispose (void);
 
   /**
    * \todo to be implemented
@@ -116,42 +120,31 @@ public:
    * \param bearer the characteristics of the bearer to be activated
    */
   void ActivateEpsBearer (Ptr<NetDevice> ueDevice, EpsBearer bearer);
-  
-  
+
+  /** 
+   * 
+   * 
+   * \param type the type of scheduler to be used for the eNBs
+   */
+  void SetSchedulerType (std::string type);
+
   /**
-  * \param type the type of ns3::WifiRemoteStationManager to create.
-  * \param n0 the name of the attribute to set
-  * \param v0 the value of the attribute to set
-  * \param n1 the name of the attribute to set
-  * \param v1 the value of the attribute to set
-  * \param n2 the name of the attribute to set
-  * \param v2 the value of the attribute to set
-  * \param n3 the name of the attribute to set
-  * \param v3 the value of the attribute to set
-  * \param n4 the name of the attribute to set
-  * \param v4 the value of the attribute to set
-  * \param n5 the name of the attribute to set
-  * \param v5 the value of the attribute to set
-  * \param n6 the name of the attribute to set
-  * \param v6 the value of the attribute to set
-  * \param n7 the name of the attribute to set
-  * \param v7 the value of the attribute to set
-  *
-  * All the attributes specified in this method should exist
-  * in the requested scheduler.
-  */
-  void SetScheduler (std::string type,
-                                std::string n0 = "", const AttributeValue &v0 = EmptyAttributeValue (),
-                                std::string n1 = "", const AttributeValue &v1 = EmptyAttributeValue (),
-                                std::string n2 = "", const AttributeValue &v2 = EmptyAttributeValue (),
-                                std::string n3 = "", const AttributeValue &v3 = EmptyAttributeValue (),
-                                std::string n4 = "", const AttributeValue &v4 = EmptyAttributeValue (),
-                                std::string n5 = "", const AttributeValue &v5 = EmptyAttributeValue (),
-                                std::string n6 = "", const AttributeValue &v6 = EmptyAttributeValue (),
-                                std::string n7 = "", const AttributeValue &v7 = EmptyAttributeValue ());
-  
-  
-  
+   * set an attribute for the scheduler to be created
+   */
+  void SetSchedulerAttribute (std::string n, const AttributeValue &v);
+
+  /** 
+   * 
+   * 
+   * \param type the type of propagation model to be used for the eNBs
+   */
+  void SetPropagationModelType (std::string type);
+
+  /**
+   * set an attribute for the propagation model to be created
+   */
+  void SetPropagationModelAttribute (std::string n, const AttributeValue &v);
+
 
   /**
    * Enables logging for all components of the LENA architecture
@@ -159,14 +152,57 @@ public:
    */
   void EnableLogComponents (void);
 
+  /**
+   * Enable trace sinks for MAC layer
+   */
+  void EnableMacTraces (void);
+
+  /**
+   * Enable trace sinks for DL MAC layer
+   */
+  void EnableDlMacTraces (void);
+
+  /**
+   * Enable trace sinks for UL MAC layer
+   */
+  void EnableUlMacTraces (void);
+
+  /**
+   * Enable trace sinks for RLC layer
+   */
+  void EnableRlcTraces (void);
+
+  /**
+   * Enable trace sinks for DL RLC layer
+   */
+  void EnableDlRlcTraces (void);
+
+  /**
+   * Enable trace sinks for UL MAC layer
+   */
+  void EnableUlRlcTraces (void);
+
+  Ptr<RlcStatsCalculator> GetRlcStats (void);
+
+protected:
+  // inherited from Object
+  virtual void DoStart (void);
+
 private:
   Ptr<NetDevice> InstallSingleEnbDevice (Ptr<Node> n);
   Ptr<NetDevice> InstallSingleUeDevice (Ptr<Node> n);
 
+  //uint64_t FindImsiFromEnbRlcPath(std::string path);
+
   Ptr<SpectrumChannel> m_downlinkChannel;
   Ptr<SpectrumChannel> m_uplinkChannel;
-  
-  ObjectFactory m_scheduler;
+
+  ObjectFactory m_schedulerFactory;
+  ObjectFactory m_propagationModelFactory;
+
+  Ptr<MacStatsCalculator> m_macStats;
+  Ptr<RlcStatsCalculator> m_rlcStats;
+
 };
 
 

@@ -84,7 +84,7 @@ OnOffApplication::GetTypeId (void)
                    MakeTypeIdChecker ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
                      MakeTraceSourceAccessor (&OnOffApplication::m_txTrace))
-    ;
+  ;
   return tid;
 }
 
@@ -173,8 +173,8 @@ void OnOffApplication::CancelEvents ()
     { // Cancel the pending send packet event
       // Calculate residual bits since last packet sent
       Time delta(Simulator::Now() - m_lastStartTime);
-      Scalar bits = delta * Scalar (m_cbrRate.GetBitRate ()) / Seconds (1.0);
-      m_residualBits += (uint32_t)bits.GetDouble ();
+      int64x64_t bits = delta.To(Time::S) * m_cbrRate.GetBitRate ();
+      m_residualBits += bits.GetHigh ();
     }
   Simulator::Cancel(m_sendEvent);
   Simulator::Cancel(m_startStopEvent);
@@ -207,7 +207,7 @@ void OnOffApplication::ScheduleNextTx()
       uint32_t bits = m_pktSize * 8 - m_residualBits;
       NS_LOG_LOGIC ("bits = " << bits);
       Time nextTime(Seconds (bits / 
-        static_cast<double>(m_cbrRate.GetBitRate()))); // Time till next packet
+                             static_cast<double>(m_cbrRate.GetBitRate()))); // Time till next packet
       NS_LOG_LOGIC ("nextTime = " << nextTime);
       m_sendEvent = Simulator::Schedule(nextTime, 
                                         &OnOffApplication::SendPacket, this);
@@ -236,7 +236,7 @@ void OnOffApplication::ScheduleStopEvent()
   m_startStopEvent = Simulator::Schedule(onInterval, &OnOffApplication::StopSending, this);
 }
 
-  
+
 void OnOffApplication::SendPacket()
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -258,7 +258,7 @@ void OnOffApplication::ConnectionSucceeded(Ptr<Socket>)
   m_connected = true;
   ScheduleStartEvent();
 }
-  
+
 void OnOffApplication::ConnectionFailed(Ptr<Socket>)
 {
   NS_LOG_FUNCTION_NOARGS ();

@@ -22,7 +22,6 @@
 #include "attribute.h"
 #include "string.h"
 #include "uinteger.h"
-#include "test.h"
 
 #include "ns3/core-config.h"
 #ifdef HAVE_STDLIB_H
@@ -32,8 +31,8 @@
 namespace ns3 {
 
 GlobalValue::GlobalValue (std::string name, std::string help,
-			  const AttributeValue &initialValue,
-			  Ptr<const AttributeChecker> checker)
+                          const AttributeValue &initialValue,
+                          Ptr<const AttributeChecker> checker)
   : m_name (name),
     m_help (help),
     m_initialValue (initialValue.Copy ()),
@@ -108,7 +107,7 @@ GlobalValue::GetChecker (void) const
 {
   return m_checker;
 }
-  
+
 bool
 GlobalValue::SetValue (const AttributeValue &value)
 {
@@ -145,13 +144,13 @@ GlobalValue::Bind (std::string name, const AttributeValue &value)
   for (Iterator i = Begin (); i != End (); i++)
     {
       if ((*i)->GetName () == name)
-	{
-	  if (!(*i)->SetValue (value))
-	    {
-	      NS_FATAL_ERROR ("Invalid new value for global value: "<<name);
-	    }
-	  return;
-	}
+        {
+          if (!(*i)->SetValue (value))
+            {
+              NS_FATAL_ERROR ("Invalid new value for global value: "<<name);
+            }
+          return;
+        }
     }
   NS_FATAL_ERROR ("Non-existant global value: "<<name);
 }
@@ -161,9 +160,9 @@ GlobalValue::BindFailSafe (std::string name, const AttributeValue &value)
   for (Iterator i = Begin (); i != End (); i++)
     {
       if ((*i)->GetName () == name)
-	{
-	  return (*i)->SetValue (value);
-	}
+        {
+          return (*i)->SetValue (value);
+        }
     }
   return false;
 }
@@ -184,10 +183,10 @@ GlobalValue::GetValueByNameFailSafe (std::string name, AttributeValue &value)
   for (GlobalValue::Iterator gvit = GlobalValue::Begin (); gvit != GlobalValue::End (); ++gvit)
     {
       if ((*gvit)->GetName () == name)
-         {
-           (*gvit)->GetValue (value);  
-           return true;
-         }
+        {
+          (*gvit)->GetValue (value);
+          return true;
+        }
     } 
   return false; // not found
 }
@@ -195,7 +194,7 @@ GlobalValue::GetValueByNameFailSafe (std::string name, AttributeValue &value)
 void
 GlobalValue::GetValueByName (std::string name, AttributeValue &value)
 {
-  if (! GetValueByNameFailSafe (name, value))
+  if (!GetValueByNameFailSafe (name, value))
     {
       NS_FATAL_ERROR ("Could not find GlobalValue named \"" << name << "\"");
     }
@@ -207,73 +206,6 @@ GlobalValue::GetVector (void)
   static Vector vector;
   return &vector;
 }
-
-// ===========================================================================
-// Test for the ability to get at a GlobalValue.
-// ===========================================================================
-class GlobalValueTestCase : public TestCase
-{
-public:
-  GlobalValueTestCase ();
-  virtual ~GlobalValueTestCase () {}
-
-private:
-  virtual void DoRun (void);
-};
-
-GlobalValueTestCase::GlobalValueTestCase ()
-  : TestCase ("Check GlobalValue mechanism")
-{
-}
-
-void
-GlobalValueTestCase::DoRun (void)
-{
-  //
-  // Typically these are static globals but we can make one on the stack to 
-  // keep it hidden from the documentation.
-  //
-  GlobalValue uint = GlobalValue ("TestUint", "help text",
-				  UintegerValue (10),
-				  MakeUintegerChecker<uint32_t> ());
-
-  //
-  // Make sure we can get at the value and that it was initialized correctly.
-  //
-  UintegerValue uv;
-  uint.GetValue (uv);
-  NS_TEST_ASSERT_MSG_EQ (uv.Get (), 10, "GlobalValue \"TestUint\" not initialized as expected");
-
-  //
-  // Remove the global value for a valgrind clean run
-  //
-  GlobalValue::Vector *vector = GlobalValue::GetVector ();
-  for (GlobalValue::Vector::iterator i = vector->begin (); i != vector->end (); ++i)
-    {
-      if ((*i) == &uint)
-	{
-	  vector->erase (i);
-          break;
-        }
-    }
-}
-
-// ===========================================================================
-// The Test Suite that glues all of the Test Cases together.
-// ===========================================================================
-class GlobalValueTestSuite : public TestSuite
-{
-public:
-  GlobalValueTestSuite ();
-};
-
-GlobalValueTestSuite::GlobalValueTestSuite ()
-  : TestSuite ("global-value", BVT)
-{
-  AddTestCase (new GlobalValueTestCase);
-}
-
-static GlobalValueTestSuite globalValueTestSuite;
 
 } // namespace ns3
 

@@ -72,20 +72,18 @@ class EnbRadioBearerInfo : public Object
 {
 
 public:
-
-  EnbRadioBearerInfo(void);
+  EnbRadioBearerInfo (void);
   virtual ~EnbRadioBearerInfo (void);
   static TypeId GetTypeId (void);
 
-  void SetRlc(Ptr<LteRlc> rlc);
+  void SetRlc (Ptr<LteRlc> rlc);
 
 private:
-
   Ptr<LteRlc> m_rlc;
 
 };
 
-NS_OBJECT_ENSURE_REGISTERED(EnbRadioBearerInfo);
+NS_OBJECT_ENSURE_REGISTERED (EnbRadioBearerInfo);
 
 EnbRadioBearerInfo::EnbRadioBearerInfo (void)
 {
@@ -108,68 +106,31 @@ TypeId EnbRadioBearerInfo::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&EnbRadioBearerInfo::m_rlc),
                    MakePointerChecker<LteRlc> ())
-    ;
+  ;
   return tid;
 }
 
-void EnbRadioBearerInfo::SetRlc(Ptr<LteRlc> rlc)
+void EnbRadioBearerInfo::SetRlc (Ptr<LteRlc> rlc)
 {
   m_rlc = rlc;
 }
 
 
+NS_OBJECT_ENSURE_REGISTERED (UeInfo);
 
-/**
- * Manages all the radio bearer information possessed by the ENB RRC for a single UE
- *
- */
-
-class UeInfo : public Object
+UeInfo::UeInfo (void)
+  : m_lastAllocatedId (0)
 {
-public:
-  /**
-   *
-   *
-   * \param EnbRadioBearerInfo
-   *
-   * \return the allocated logical channel id; 0 is returned if it is not possible to allocate a channel id (e.g., id space exausted).
-   */
-  uint8_t AddRadioBearer (Ptr<EnbRadioBearerInfo> enbRadioBearerInfo);
-
-  /**
-   *
-   *
-   * \param uint8_t the logical channel id
-   *
-   * \return the EnbRadioBearerInfo of the selected radio bearer
-   */
-  Ptr<EnbRadioBearerInfo> GetRadioBerer (uint8_t lcid);
-
-
-  /**
-   * delete the entry of the given radio bearer
-   *
-   * \param lcid the logical channel id of the radio bearer
-   */
-  void RemoveRadioBearer (uint8_t lcid);
-
-  UeInfo(void);
-  virtual ~UeInfo (void);
-
-  static TypeId GetTypeId (void);
-
-private:
-  std::map <uint8_t, Ptr<EnbRadioBearerInfo> > m_rbMap;
-  uint8_t m_lastAllocatedId;
-};
-
-NS_OBJECT_ENSURE_REGISTERED(UeInfo);
-
-UeInfo::UeInfo (void) :
-    m_lastAllocatedId (0)
-{
-  // Nothing to do here
+  m_imsi = 0;
 }
+
+UeInfo::UeInfo (uint64_t imsi)
+  : m_lastAllocatedId (0)
+{
+  m_imsi = imsi;
+}
+
+
 
 UeInfo::~UeInfo (void)
 {
@@ -185,8 +146,19 @@ TypeId UeInfo::GetTypeId (void)
                    ObjectMapValue (),
                    MakeObjectMapAccessor (&UeInfo::m_rbMap),
                    MakeObjectMapChecker<EnbRadioBearerInfo> ())
-    ;
+/*    .AddAttribute("Imsi",
+                   "International Mobile Subscriber Identity assigned to this UE",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&UeInfo::m_imsi),
+                   MakeUintegerChecker<uint64_t> ())*/
+  ;
   return tid;
+}
+
+uint64_t
+UeInfo::GetImsi (void)
+{
+  return m_imsi;
 }
 
 uint8_t
@@ -199,7 +171,7 @@ UeInfo::AddRadioBearer (Ptr<EnbRadioBearerInfo> rbi)
         {
           if (m_rbMap.find (lcid) == m_rbMap.end ())
             {
-              m_rbMap.insert (std::pair<uint8_t, Ptr<EnbRadioBearerInfo> >(lcid, rbi));
+              m_rbMap.insert (std::pair<uint8_t, Ptr<EnbRadioBearerInfo> > (lcid, rbi));
               m_lastAllocatedId = lcid;
               return lcid;
             }
@@ -210,7 +182,7 @@ UeInfo::AddRadioBearer (Ptr<EnbRadioBearerInfo> rbi)
 }
 
 Ptr<EnbRadioBearerInfo>
-UeInfo::GetRadioBerer (uint8_t lcid)
+UeInfo::GetRadioBearer (uint8_t lcid)
 {
   NS_LOG_FUNCTION (this << (uint32_t) lcid);
   NS_ASSERT (0 != lcid);
@@ -273,32 +245,32 @@ LteEnbRrc::GetTypeId (void)
                    ObjectMapValue (),
                    MakeObjectMapAccessor (&LteEnbRrc::m_ueMap),
                    MakeObjectMapChecker<UeInfo> ())
-     ;
+  ;
   return tid;
 }
 
 uint16_t
-LteEnbRrc::GetLastAllocatedRnti() const
+LteEnbRrc::GetLastAllocatedRnti () const
 {
-    NS_LOG_FUNCTION (this);
-    return m_lastAllocatedRnti;
+  NS_LOG_FUNCTION (this);
+  return m_lastAllocatedRnti;
 }
-std::map<uint16_t,Ptr<UeInfo> > LteEnbRrc::GetUeMap(void) const
+std::map<uint16_t,Ptr<UeInfo> > LteEnbRrc::GetUeMap (void) const
 {
-    return m_ueMap;
+  return m_ueMap;
 }
 
-void LteEnbRrc::SetUeMap(std::map<uint16_t,Ptr<UeInfo> > ueMap)
+void LteEnbRrc::SetUeMap (std::map<uint16_t,Ptr<UeInfo> > ueMap)
 {
   this->m_ueMap = ueMap;
 }
 
 
 void
-LteEnbRrc::SetLastAllocatedRnti(uint16_t lastAllocatedRnti)
+LteEnbRrc::SetLastAllocatedRnti (uint16_t lastAllocatedRnti)
 {
-    NS_LOG_FUNCTION (this << lastAllocatedRnti);
-    m_lastAllocatedRnti = lastAllocatedRnti;
+  NS_LOG_FUNCTION (this << lastAllocatedRnti);
+  m_lastAllocatedRnti = lastAllocatedRnti;
 }
 
 
@@ -343,11 +315,11 @@ LteEnbRrc::ConfigureCell (uint8_t ulBandwidth, uint8_t dlBandwidth)
 }
 
 uint16_t
-LteEnbRrc::AddUe ()
+LteEnbRrc::AddUe (uint64_t imsi)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << imsi);
   // no Call Admission Control for now
-  uint16_t rnti = CreateUeInfo (); // side effect: create UeInfo for this UE
+  uint16_t rnti = CreateUeInfo (imsi); // side effect: create UeInfo for this UE
   NS_ASSERT_MSG (rnti != 0, "CreateUeInfo returned RNTI==0");
   m_cmacSapProvider->AddUe (rnti);
   return rnti;
@@ -417,9 +389,9 @@ LteEnbRrc::DoNotifyLcConfigResult (uint16_t rnti, uint8_t lcid, bool success)
 
 
 uint16_t
-LteEnbRrc::CreateUeInfo ()
+LteEnbRrc::CreateUeInfo (uint64_t imsi)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << imsi);
   for (uint16_t rnti = m_lastAllocatedRnti; rnti != m_lastAllocatedRnti - 1; ++rnti)
     {
       if (rnti != 0)
@@ -427,7 +399,7 @@ LteEnbRrc::CreateUeInfo ()
           if (m_ueMap.find (rnti) == m_ueMap.end ())
             {
               m_lastAllocatedRnti = rnti;
-              m_ueMap.insert (std::pair<uint16_t, Ptr<UeInfo> > (rnti, CreateObject<UeInfo> ()));
+              m_ueMap.insert (std::pair<uint16_t, Ptr<UeInfo> > (rnti, CreateObject<UeInfo> (imsi)));
               return rnti;
             }
         }

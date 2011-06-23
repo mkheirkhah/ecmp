@@ -36,13 +36,13 @@ Ipv4ListRouting::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Ipv4ListRouting")
     .SetParent<Ipv4RoutingProtocol> ()
     .AddConstructor<Ipv4ListRouting> ()
-    ;
+  ;
   return tid;
 }
 
 
 Ipv4ListRouting::Ipv4ListRouting () 
- : m_ipv4 (0)
+  : m_ipv4 (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
@@ -72,14 +72,14 @@ void
 Ipv4ListRouting::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
   *stream->GetStream () << "Node: " << m_ipv4->GetObject<Node> ()->GetId () 
-    << " Time: " << Simulator::Now().GetSeconds () << "s " 
-    << "Ipv4ListRouting table" << std::endl;
+                        << " Time: " << Simulator::Now().GetSeconds () << "s "
+                        << "Ipv4ListRouting table" << std::endl;
   for (Ipv4RoutingProtocolList::const_iterator i = m_routingProtocols.begin ();
-      i != m_routingProtocols.end (); i++)
-      {
-        *stream->GetStream () << "  Priority: " << (*i).first << " Protocol: " << (*i).second->GetInstanceTypeId () << std::endl;
-        (*i).second->PrintRoutingTable (stream);
-      }
+       i != m_routingProtocols.end (); i++)
+    {
+      *stream->GetStream () << "  Priority: " << (*i).first << " Protocol: " << (*i).second->GetInstanceTypeId () << std::endl;
+      (*i).second->PrintRoutingTable (stream);
+    }
   *stream->GetStream () << std::endl;
 }
 
@@ -179,7 +179,7 @@ Ipv4ListRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<
           return true;
         }
     }
-  // No routing protocol has found a route.  
+  // No routing protocol has found a route.
   return retVal;
 }
 
@@ -193,7 +193,7 @@ Ipv4ListRouting::NotifyInterfaceUp (uint32_t interface)
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyInterfaceUp (interface);
-    }  
+    }
 }
 void 
 Ipv4ListRouting::NotifyInterfaceDown (uint32_t interface)
@@ -205,7 +205,7 @@ Ipv4ListRouting::NotifyInterfaceDown (uint32_t interface)
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyInterfaceDown (interface);
-    }  
+    }
 }
 void 
 Ipv4ListRouting::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address)
@@ -217,7 +217,7 @@ Ipv4ListRouting::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress addr
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyAddAddress (interface, address);
-    }  
+    }
 }
 void 
 Ipv4ListRouting::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address)
@@ -229,7 +229,7 @@ Ipv4ListRouting::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress a
        rprotoIter++)
     {
       (*rprotoIter).second->NotifyRemoveAddress (interface, address);
-    }  
+    }
 }
 void 
 Ipv4ListRouting::SetIpv4 (Ptr<Ipv4> ipv4)
@@ -242,7 +242,7 @@ Ipv4ListRouting::SetIpv4 (Ptr<Ipv4> ipv4)
        rprotoIter++)
     {
       (*rprotoIter).second->SetIpv4 (ipv4);
-    }  
+    }
   m_ipv4 = ipv4;
 }
 
@@ -294,112 +294,4 @@ Ipv4ListRouting::Compare (const Ipv4RoutingProtocolEntry& a, const Ipv4RoutingPr
 
 
 } // namespace ns3
-
-#include "ns3/test.h"
-#include "ipv4-list-routing.h"
-#include "ns3/ipv4-routing-protocol.h"
-
-namespace ns3 {
-
-class Ipv4ARouting : public Ipv4RoutingProtocol {
-public:
-  Ptr<Ipv4Route> RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)  { return 0;}
-  bool RouteInput  (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
-                             UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                             LocalDeliverCallback lcb, ErrorCallback ecb) {return false;}
-  void NotifyInterfaceUp (uint32_t interface) {}
-  void NotifyInterfaceDown (uint32_t interface) {}
-  void NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {}
-  void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) {}
-  void SetIpv4 (Ptr<Ipv4> ipv4) {}
-  void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const {}
-};
-
-class Ipv4BRouting : public Ipv4RoutingProtocol {
-public:
-  Ptr<Ipv4Route> RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)  { return 0;}
-  bool RouteInput  (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
-                             UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                             LocalDeliverCallback lcb, ErrorCallback ecb) {return false;}
-  void NotifyInterfaceUp (uint32_t interface) {}
-  void NotifyInterfaceDown (uint32_t interface) {}
-  void NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {}
-  void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) {}
-  void SetIpv4 (Ptr<Ipv4> ipv4) {}
-  void PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const {}
-};
-
-class Ipv4ListRoutingNegativeTestCase : public TestCase
-{
-public:
-  Ipv4ListRoutingNegativeTestCase();
-  virtual void DoRun (void);
-};
-
-Ipv4ListRoutingNegativeTestCase::Ipv4ListRoutingNegativeTestCase()
-  : TestCase("Check negative priorities")
-{}
-void
-Ipv4ListRoutingNegativeTestCase::DoRun (void)
-{
-  Ptr<Ipv4ListRouting> lr = CreateObject<Ipv4ListRouting> ();
-  Ptr<Ipv4RoutingProtocol> aRouting = CreateObject<Ipv4ARouting> ();
-  Ptr<Ipv4RoutingProtocol> bRouting = CreateObject<Ipv4BRouting> ();
-  // The Ipv4BRouting should be added with higher priority (larger integer value)
-  lr->AddRoutingProtocol (aRouting, -10);
-  lr->AddRoutingProtocol (bRouting, -5);
-  int16_t first = 3;
-  uint32_t num = lr->GetNRoutingProtocols ();
-  NS_TEST_ASSERT_MSG_EQ (num, 2, "XXX");
-  Ptr<Ipv4RoutingProtocol> firstRp = lr->GetRoutingProtocol (0, first);
-  NS_TEST_ASSERT_MSG_EQ (-5, first, "XXX");
-  NS_TEST_ASSERT_MSG_EQ (firstRp, bRouting, "XXX");
-}
-
-class Ipv4ListRoutingPositiveTestCase : public TestCase
-{
-public:
-  Ipv4ListRoutingPositiveTestCase();
-  virtual void DoRun (void);
-};
-
-Ipv4ListRoutingPositiveTestCase::Ipv4ListRoutingPositiveTestCase()
-  : TestCase("Check positive priorities")
-{}
-void
-Ipv4ListRoutingPositiveTestCase::DoRun (void)
-{
-  Ptr<Ipv4ListRouting> lr = CreateObject<Ipv4ListRouting> ();
-  Ptr<Ipv4RoutingProtocol> aRouting = CreateObject<Ipv4ARouting> ();
-  Ptr<Ipv4RoutingProtocol> bRouting = CreateObject<Ipv4BRouting> ();
-  // The Ipv4ARouting should be added with higher priority (larger integer 
-  // value) and will be fetched first below
-  lr->AddRoutingProtocol (aRouting, 10);
-  lr->AddRoutingProtocol (bRouting, 5);
-  int16_t first = 3;
-  int16_t second = 3;
-  uint32_t num = lr->GetNRoutingProtocols ();
-  NS_TEST_ASSERT_MSG_EQ (num, 2, "XXX");
-  Ptr<Ipv4RoutingProtocol> firstRp = lr->GetRoutingProtocol (0, first);
-  NS_TEST_ASSERT_MSG_EQ (10, first, "XXX");
-  NS_TEST_ASSERT_MSG_EQ (firstRp, aRouting, "XXX");
-  Ptr<Ipv4RoutingProtocol> secondRp = lr->GetRoutingProtocol (1, second);
-  NS_TEST_ASSERT_MSG_EQ (5, second, "XXX");
-  NS_TEST_ASSERT_MSG_EQ (secondRp, bRouting, "XXX");
-}
-
-static class Ipv4ListRoutingTestSuite : public TestSuite
-{
-public:
-  Ipv4ListRoutingTestSuite()
-    : TestSuite("ipv4-list-routing", UNIT)
-  {
-    AddTestCase(new Ipv4ListRoutingPositiveTestCase());
-    AddTestCase(new Ipv4ListRoutingNegativeTestCase());
-  }
-
-} g_ipv4ListRoutingTestSuite;
-
-} // namespace ns3
-
 

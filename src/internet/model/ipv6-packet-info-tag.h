@@ -22,6 +22,7 @@
 #define __IPV6_PACKET_INFO_TAG_H__
 
 #include "ns3/tag.h"
+#include "ns3/ipv6-address.h"
 
 namespace ns3 {
 
@@ -60,7 +61,7 @@ public:
   // Implemented, but not used in the stack yet
   uint8_t GetTrafficClass (void) const;
 
-  static TypeId GetTypeId (void);  
+  static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
   virtual uint32_t GetSerializedSize (void) const;
   virtual void Serialize (TagBuffer i) const;

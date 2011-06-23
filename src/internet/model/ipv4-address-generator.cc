@@ -34,7 +34,7 @@ public:
   virtual ~Ipv4AddressGeneratorImpl ();
 
   void Init (const Ipv4Address net, const Ipv4Mask mask, 
-    const Ipv4Address addr);
+             const Ipv4Address addr);
 
   Ipv4Address GetNetwork (const Ipv4Mask mask) const;
   Ipv4Address NextNetwork (const Ipv4Mask mask);
@@ -55,7 +55,7 @@ private:
 
   class NetworkState
   {
-  public:
+public:
     uint32_t mask;
     uint32_t shift;
     uint32_t network;
@@ -67,7 +67,7 @@ private:
 
   class Entry
   {
-  public:
+public:
     uint32_t addrLow;
     uint32_t addrHigh;
   };
@@ -83,7 +83,7 @@ Ipv4AddressGeneratorImpl::Ipv4AddressGeneratorImpl ()
   Reset ();
 }
 
-  void
+void
 Ipv4AddressGeneratorImpl::Reset (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -127,7 +127,7 @@ Ipv4AddressGeneratorImpl::~Ipv4AddressGeneratorImpl ()
   NS_LOG_FUNCTION_NOARGS ();
 }
 
-  void
+void
 Ipv4AddressGeneratorImpl::Init (
   const Ipv4Address net,
   const Ipv4Mask mask,
@@ -161,7 +161,7 @@ Ipv4AddressGeneratorImpl::Init (
   return;
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGeneratorImpl::GetNetwork (
   const Ipv4Mask mask) const
 {
@@ -171,7 +171,7 @@ Ipv4AddressGeneratorImpl::GetNetwork (
   return Ipv4Address (m_netTable[index].network << m_netTable[index].shift);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGeneratorImpl::NextNetwork (
   const Ipv4Mask mask)
 {
@@ -190,7 +190,7 @@ Ipv4AddressGeneratorImpl::NextNetwork (
   return Ipv4Address (m_netTable[index].network << m_netTable[index].shift);
 }
 
-  void
+void
 Ipv4AddressGeneratorImpl::InitAddress (
   const Ipv4Address addr,
   const Ipv4Mask mask)
@@ -204,7 +204,7 @@ Ipv4AddressGeneratorImpl::InitAddress (
   m_netTable[index].addr = addrBits;
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGeneratorImpl::GetAddress (
   const Ipv4Mask mask) const
 {
@@ -213,11 +213,11 @@ Ipv4AddressGeneratorImpl::GetAddress (
   uint32_t index = MaskToIndex (mask);
 
   return Ipv4Address (
-    (m_netTable[index].network << m_netTable[index].shift) |
-    m_netTable[index].addr);
+           (m_netTable[index].network << m_netTable[index].shift) |
+           m_netTable[index].addr);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGeneratorImpl::NextAddress (const Ipv4Mask mask)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -234,8 +234,8 @@ Ipv4AddressGeneratorImpl::NextAddress (const Ipv4Mask mask)
                        "Ipv4AddressGeneratorImpl::NextAddress(): Address overflow");
 
   Ipv4Address addr = Ipv4Address (
-    (m_netTable[index].network << m_netTable[index].shift) |
-    m_netTable[index].addr);
+      (m_netTable[index].network << m_netTable[index].shift) |
+      m_netTable[index].addr);
 
   ++m_netTable[index].addr;
 //
@@ -246,7 +246,7 @@ Ipv4AddressGeneratorImpl::NextAddress (const Ipv4Mask mask)
   return addr;
 }
 
-  bool
+bool
 Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -260,7 +260,7 @@ Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
   for (i = m_entries.begin (); i != m_entries.end (); ++i)
     {
       NS_LOG_LOGIC ("examine entry: " << Ipv4Address ((*i).addrLow) << 
-        " to " << Ipv4Address ((*i).addrHigh));
+                    " to " << Ipv4Address ((*i).addrHigh));
 //
 // First things first.  Is there an address collision -- that is, does the
 // new address fall in a previously allocated block of addresses.
@@ -273,7 +273,7 @@ Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
               NS_FATAL_ERROR ("Ipv4AddressGeneratorImpl::Add(): Address Collision: " << Ipv4Address (addr));
             }
           return false;
-       }
+        }
 //
 // If the new address is less than the lowest address in the current block,
 // and can't be merged into to the current block, then insert it as a new
@@ -300,7 +300,7 @@ Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
               if (addr == (*j).addrLow)
                 {
                   NS_LOG_LOGIC ("Ipv4AddressGeneratorImpl::Add(): "
-                    "Address Collision: " << Ipv4Address (addr)); 
+                                "Address Collision: " << Ipv4Address (addr));
                   if (!m_test)
                     {
                       NS_FATAL_ERROR ("Ipv4AddressGeneratorImpl::Add(): Address Collision: " << Ipv4Address (addr));
@@ -308,7 +308,7 @@ Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
                   return false;
                 }
             }
-          
+
           NS_LOG_LOGIC ("New addrHigh = " << Ipv4Address (addr));
           (*i).addrHigh = addr;
           return true;
@@ -334,14 +334,14 @@ Ipv4AddressGeneratorImpl::AddAllocated (const Ipv4Address address)
   return true;
 }
 
-  void
+void
 Ipv4AddressGeneratorImpl::TestMode (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_test = true;
 }
 
-  uint32_t
+uint32_t
 Ipv4AddressGeneratorImpl::MaskToIndex (Ipv4Mask mask) const
 {
 //
@@ -371,7 +371,7 @@ Ipv4AddressGeneratorImpl::MaskToIndex (Ipv4Mask mask) const
   return 0;
 }
 
-  void
+void
 Ipv4AddressGenerator::Init (
   const Ipv4Address net,
   const Ipv4Mask mask,
@@ -380,28 +380,28 @@ Ipv4AddressGenerator::Init (
   NS_LOG_FUNCTION_NOARGS ();
 
   SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->Init (net, mask, addr);
+  ->Init (net, mask, addr);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGenerator::NextNetwork (const Ipv4Mask mask)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->NextNetwork (mask);
+         ->NextNetwork (mask);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGenerator::GetNetwork (const Ipv4Mask mask)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->GetNetwork (mask);
+         ->GetNetwork (mask);
 }
 
-  void
+void
 Ipv4AddressGenerator::InitAddress (
   const Ipv4Address addr,
   const Ipv4Mask mask)
@@ -409,348 +409,53 @@ Ipv4AddressGenerator::InitAddress (
   NS_LOG_FUNCTION_NOARGS ();
 
   SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->InitAddress (addr, mask);
+  ->InitAddress (addr, mask);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGenerator::GetAddress (const Ipv4Mask mask)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->GetAddress (mask);
+         ->GetAddress (mask);
 }
 
-  Ipv4Address
+Ipv4Address
 Ipv4AddressGenerator::NextAddress (const Ipv4Mask mask)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->NextAddress (mask);
+         ->NextAddress (mask);
 }
 
-  void
+void
 Ipv4AddressGenerator::Reset (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->Reset ();
+         ->Reset ();
 }
 
-  bool
+bool
 Ipv4AddressGenerator::AddAllocated (const Ipv4Address addr)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   return SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->AddAllocated (addr);
+         ->AddAllocated (addr);
 }
 
-  void
-  Ipv4AddressGenerator::TestMode (void)
+void
+Ipv4AddressGenerator::TestMode (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   SimulationSingleton<Ipv4AddressGeneratorImpl>::Get ()
-    ->TestMode ();
+  ->TestMode ();
 }
-
-} // namespace ns3
-
-#include "ns3/test.h"
-
-namespace ns3 {
-
-class NetworkNumberAllocatorTestCase : public TestCase
-{
-public:
-  NetworkNumberAllocatorTestCase ();
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-NetworkNumberAllocatorTestCase::NetworkNumberAllocatorTestCase ()
-  : TestCase ("Make sure the network number allocator is working on some of network prefixes.")
-{}
-void 
-NetworkNumberAllocatorTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-}
-void 
-NetworkNumberAllocatorTestCase::DoRun (void)
-{
-  Ipv4Address network;
-  Ipv4AddressGenerator::Init (Ipv4Address ("1.0.0.0"), Ipv4Mask ("255.0.0.0"),
-    Ipv4Address ("0.0.0.0"));
-  network = Ipv4AddressGenerator::GetNetwork (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("1.0.0.0"), "XXX");
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("2.0.0.0"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.1.0.0"), 
-    Ipv4Mask ("255.255.0.0"), Ipv4Address ("0.0.0.0"));
-  network = Ipv4AddressGenerator::GetNetwork (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.1.0.0"), "XXX");
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.2.0.0"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.0.1.0"),
-    Ipv4Mask ("255.255.255.0"), Ipv4Address ("0.0.0.0"));
-  network = Ipv4AddressGenerator::GetNetwork (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.1.0"), "XXX");
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.2.0"), "XXX");
-
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("3.0.0.0"), "XXX");
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.3.0.0"), "XXX");
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.3.0"), "XXX");
-}
-
-class AddressAllocatorTestCase : public TestCase
-{
-public:
-  AddressAllocatorTestCase ();
-private:
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-AddressAllocatorTestCase::AddressAllocatorTestCase ()
-  : TestCase ("Sanity check on allocation of addresses")
-{}
-
-void
-AddressAllocatorTestCase::DoRun (void)
-{
-  Ipv4Address address;
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("1.0.0.0"), Ipv4Mask ("255.0.0.0"),
-    Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("1.0.0.4"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.1.0.0"),
-    Ipv4Mask ("255.255.0.0"), Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.1.0.4"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.0.1.0"),
-    Ipv4Mask ("255.255.255.0"), Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.1.4"), "XXX");
-}
-
-void 
-AddressAllocatorTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-
-
-class NetworkAndAddressTestCase : public TestCase
-{
-public:
-  NetworkAndAddressTestCase ();
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-NetworkAndAddressTestCase::NetworkAndAddressTestCase ()
-  : TestCase ("Make sure Network and address allocation play together.")
-{}
-
-void 
-NetworkAndAddressTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-
-void
-NetworkAndAddressTestCase::DoRun (void)
-{
-  Ipv4Address address;
-  Ipv4Address network;
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("3.0.0.0"), Ipv4Mask ("255.0.0.0"),
-    Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("3.0.0.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("3.0.0.4"), "XXX");
-
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("4.0.0.0"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("4.0.0.5"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.3.0.0"), 
-    Ipv4Mask ("255.255.0.0"), Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.3.0.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.3.0.4"), "XXX");
-
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.4.0.0"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.0.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.4.0.5"), "XXX");
-
-  Ipv4AddressGenerator::Init (Ipv4Address ("0.0.3.0"),
-    Ipv4Mask ("255.255.255.0"), Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.3.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.3.4"), "XXX");
-
-  network = Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (network, Ipv4Address ("0.0.4.0"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("0.0.4.5"), "XXX");
-}
-
-class ExampleAddressGeneratorTestCase : public TestCase
-{
-public:
-  ExampleAddressGeneratorTestCase ();
-private:
-  virtual void DoRun (void);
-  virtual void DoTeardown (void);
-};
-
-ExampleAddressGeneratorTestCase::ExampleAddressGeneratorTestCase ()
-  : TestCase ("A quick kindof-semi-almost-real example")
-{}
-
-void
-ExampleAddressGeneratorTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-}
-
-void
-ExampleAddressGeneratorTestCase::DoRun (void)
-{
-  Ipv4Address address;
-  //
-  // First, initialize our /24 network to 192.168.0.0 and begin 
-  // allocating with ip address 0.0.0.3 out of that prefix.
-  //
-  Ipv4AddressGenerator::Init (Ipv4Address ("192.168.0.0"),
-    Ipv4Mask ("255.255.255.0"), Ipv4Address ("0.0.0.3"));
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("192.168.0.3"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("192.168.0.4"), "XXX");
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("192.168.0.5"), "XXX");
-  //
-  // Allocate the next network out of our /24 network (this should be 
-  // 192.168.1.0) and begin allocating with IP address 0.0.0.3 out of that
-  // prefix.
-  //
-  Ipv4AddressGenerator::NextNetwork (Ipv4Mask ("255.255.255.0"));
-  Ipv4AddressGenerator::InitAddress (Ipv4Address ("0.0.0.3"),
-    Ipv4Mask ("255.255.255.0"));
-  //
-  // The first address we should get is the previous numbers ORed together, which
-  // is 192.168.1.3, of course.
-  //
-  address = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.255.255.0"));
-  NS_TEST_EXPECT_MSG_EQ (address, Ipv4Address ("192.168.1.3"), "XXX");
-}
-
-class AddressCollisionTestCase : public TestCase
-{
-public:
-  AddressCollisionTestCase ();
-private:
-  void DoRun (void);
-  void DoTeardown (void);
-};
-
-AddressCollisionTestCase::AddressCollisionTestCase ()
-  : TestCase ("Make sure that the address collision logic works.")
-{}
-
-void
-AddressCollisionTestCase::DoTeardown (void)
-{
-  Ipv4AddressGenerator::Reset ();
-  Simulator::Destroy ();
-}
-void
-AddressCollisionTestCase::DoRun (void)
-{
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.5");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.10");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.15");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.20");
-
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.4");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.3");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.2");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.1");
-
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.6");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.7");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.8");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.9");
-
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.11");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.12");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.13");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.14");
-
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.19");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.18");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.17");
-  Ipv4AddressGenerator::AddAllocated ("0.0.0.16");
-
-  Ipv4AddressGenerator::TestMode ();
-  bool added = Ipv4AddressGenerator::AddAllocated ("0.0.0.21");
-  NS_TEST_EXPECT_MSG_EQ (added, true, "XXX");
-
-  added = Ipv4AddressGenerator::AddAllocated ("0.0.0.4");
-  NS_TEST_EXPECT_MSG_EQ (added, false, "XXX");
-
-  added = Ipv4AddressGenerator::AddAllocated ("0.0.0.9");
-  NS_TEST_EXPECT_MSG_EQ (added, false, "XXX");
-
-  added = Ipv4AddressGenerator::AddAllocated ("0.0.0.16");
-  NS_TEST_EXPECT_MSG_EQ (added, false, "XXX");
-
-  added = Ipv4AddressGenerator::AddAllocated ("0.0.0.21");
-  NS_TEST_EXPECT_MSG_EQ (added, false, "XXX");
-}
-
-
-static class Ipv4AddressGeneratorTestSuite : public TestSuite
-{
-public:
-  Ipv4AddressGeneratorTestSuite ()
-    : TestSuite ("ipv4-address-generator")
-  {
-    AddTestCase (new NetworkNumberAllocatorTestCase ());
-    AddTestCase (new AddressAllocatorTestCase ());
-    AddTestCase (new NetworkAndAddressTestCase ());
-    AddTestCase (new ExampleAddressGeneratorTestCase ());
-    AddTestCase (new AddressCollisionTestCase ());
-  }
-} g_ipv4AddressGeneratorTestSuite;
 
 } // namespace ns3
 

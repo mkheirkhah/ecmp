@@ -24,7 +24,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/point-to-point-layout-module.h"
 
 using namespace ns3;
 
@@ -49,7 +49,7 @@ int main (int argc, char *argv[])
     {
       NS_FATAL_ERROR ("Need more nodes for grid.");
     }
-  
+
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
@@ -68,9 +68,9 @@ int main (int argc, char *argv[])
 
   OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
   clientHelper.SetAttribute 
-    ("OnTime", RandomVariableValue (ConstantVariable (1)));
+          ("OnTime", RandomVariableValue (ConstantVariable (1)));
   clientHelper.SetAttribute 
-    ("OffTime", RandomVariableValue (ConstantVariable (0)));
+          ("OffTime", RandomVariableValue (ConstantVariable (0)));
   ApplicationContainer clientApps;
 
   // Create an on/off app sending packets
@@ -82,7 +82,7 @@ int main (int argc, char *argv[])
   clientApps.Stop (Seconds (1.5));
 
   // Set the bounding box for animation
-  grid.BoundingBox (1, 1, 10, 10);
+  grid.BoundingBox (1, 1, 100, 100);
 
   // Create the animation object and configure for specified output
   AnimationInterface anim;
@@ -95,7 +95,7 @@ int main (int argc, char *argv[])
       anim.SetOutputFile (animFile);
     }
   anim.StartAnimation ();
-  
+
   // Set up the actual simulation
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 

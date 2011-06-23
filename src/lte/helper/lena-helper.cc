@@ -22,6 +22,9 @@
 
 #include "lena-helper.h"
 
+#include <ns3/string.h>
+#include <ns3/log.h>
+
 #include <ns3/lte-enb-rrc.h>
 #include <ns3/lte-ue-rrc.h>
 #include <ns3/lte-ue-mac.h>
@@ -37,64 +40,107 @@
 #include <ns3/lte-enb-net-device.h>
 #include <ns3/lte-ue-net-device.h>
 
-#include <ns3/lte-spectrum-value-helper.h>
-#include <ns3/lte-enb-mac.h>
-#include <ns3/pf-ff-mac-scheduler.h>
-#include <ns3/lte-enb-rrc.h>
-#include <ns3/lte-ue-mac.h>
-#include <ns3/lte-ue-rrc.h>
+#include <ns3/ff-mac-scheduler.h>
 
+NS_LOG_COMPONENT_DEFINE ("LenaHelper");
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (LenaHelper);
 
 LenaHelper::LenaHelper (void)
 {
+  NS_LOG_FUNCTION (this);
+}
+
+void 
+LenaHelper::DoStart (void)
+{
+  NS_LOG_FUNCTION (this);
   m_downlinkChannel = CreateObject<SingleModelSpectrumChannel> ();
   m_uplinkChannel = CreateObject<SingleModelSpectrumChannel> ();
-  Ptr<SpectrumPropagationLossModel> model = CreateObject<FriisSpectrumPropagationLossModel> ();
-  m_downlinkChannel->AddSpectrumPropagationLossModel (model);
-  
-  SetScheduler ("RrFfMacScheduler"); // default scheduler
+  Ptr<SpectrumPropagationLossModel> dlPropagationModel = m_propagationModelFactory.Create<SpectrumPropagationLossModel> ();
+  Ptr<SpectrumPropagationLossModel> ulPropagationModel = m_propagationModelFactory.Create<SpectrumPropagationLossModel> ();
+  m_downlinkChannel->AddSpectrumPropagationLossModel (dlPropagationModel);
+  m_uplinkChannel->AddSpectrumPropagationLossModel (ulPropagationModel);
+  m_macStats = CreateObject<MacStatsCalculator> ();
+  m_rlcStats = CreateObject<RlcStatsCalculator> ();
+  Object::DoStart ();
 }
 
 LenaHelper::~LenaHelper (void)
 {
-  m_downlinkChannel = 0;
-  m_uplinkChannel = 0;
+  NS_LOG_FUNCTION (this);
 }
 
 
+void
+LenaHelper::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  m_downlinkChannel = 0;
+  m_uplinkChannel = 0;
+  Object::DoDispose ();
+}
+
+TypeId LenaHelper::GetTypeId (void)
+{
+  static TypeId
+  tid =
+    TypeId ("ns3::LenaHelper")
+    .SetParent<Object> ()
+    .AddConstructor<LenaHelper> ()
+    .AddAttribute ("Scheduler",
+                   "The type of scheduler to be used for eNBs",
+                   StringValue ("ns3::PfFfMacScheduler"),
+                   MakeStringAccessor (&LenaHelper::SetSchedulerType),
+                   MakeStringChecker ())
+    .AddAttribute ("PropagationModel",
+                   "The type of propagation model to be used",
+                   StringValue ("ns3::FriisSpectrumPropagationLossModel"),
+                   MakeStringAccessor (&LenaHelper::SetPropagationModelType),
+                   MakeStringChecker ())
+  ;
+  return tid;
+}
+
+void 
+LenaHelper::SetSchedulerType (std::string type) 
+{
+  NS_LOG_FUNCTION (this << type);
+  m_schedulerFactory = ObjectFactory ();
+  m_schedulerFactory.SetTypeId (type);
+}
+
+void 
+LenaHelper::SetSchedulerAttribute (std::string n, const AttributeValue &v)
+{
+  NS_LOG_FUNCTION (this << n);
+  m_schedulerFactory.Set (n, v);
+}
 
 
 void 
-LenaHelper::SetScheduler (std::string type,
-                          std::string n0, const AttributeValue &v0,
-                          std::string n1, const AttributeValue &v1,
-                          std::string n2, const AttributeValue &v2,
-                          std::string n3, const AttributeValue &v3,
-                          std::string n4, const AttributeValue &v4,
-                          std::string n5, const AttributeValue &v5,
-                          std::string n6, const AttributeValue &v6,
-                          std::string n7, const AttributeValue &v7)
+LenaHelper::SetPropagationModelType (std::string type) 
 {
-  m_scheduler = ObjectFactory ();
-  m_scheduler.SetTypeId (type);
-  m_scheduler.Set (n0, v0);
-  m_scheduler.Set (n1, v1);
-  m_scheduler.Set (n2, v2);
-  m_scheduler.Set (n3, v3);
-  m_scheduler.Set (n4, v4);
-  m_scheduler.Set (n5, v5);
-  m_scheduler.Set (n6, v6);
-  m_scheduler.Set (n7, v7);
+  NS_LOG_FUNCTION (this << type);
+  m_propagationModelFactory = ObjectFactory ();
+  m_propagationModelFactory.SetTypeId (type);
 }
 
+void 
+LenaHelper::SetPropagationModelAttribute (std::string n, const AttributeValue &v)
+{
+  NS_LOG_FUNCTION (this << n);
+  m_propagationModelFactory.Set (n, v);
+}
 
 
 NetDeviceContainer
 LenaHelper::InstallEnbDevice (NodeContainer c)
 {
+  NS_LOG_FUNCTION (this);
+  Start ();  // will run DoStart () if necessary
   NetDeviceContainer devices;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {
@@ -108,6 +154,7 @@ LenaHelper::InstallEnbDevice (NodeContainer c)
 NetDeviceContainer
 LenaHelper::InstallUeDevice (NodeContainer c)
 {
+  NS_LOG_FUNCTION (this);
   NetDeviceContainer devices;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {
@@ -122,29 +169,25 @@ LenaHelper::InstallUeDevice (NodeContainer c)
 void
 LenaHelper::SetEnbDeviceAttribute (std::string name, const AttributeValue &value)
 {
-
+  NS_LOG_FUNCTION (this);
+  NS_FATAL_ERROR ("not implemented yet");
 }
 
 void
 LenaHelper::SetUeDeviceAttribute (std::string name, const AttributeValue &value)
 {
-
+  NS_LOG_FUNCTION (this);
+  NS_FATAL_ERROR ("not implemented yet");
 }
 
 
 Ptr<NetDevice>
 LenaHelper::InstallSingleEnbDevice (Ptr<Node> n)
 {
-  Ptr<LteEnbPhy> phy = CreateObject<LteEnbPhy> ();
-
   Ptr<LteSpectrumPhy> dlPhy = CreateObject<LteSpectrumPhy> ();
   Ptr<LteSpectrumPhy> ulPhy = CreateObject<LteSpectrumPhy> ();
 
-  phy->SetDownlinkSpectrumPhy (dlPhy);
-  phy->SetUplinkSpectrumPhy (ulPhy);
-
-  Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateUplinkNoisePowerSpectralDensity ();
-  ulPhy->SetNoisePowerSpectralDensity (noisePsd);
+  Ptr<LteEnbPhy> phy = CreateObject<LteEnbPhy> (dlPhy, ulPhy);
 
   Ptr<LteCqiSinrChunkProcessor> p = Create<LteCqiSinrChunkProcessor> (phy->GetObject<LtePhy> ());
   ulPhy->AddSinrChunkProcessor (p);
@@ -160,7 +203,7 @@ LenaHelper::InstallSingleEnbDevice (Ptr<Node> n)
   m_uplinkChannel->AddRx (ulPhy);
 
   Ptr<LteEnbMac> mac = CreateObject<LteEnbMac> ();
-  Ptr<FfMacScheduler> sched = m_scheduler.Create<FfMacScheduler> ();  
+  Ptr<FfMacScheduler> sched = m_schedulerFactory.Create<FfMacScheduler> ();
   Ptr<LteEnbRrc> rrc = CreateObject<LteEnbRrc> ();
 
 
@@ -184,7 +227,7 @@ LenaHelper::InstallSingleEnbDevice (Ptr<Node> n)
   ulPhy->SetDevice (dev);
 
   n->AddDevice (dev);
-  ulPhy->SetPhyMacRxEndOkCallback (MakeCallback (&LteEnbPhy::PhyPduReceived, phy));
+  ulPhy->SetGenericPhyRxEndOkCallback (MakeCallback (&LteEnbPhy::PhyPduReceived, phy));
 
   dev->Start ();
   return dev;
@@ -193,16 +236,10 @@ LenaHelper::InstallSingleEnbDevice (Ptr<Node> n)
 Ptr<NetDevice>
 LenaHelper::InstallSingleUeDevice (Ptr<Node> n)
 {
-  Ptr<LteUePhy> phy = CreateObject<LteUePhy> ();
-
   Ptr<LteSpectrumPhy> dlPhy = CreateObject<LteSpectrumPhy> ();
   Ptr<LteSpectrumPhy> ulPhy = CreateObject<LteSpectrumPhy> ();
 
-  phy->SetDownlinkSpectrumPhy (dlPhy);
-  phy->SetUplinkSpectrumPhy (ulPhy);
-
-  Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateDownlinkNoisePowerSpectralDensity ();
-  dlPhy->SetNoisePowerSpectralDensity (noisePsd);
+  Ptr<LteUePhy> phy = CreateObject<LteUePhy> (dlPhy, ulPhy);
 
   Ptr<LteCqiSinrChunkProcessor> p = Create<LteCqiSinrChunkProcessor> (phy->GetObject<LtePhy> ());
   dlPhy->AddSinrChunkProcessor (p);
@@ -216,7 +253,7 @@ LenaHelper::InstallSingleUeDevice (Ptr<Node> n)
   ulPhy->SetMobility (mm);
 
   m_downlinkChannel->AddRx (dlPhy);
-  
+
   Ptr<LteUeMac> mac = CreateObject<LteUeMac> ();
   Ptr<LteUeRrc> rrc = CreateObject<LteUeRrc> ();
 
@@ -233,9 +270,8 @@ LenaHelper::InstallSingleUeDevice (Ptr<Node> n)
   ulPhy->SetDevice (dev);
 
   n->AddDevice (dev);
-  dlPhy->SetPhyMacRxEndOkCallback (MakeCallback (&LteUePhy::PhyPduReceived, phy));
+  dlPhy->SetGenericPhyRxEndOkCallback (MakeCallback (&LteUePhy::PhyPduReceived, phy));
 
-  dev->Start ();
   return dev;
 }
 
@@ -254,9 +290,9 @@ LenaHelper::Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
 {
   // setup RRC connection
   Ptr<LteEnbRrc> enbRrc = enbDevice->GetObject<LteEnbNetDevice> ()->GetRrc ();
-  uint16_t rnti = enbRrc->AddUe ();
+  uint16_t rnti = enbRrc->AddUe (ueDevice->GetObject<LteUeNetDevice> ()->GetImsi ());
   Ptr<LteUeRrc> ueRrc = ueDevice->GetObject<LteUeNetDevice> ()->GetRrc ();
-  ueRrc->ConfigureUe (rnti);
+  ueRrc->ConfigureUe (rnti, enbDevice->GetObject<LteEnbNetDevice> ()->GetCellId () );
 
   // attach UE to eNB
   ueDevice->GetObject<LteUeNetDevice> ()->SetTargetEnb (enbDevice->GetObject<LteEnbNetDevice> ());
@@ -269,8 +305,12 @@ LenaHelper::Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
  
   // WILD HACK - should be done through PHY SAP, probably passing by RRC
   uePhy->SetRnti (rnti);
-  uePhy->DoSetBandwidth (enbDevice->GetObject<LteEnbNetDevice> ()->GetUlBandwidth (), 
+  uePhy->DoSetBandwidth (enbDevice->GetObject<LteEnbNetDevice> ()->GetUlBandwidth (),
                          enbDevice->GetObject<LteEnbNetDevice> ()->GetDlBandwidth ());
+  uePhy->DoSetEarfcn (enbDevice->GetObject<LteEnbNetDevice> ()->GetDlEarfcn (),
+                      enbDevice->GetObject<LteEnbNetDevice> ()->GetUlEarfcn ());
+
+  ueDevice->Start ();
 }
 
 
@@ -310,11 +350,11 @@ LenaHelper::EnableLogComponents (void)
   LogComponentEnable ("LtePhy", LOG_LEVEL_ALL);
   LogComponentEnable ("LteEnbPhy", LOG_LEVEL_ALL);
   LogComponentEnable ("LteUePhy", LOG_LEVEL_ALL);
-
+  LogComponentEnable ("LteSpectrumValueHelper", LOG_LEVEL_ALL);
   LogComponentEnable ("LteSpectrumPhy", LOG_LEVEL_ALL);
   LogComponentEnable ("LteInterference", LOG_LEVEL_ALL);
   LogComponentEnable ("LteSinrChunkProcessor", LOG_LEVEL_ALL);
- 
+
   LogComponentEnable ("LtePropagationLossModel", LOG_LEVEL_ALL);
   LogComponentEnable ("LossModel", LOG_LEVEL_ALL);
   LogComponentEnable ("ShadowingLossModel", LOG_LEVEL_ALL);
@@ -329,6 +369,152 @@ LenaHelper::EnableLogComponents (void)
   LogComponentEnable ("RlcStatsCalculator", LOG_LEVEL_ALL);
 }
 
+void
+LenaHelper::EnableMacTraces (void)
+{
+  EnableDlMacTraces ();
+  EnableUlMacTraces ();
+}
 
+void
+DlSchedulingCallback (Ptr<MacStatsCalculator> mac, std::string path,
+                      uint32_t frameNo, uint32_t subframeNo, uint16_t rnti,
+                      uint8_t mcsTb1, uint16_t sizeTb1, uint8_t mcsTb2, uint16_t sizeTb2)
+{
+  mac->DlScheduling (frameNo, subframeNo, rnti, mcsTb1, sizeTb1, mcsTb2, sizeTb2);
+}
+
+void
+LenaHelper::EnableDlMacTraces (void)
+{
+  Config::Connect ("/NodeList/0/DeviceList/0/LteEnbMac/DlScheduling",
+                   MakeBoundCallback (&DlSchedulingCallback, m_macStats));
+}
+
+void
+UlSchedulingCallback (Ptr<MacStatsCalculator> mac, std::string path,
+                      uint32_t frameNo, uint32_t subframeNo, uint16_t rnti,
+                      uint8_t mcs, uint16_t size)
+{
+  mac->UlScheduling (frameNo, subframeNo, rnti, mcs, size);
+}
+
+void
+LenaHelper::EnableUlMacTraces (void)
+{
+  Config::Connect ("/NodeList/0/DeviceList/0/LteEnbMac/UlScheduling",
+                   MakeBoundCallback (&UlSchedulingCallback, m_macStats));
+}
+
+void
+LenaHelper::EnableRlcTraces (void)
+{
+  EnableDlRlcTraces ();
+  EnableUlRlcTraces ();
+
+}
+
+uint64_t
+FindImsiFromEnbRlcPath (std::string path)
+{
+  // Sample path input:
+  // /NodeList/#NodeId/DeviceList/#DeviceId/LteEnbRrc/UeMap/#C-RNTI/RadioBearerMap/#LCID/LteRlc/RxPDU
+
+  // We retrieve the UeInfo accociated to the C-RNTI and perform the IMSI lookup
+  std::string ueMapPath = path.substr (0, path.find ("/RadioBearerMap"));
+  Config::MatchContainer match = Config::LookupMatches (ueMapPath);
+
+  if (match.GetN () != 0)
+    {
+      Ptr<Object> ueInfo = match.Get (0);
+      return ueInfo->GetObject<UeInfo> ()->GetImsi ();
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Lookup " << ueMapPath << " got no matches");
+    }
+}
+
+uint64_t
+FindImsiFromUeRlc (std::string path)
+{
+  // Sample path input:
+  // /NodeList/1/DeviceList/0/LteUeRrc/RlcMap/1/RxPDU
+  // /NodeList/#NodeId/DeviceList/#DeviceId/LteUeRrc/RlcMap/#LCID/RxPDU
+
+  // We retrieve the LteUeNetDevice path
+  std::string lteUeNetDevicePath = path.substr (0, path.find ("/LteUeRrc"));
+  Config::MatchContainer match = Config::LookupMatches (lteUeNetDevicePath);
+
+  if (match.GetN () != 0)
+    {
+      Ptr<Object> ueNetDevice = match.Get (0);
+      return ueNetDevice->GetObject<LteUeNetDevice> ()->GetImsi ();
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Lookup " << lteUeNetDevicePath << " got no matches");
+    }
+
+}
+
+
+void
+DlTxPduCallback (Ptr<RlcStatsCalculator> m_rlcStats, std::string path,
+                 uint16_t rnti, uint8_t lcid, uint32_t packetSize)
+{
+  uint64_t imsi = FindImsiFromEnbRlcPath (path);
+  m_rlcStats->DlTxPdu (imsi, rnti, lcid, packetSize);
+}
+
+void
+DlRxPduCallback (Ptr<RlcStatsCalculator> m_rlcStats, std::string path,
+                 uint16_t rnti, uint8_t lcid, uint32_t packetSize, uint64_t delay)
+{
+  uint64_t imsi = FindImsiFromUeRlc (path);
+  m_rlcStats->DlRxPdu (imsi, rnti, lcid, packetSize, delay);
+}
+
+void
+LenaHelper::EnableDlRlcTraces (void)
+{
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/UeMap/*/RadioBearerMap/*/LteRlc/TxPDU",
+                   MakeBoundCallback (&DlTxPduCallback, m_rlcStats));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/RlcMap/*/RxPDU",
+                   MakeBoundCallback (&DlRxPduCallback, m_rlcStats));
+}
+
+void
+UlTxPduCallback (Ptr<RlcStatsCalculator> m_rlcStats, std::string path,
+                 uint16_t rnti, uint8_t lcid, uint32_t packetSize)
+{
+  uint64_t imsi = FindImsiFromUeRlc (path);
+  m_rlcStats->UlTxPdu (imsi, rnti, lcid, packetSize);
+}
+
+void
+UlRxPduCallback (Ptr<RlcStatsCalculator> m_rlcStats, std::string path,
+                 uint16_t rnti, uint8_t lcid, uint32_t packetSize, uint64_t delay)
+{
+  uint64_t imsi = FindImsiFromEnbRlcPath (path);
+  m_rlcStats->UlRxPdu (imsi, rnti, lcid, packetSize, delay);
+}
+
+
+
+void
+LenaHelper::EnableUlRlcTraces (void)
+{
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/RlcMap/*/TxPDU",
+                   MakeBoundCallback (&UlTxPduCallback, m_rlcStats));
+  Config::Connect ("/NodeList/0/DeviceList/*/LteEnbRrc/UeMap/*/RadioBearerMap/*/LteRlc/RxPDU",
+                   MakeBoundCallback (&UlRxPduCallback, m_rlcStats));
+}
+
+Ptr<RlcStatsCalculator>
+LenaHelper::GetRlcStats (void)
+{
+  return m_rlcStats;
+}
 
 } // namespace ns3

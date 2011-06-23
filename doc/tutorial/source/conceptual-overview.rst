@@ -155,10 +155,10 @@ directory structure something like the following:
 
 ::
 
-  AUTHORS       doc/       README         src/     waf.bat*
-  bindings/     examples/  RELEASE_NOTES  utils/   wscript
-  build/        LICENSE    samples/       VERSION  wutils.py
-  CHANGES.html  ns3/       scratch/       waf*     wutils.pyc
+  AUTHORS       doc/       README         utils/   wscript   
+  bindings/     examples/  RELEASE_NOTES  VERSION  wutils.py  
+  build/        LICENSE    scratch/       waf*     wutils.pyc 
+  CHANGES.html  ns3/       src            waf.bat*  
 
 Change into the ``examples/tutorial`` directory.  You should see a file named 
 ``first.cc`` located there.  This is a script that will create a simple
@@ -220,9 +220,10 @@ The code proper starts with a number of include statements.
 ::
 
   #include "ns3/core-module.h"
-  #include "ns3/simulator-module.h"
-  #include "ns3/node-module.h"
-  #include "ns3/helper-module.h"
+  #include "ns3/network-module.h"
+  #include "ns3/internet-module.h"
+  #include "ns3/point-to-point-module.h"
+  #include "ns3/applications-module.h"
 
 To help our high-level script users deal with the large number of include 
 files present in the system, we group includes according to relatively large 
@@ -249,10 +250,10 @@ already have done a
 
 ::
 
-  ./waf -d debug configure
+  ./waf -d debug --enable-examples --enable-tests configure
 
-in order to configure the project to perform debug builds.  You will also have
-done a
+in order to configure the project to perform debug builds that include 
+examples and tests.  You will also have done a
 
 ::
 
@@ -805,7 +806,6 @@ most of our *repositories* will look:
   drwxr-xr-x                               doc              files
   drwxr-xr-x                               examples         files
   drwxr-xr-x                               ns3              files
-  drwxr-xr-x                               samples          files
   drwxr-xr-x                               scratch          files
   drwxr-xr-x                               src              files
   drwxr-xr-x                               utils            files
@@ -836,5 +836,5 @@ you will find (as of this writing) is ``abort.h``.  If you click on the
 contains useful macros for exiting scripts if abnormal conditions are detected.
 
 The source code for the helpers we have used in this chapter can be found in the 
-``src/helper`` directory.  Feel free to poke around in the directory tree to
+``src/applications/helper`` directory.  Feel free to poke around in the directory tree to
 get a feel for what is there and the style of |ns3| programs.

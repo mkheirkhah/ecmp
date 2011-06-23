@@ -56,39 +56,55 @@ TypeId LteEnbNetDevice::GetTypeId (void)
     .SetParent<LteNetDevice> ()
     .AddConstructor<LteEnbNetDevice> ()
     .AddAttribute ("LteEnbRrc",
-                   "The RRC associated to this EnbNetDevice",               
+                   "The RRC associated to this EnbNetDevice",
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_rrc),
                    MakePointerChecker <LteEnbRrc> ())
     .AddAttribute ("LteEnbMac",
-                   "The MAC associated to this EnbNetDevice",               
+                   "The MAC associated to this EnbNetDevice",
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_mac),
                    MakePointerChecker <LteEnbMac> ())
     .AddAttribute ("FfMacScheduler",
-                   "The scheduler associated to this EnbNetDevice",               
+                   "The scheduler associated to this EnbNetDevice",
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_scheduler),
                    MakePointerChecker <FfMacScheduler> ())
     .AddAttribute ("LteEnbPhy",
-                   "The PHY associated to this EnbNetDevice",               
+                   "The PHY associated to this EnbNetDevice",
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_phy),
                    MakePointerChecker <LteEnbPhy> ())
     .AddAttribute ("UlBandwidth",
-                   "Uplink bandwidth in number of Resource Blocks",
+                   "Uplink Transmission Bandwidth Configuration in number of Resource Blocks",
                    UintegerValue (25),
                    MakeUintegerAccessor (&LteEnbNetDevice::SetUlBandwidth, 
                                          &LteEnbNetDevice::GetUlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("DlBandwidth",
-                   "Downlink bandwidth in number of Resource Blocks",
+                   "Downlink Transmission Bandwidth Configuration in number of Resource Blocks",
                    UintegerValue (25),
                    MakeUintegerAccessor (&LteEnbNetDevice::SetDlBandwidth, 
                                          &LteEnbNetDevice::GetDlBandwidth),
                    MakeUintegerChecker<uint8_t> ())
-
-    ;
+    .AddAttribute ("CellId",
+                   "Cell Identifier",
+                   UintegerValue (0),
+                   MakeUintegerAccessor (&LteEnbNetDevice::m_cellId),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("DlEarfcn",
+                   "Downlink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
+                   "as per 3GPP 36.101 Section 5.7.3. ",
+                   UintegerValue (100),
+                   MakeUintegerAccessor (&LteEnbNetDevice::m_dlEarfcn),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("UlEarfcn",
+                   "Uplink E-UTRA Absolute Radio Frequency Channel Number (EARFCN) "
+                   "as per 3GPP 36.101 Section 5.7.3. ",
+                   UintegerValue (18100),
+                   MakeUintegerAccessor (&LteEnbNetDevice::m_ulEarfcn),
+                   MakeUintegerChecker<uint16_t> ())
+  ;
   return tid;
 }
 
@@ -107,8 +123,6 @@ LteEnbNetDevice::LteEnbNetDevice (Ptr<Node> node, Ptr<LteEnbPhy> phy, Ptr<LteEnb
   m_rrc = rrc;
   SetNode (node);
   NS_ASSERT_MSG (m_cellIdCounter < 65535, "max num eNBs exceeded");
-  m_cellId = ++m_cellIdCounter;
-  UpdateConfig ();
 }
 
 LteEnbNetDevice::~LteEnbNetDevice (void)
@@ -165,7 +179,7 @@ LteEnbNetDevice::GetCellId () const
 {
   return m_cellId;
 }
-  
+
 uint8_t 
 LteEnbNetDevice::GetUlBandwidth () const
 {
@@ -182,10 +196,10 @@ LteEnbNetDevice::SetUlBandwidth (uint8_t bw)
     case 25:
     case 50:
     case 75:
-    case 100:     
+    case 100:
       m_ulBandwidth = bw;
       break;
-      
+
     default:
       NS_FATAL_ERROR ("invalid bandwidth value " << (uint16_t) bw);
       break;
@@ -208,20 +222,56 @@ LteEnbNetDevice::SetDlBandwidth (uint8_t bw)
     case 25:
     case 50:
     case 75:
-    case 100:     
+    case 100:
       m_dlBandwidth = bw;
       break;
-      
+
     default:
       NS_FATAL_ERROR ("invalid bandwidth value " << (uint16_t) bw);
       break;
     }
 }
 
+uint16_t 
+LteEnbNetDevice::GetDlEarfcn () const
+{
+  return m_dlEarfcn;
+}
+
+void 
+LteEnbNetDevice::SetDlEarfcn (uint16_t earfcn)
+{ 
+  m_dlEarfcn = earfcn;
+}
+
+uint16_t 
+LteEnbNetDevice::GetUlEarfcn () const
+{
+  return m_ulEarfcn;
+}
+
+void 
+LteEnbNetDevice::SetUlEarfcn (uint16_t earfcn)
+{ 
+  m_ulEarfcn = earfcn;
+}
+
+
+void 
+LteEnbNetDevice::DoStart (void)
+{
+  m_cellId = ++m_cellIdCounter;
+  UpdateConfig ();
+  m_phy->Start ();
+  m_mac->Start ();
+  m_rrc->Start ();
+}
+
+
 
 bool
 LteEnbNetDevice::DoSend (Ptr<Packet> packet, const Mac48Address& source,
-                      const Mac48Address& dest, uint16_t protocolNumber)
+                         const Mac48Address& dest, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << source << dest << protocolNumber);
 
@@ -264,10 +314,12 @@ LteEnbNetDevice::UpdateConfig (void)
 
   m_rrc->ConfigureCell (m_ulBandwidth, m_dlBandwidth);
 
-  // WILD HACK -  should use the PHY SAP instead. Probably should handle this through the RRC
+  // Configuring directly for now, but ideally we should use the PHY
+  // SAP instead. Probably should handle this through the RRC.
   m_phy->DoSetBandwidth (m_ulBandwidth, m_dlBandwidth);
+  m_phy->DoSetEarfcn (m_dlEarfcn, m_ulEarfcn);
   m_phy->DoSetCellId (m_cellId);
-  
+
 }
 
 

@@ -27,17 +27,17 @@
 namespace ns3 {
 
 
-struct lteFlowId_t
+struct LteFlowId_t
 {
   uint16_t  m_rnti;
   uint8_t   m_lcId;
 
 public:
-  lteFlowId_t ();
-  lteFlowId_t (const uint16_t a, const uint8_t b);
+  LteFlowId_t ();
+  LteFlowId_t (const uint16_t a, const uint8_t b);
 
-  friend bool operator == (const lteFlowId_t &a, const lteFlowId_t &b);
-  friend bool operator < (const lteFlowId_t &a, const lteFlowId_t &b);
+  friend bool operator == (const LteFlowId_t &a, const LteFlowId_t &b);
+  friend bool operator < (const LteFlowId_t &a, const LteFlowId_t &b);
 };
 
 class LteFfConverter
@@ -47,7 +47,7 @@ public:
   static uint16_t double2fpS11dot3 (double val);
   static double fpS11dot3toDouble (uint16_t val);
   static double getMinFpS11dot3Value ();
-  
+
   //static const double MIN_FP_S11DOT3_VALUE = -4096;
 
 

@@ -16,13 +16,13 @@
 
 // Network topology
 //
-//        n0     n1  
+//        n0     n1
 //        |      | 
 //       ----------
 //       | Switch |
 //       ----------
 //        |      | 
-//        n2     n3  
+//        n2     n3
 //
 //
 // - CBR/UDP flows from n0 to n1 and from n3 to n0
@@ -37,6 +37,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/bridge-module.h"
 #include "ns3/csma-module.h"
+#include "ns3/internet-module.h"
 
 using namespace ns3;
 

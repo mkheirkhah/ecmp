@@ -23,47 +23,28 @@
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/lte-module.h"
-#include "ns3/rlc-stats-calculator.h"
+#include "ns3/config-store.h"
+//#include "ns3/gtk-config-store.h"
 
-
-#include "ns3/gtk-config-store.h"
 
 using namespace ns3;
 
-void UlTxPduCallback(Ptr<RlcStatsCalculator> rlcStats, std::string path,
-                   uint16_t rnti, uint8_t lcid, uint32_t packetSize)
-{
-  rlcStats->UlTxPdu(rnti, lcid, packetSize);
-}
-
-void UlRxPduCallback(Ptr<RlcStatsCalculator> rlcStats, std::string path,
-                   uint16_t rnti, uint8_t lcid, uint32_t packetSize, uint64_t delay)
-{
-  rlcStats->UlRxPdu(rnti, lcid, packetSize, delay);
-}
-
-void DlTxPduCallback(Ptr<RlcStatsCalculator> rlcStats, std::string path,
-                   uint16_t rnti, uint8_t lcid, uint32_t packetSize)
-{
-  rlcStats->DlTxPdu(rnti, lcid, packetSize);
-}
-
-void DlRxPduCallback(Ptr<RlcStatsCalculator> rlcStats, std::string path,
-                   uint16_t rnti, uint8_t lcid, uint32_t packetSize, uint64_t delay)
-{
-  rlcStats->DlRxPdu(rnti, lcid, packetSize, delay);
-}
-
 int main (int argc, char *argv[])
 {
-  LenaHelper lena;
-
   // Command line arguments
   CommandLine cmd;
   cmd.Parse (argc, argv);
 
+  ConfigStore inputConfig;
+  inputConfig.ConfigureDefaults ();
+
+  // parse again so you can override default values from the command line
+  cmd.Parse (argc, argv);
+
+  Ptr<LenaHelper> lena = CreateObject<LenaHelper> ();
+
   // Enable LTE log components
-  //lena.EnableLogComponents ();
+  //lena->EnableLogComponents ();
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
@@ -81,30 +62,31 @@ int main (int argc, char *argv[])
   // Create Devices and install them in the Nodes (eNB and UE)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
-  enbDevs = lena.InstallEnbDevice (enbNodes);
-  ueDevs = lena.InstallUeDevice (ueNodes);
+  enbDevs = lena->InstallEnbDevice (enbNodes);
+  ueDevs = lena->InstallUeDevice (ueNodes);
 
   // Attach a UE to a eNB
-  lena.Attach (ueDevs, enbDevs.Get (0));
+  lena->Attach (ueDevs, enbDevs.Get (0));
 
   // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
-  lena.ActivateEpsBearer (ueDevs, bearer);
+  lena->ActivateEpsBearer (ueDevs, bearer);
 
-  Simulator::Stop (Seconds (4));
+  Simulator::Stop (Seconds (2));
 
-  // Insert RLC Performance Calculator
-  Ptr<RlcStatsCalculator> rlcStats = CreateObject<RlcStatsCalculator> ();
-  Config::Connect("/NodeList/0/DeviceList/0/LteEnbRrc/UeMap/*/RadioBearerMap/*/LteRlc/TxPDU",
-                   MakeBoundCallback(&DlTxPduCallback, rlcStats));
-  Config::Connect("/NodeList/*/DeviceList/0/LteUeRrc/RlcMap/*/RxPDU",
-                   MakeBoundCallback(&DlRxPduCallback, rlcStats));
+  lena->EnableMacTraces ();
+  lena->EnableRlcTraces ();
 
-  Config::Connect("/NodeList/*/DeviceList/0/LteUeRrc/RlcMap/*/TxPDU",
-                   MakeBoundCallback(&UlTxPduCallback, rlcStats));
-  Config::Connect ("/NodeList/0/DeviceList/0/LteEnbRrc/UeMap/*/RadioBearerMap/*/LteRlc/RxPDU",
-                   MakeBoundCallback(&UlRxPduCallback, rlcStats));
+
+  double distance_temp [] = { 10000,10000,10000}; //{10000, 10000, 10000};
+  std::vector<double> userDistance;
+  userDistance.assign (distance_temp, distance_temp + 3);
+  for (int i = 0; i < 3; i++)
+    {
+      Ptr<ConstantPositionMobilityModel> mm = ueNodes.Get (i)->GetObject<ConstantPositionMobilityModel> ();
+      mm->SetPosition (Vector (userDistance[i], 0.0, 0.0));
+    } // rkwan 
 
   Simulator::Run ();
 

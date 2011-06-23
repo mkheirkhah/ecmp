@@ -31,7 +31,7 @@
 #include <ns3/spectrum-channel.h>
 #include <ns3/spectrum-type.h>
 #include <ns3/spectrum-interference.h>
-#include <ns3/phy-mac.h>
+#include <ns3/generic-phy.h>
 #include "lte-spectrum-phy.h"
 
 namespace ns3 {
@@ -41,6 +41,8 @@ class LteNetDevice;
 class IdealControlMessage;
 
 /**
+ * \ingroup lte
+ *
  * The LtePhy models the physical layer of LTE. It is composed by two
  * LteSpectrumPhy, one for the downlink and one for the uplink.
  */
@@ -48,7 +50,18 @@ class LtePhy : public Object
 {
 
 public:
+  /** 
+   * @warning the default constructor should not be used
+   */
   LtePhy ();
+
+  /** 
+   * 
+   * \param dlPhy the downlink LteSpectrumPhy instance
+   * \param ulPhy the uplink LteSpectrumPhy instance
+   */
+  LtePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy);
+
   virtual ~LtePhy ();
 
   static TypeId GetTypeId (void);
@@ -64,23 +77,24 @@ public:
    */
   Ptr<LteNetDevice> GetDevice ();
 
+  /** 
+   * 
+   * \return a pointer to the LteSpectrumPhy instance that manages the downlink
+   */
+  Ptr<LteSpectrumPhy> GetDownlinkSpectrumPhy ();
+
+
+  /** 
+   * 
+   * \return a pointer to the LteSpectrumPhy instance that manages the uplink
+   */
+  Ptr<LteSpectrumPhy> GetUplinkSpectrumPhy ();
+
   /**
   * \brief Queue the MAC PDU to be sent (according to m_macChTtiDelay)
   * \param p the MAC PDU to sent
   */
   virtual void DoSendMacPdu (Ptr<Packet> p) = 0;
-
-  /**
-   * Set the LTE SpectrumPhy for the downlink
-   * \param s the LTE SpectrumPhy
-   */
-  void SetDownlinkSpectrumPhy (Ptr<LteSpectrumPhy> s);
-
-  /**
-   * Set the LTE SpectrumPhy for the uplink
-   * \param s the LTE SpectrumPhy
-   */
-  void SetUplinkSpectrumPhy (Ptr<LteSpectrumPhy> s);
 
   /**
    * Set the downlink channel
@@ -132,7 +146,7 @@ public:
 
   /**
    * \brief Compute the TX Power Spectral Density
-   * \return a Ptr to a created SpectrumValue
+   * \return a pointer to a newly allocated SpectrumValue representing the TX Power Spectral Density in W/Hz for each Resource Block
    */
   virtual Ptr<SpectrumValue> CreateTxPowerSpectralDensity () = 0;
 
@@ -160,12 +174,19 @@ public:
   */
   void DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth);
 
+  /**
+   *
+   * \param dlEarfcn the carrier frequency (EARFCN) in downlink
+   * \param ulEarfcn the carrier frequency (EARFCN) in downlink
+   */
+  virtual void DoSetEarfcn (uint16_t dlEarfcn, uint16_t ulEarfcn);
+
   /** 
    * 
    * \param cellId the Cell Identifier
    */
   void DoSetCellId (uint16_t cellId);
-  
+
 
   /**
   * \returns the RB gruop size according to the bandwidth
@@ -195,7 +216,7 @@ public:
   * \param p queue control message to be sent
   */
   void SetControlMessages (Ptr<IdealControlMessage> m);
-  
+
   /**
   * \returns the list of control messages to be sent
   */
@@ -210,9 +231,8 @@ public:
   virtual void  GenerateCqiFeedback (const SpectrumValue& sinr) = 0;
 
 
-  
-protected:
 
+protected:
   Ptr<LteNetDevice> m_netDevice;
 
   Ptr<LteSpectrumPhy> m_downlinkSpectrumPhy;
@@ -222,11 +242,15 @@ protected:
   std::vector <int> m_listOfUplinkSubchannel;
 
   double m_txPower;
+  double m_noiseFigure;
 
   double m_tti;
   uint8_t m_ulBandwidth;
   uint8_t m_dlBandwidth;
   uint8_t m_rbgSize;
+
+  uint16_t m_dlEarfcn;
+  uint16_t m_ulEarfcn;
 
   std::vector< Ptr<PacketBurst> > m_packetBurstQueue;
   std::vector< std::list<Ptr<IdealControlMessage> > > m_controlMessagesQueue;

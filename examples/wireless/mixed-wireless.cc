@@ -64,11 +64,11 @@
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/contrib-module.h"
+#include "ns3/config-store-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/olsr-helper.h"
-#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/internet-module.h"
 
 using namespace ns3;
 
@@ -162,7 +162,7 @@ main (int argc, char *argv[])
   // Add the IPv4 protocol stack to the nodes in our container
   //
   InternetStackHelper internet;
-  internet.SetRoutingHelper (olsr);
+  internet.SetRoutingHelper (olsr); // has effect on the next Install ()
   internet.Install (backbone);
 
   // re-initialize for non-olsr routing.

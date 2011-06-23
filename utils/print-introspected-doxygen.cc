@@ -7,10 +7,11 @@
 #include "ns3/log.h"
 #include "ns3/global-value.h"
 #include "ns3/string.h"
+#include "ns3/node-container.h"
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("Main");
+NS_LOG_COMPONENT_DEFINE ("PrintIntrospectedDoxygen");
 
 void
 PrintAttributes (TypeId tid, std::ostream &os)
@@ -350,7 +351,7 @@ int main (int argc, char *argv[])
 
 
   std::cout << "/*!" << std::endl
-	    << "\\ingroup core" << std::endl
+	    << "\\ingroup constructs" << std::endl
 	    << "\\defgroup TraceSourceList The list of all trace sources." << std::endl;
   for (uint32_t i = 0; i < TypeId::GetRegisteredN (); ++i)
     {
@@ -372,7 +373,7 @@ int main (int argc, char *argv[])
 
 
   std::cout << "/*!" << std::endl
-	    << "\\ingroup core" << std::endl
+	    << "\\ingroup constructs" << std::endl
 	    << "\\defgroup AttributeList The list of all attributes." << std::endl;
   for (uint32_t i = 0; i < TypeId::GetRegisteredN (); ++i)
     {
@@ -395,7 +396,7 @@ int main (int argc, char *argv[])
 
 
   std::cout << "/*!" << std::endl
-	    << "\\ingroup core" << std::endl
+	    << "\\ingroup constructs" << std::endl
 	    << "\\defgroup GlobalValueList The list of all global values." << std::endl
 	    << "<ul>" << std::endl;
   for (GlobalValue::Iterator i = GlobalValue::Begin (); i != GlobalValue::End (); ++i)

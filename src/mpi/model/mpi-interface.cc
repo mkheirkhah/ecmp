@@ -24,7 +24,7 @@
 #include <list>
 
 #include "mpi-interface.h"
-#include "mpi-net-device.h"
+#include "mpi-receiver.h"
 
 #include "ns3/node.h"
 #include "ns3/node-list.h"
@@ -235,24 +235,23 @@ MpiInterface::ReceiveMessages ()
 
       // Find the correct node/device to schedule receive event
       Ptr<Node> pNode = NodeList::GetNode (node);
+      Ptr<MpiReceiver> pMpiRec = 0;
       uint32_t nDevices = pNode->GetNDevices ();
-      Ptr<MpiNetDevice> pMpiDev;
       for (uint32_t i = 0; i < nDevices; ++i)
         {
           Ptr<NetDevice> pThisDev = pNode->GetDevice (i);
           if (pThisDev->GetIfIndex () == dev)
             {
-              pDev = DynamicCast<MpiNetDevice> (pThisDev);
+              pMpiRec = pThisDev->GetObject<MpiReceiver> ();
               break;
             }
         }
 
-      NS_ASSERT (pNode && pDev);
+      NS_ASSERT (pNode && pMpiRec);
 
       // Schedule the rx event
       Simulator::ScheduleWithContext (pNode->GetId (), rxTime - Simulator::Now (),
-                                      &MpiNetDevice::Receive,
-                                      pMpiDev, p);
+                                      &MpiReceiver::Receive, pMpiRec, p);
 
       // Re-queue the next read
       MPI_Irecv (m_pRxBuffers[index], MAX_MPI_MSG_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0,
@@ -284,5 +283,27 @@ MpiInterface::TestSendComplete ()
   NS_FATAL_ERROR ("Can't use distributed simulator without MPI compiled in");
 #endif
 }
+
+void 
+MpiInterface::Disable ()
+{
+#ifdef NS3_MPI
+  int flag = 0 ;
+  MPI_Initialized (&flag);
+  if (flag)
+    {
+      MPI_Finalize ();
+      m_enabled = false;
+      m_initialized = false;
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Cannot disable MPI environment without Initializing it first");
+    }
+#else
+  NS_FATAL_ERROR ("Can't use distributed simulator without MPI compiled in");
+#endif
+}
+
 
 } // namespace ns3

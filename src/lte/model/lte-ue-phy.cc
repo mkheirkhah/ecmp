@@ -95,9 +95,18 @@ NS_OBJECT_ENSURE_REGISTERED (LteUePhy);
 
 
 LteUePhy::LteUePhy ()
-  : m_p10CqiPeriocity (MilliSeconds (160)),    
+{
+  NS_LOG_FUNCTION (this);
+  NS_FATAL_ERROR ("This constructor should not be called");
+}
+
+LteUePhy::LteUePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
+  : LtePhy (dlPhy, ulPhy),
+    m_p10CqiPeriocity (MilliSeconds (1)),
+    // ideal behavior
     m_p10CqiLast (MilliSeconds (0)),
-    m_a30CqiPeriocity (MilliSeconds (1)), // ideal behavior 
+    m_a30CqiPeriocity (MilliSeconds (1)),
+    // ideal behavior
     m_a30CqiLast (MilliSeconds (0))
 {
   m_uePhySapProvider = new UeMemberLteUePhySapProvider (this);
@@ -115,7 +124,7 @@ LteUePhy::DoDispose ()
   delete m_uePhySapProvider;
   LtePhy::DoDispose ();
 }
-  
+
 
 
 TypeId
@@ -130,10 +139,30 @@ LteUePhy::GetTypeId (void)
                    MakeDoubleAccessor (&LteUePhy::SetTxPower, 
                                        &LteUePhy::GetTxPower),
                    MakeDoubleChecker<double> ())
+    .AddAttribute ("NoiseFigure",
+                   "Loss (dB) in the Signal-to-Noise-Ratio due to non-idealities in the receiver."
+                   " According to Wikipedia (http://en.wikipedia.org/wiki/Noise_figure), this is "
+                   "\"the difference in decibels (dB) between"
+                   " the noise output of the actual receiver to the noise output of an "
+                   " ideal receiver with the same overall gain and bandwidth when the receivers "
+                   " are connected to sources at the standard noise temperature T0.\" "
+                   "In this model, we consider T0 = 290K.",
+                   DoubleValue (9.0),
+                   MakeDoubleAccessor (&LteUePhy::SetNoiseFigure, 
+                                       &LteUePhy::GetNoiseFigure),
+                   MakeDoubleChecker<double> ())
   ;
   return tid;
 }
 
+void
+LteUePhy::DoStart ()
+{
+  NS_LOG_FUNCTION (this);
+  Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_noiseFigure);
+  m_downlinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
+  LtePhy::DoStart ();
+}
 
 void
 LteUePhy::SetLteUePhySapUser (LteUePhySapUser* s)
@@ -147,6 +176,20 @@ LteUePhy::GetLteUePhySapProvider ()
 {
   NS_LOG_FUNCTION (this);
   return (m_uePhySapProvider);
+}
+
+void
+LteUePhy::SetNoiseFigure (double nf)
+{
+  NS_LOG_FUNCTION (this << nf);
+  m_noiseFigure = nf;
+}
+
+double
+LteUePhy::GetNoiseFigure () const
+{
+  NS_LOG_FUNCTION (this);
+  return m_noiseFigure;
 }
 
 void
@@ -232,7 +275,7 @@ LteUePhy::CreateTxPowerSpectralDensity ()
 {
   NS_LOG_FUNCTION (this);
   LteSpectrumValueHelper psdHelper;
-  Ptr<SpectrumValue> psd = psdHelper.CreateUplinkTxPowerSpectralDensity (GetTxPower (), GetSubChannelsForTransmission ());
+  Ptr<SpectrumValue> psd = psdHelper.CreateTxPowerSpectralDensity (m_ulEarfcn, m_ulBandwidth, m_txPower, GetSubChannelsForTransmission ());
 
   return psd;
 }
@@ -271,25 +314,40 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
   // CREATE CqiIdealControlMessage
   Ptr<DlCqiIdealControlMessage> msg = Create<DlCqiIdealControlMessage> ();
   CqiListElement_s dlcqi;
-  
+
   if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriocity)
     {
 
       int nbSubChannels = cqi.size ();
       double cqiSum = 0.0;
+      int activeSubChannels = 0;
       // average the CQIs of the different RBs
       for (int i = 0; i < nbSubChannels; i++)
         {
-          cqiSum += cqi.at (i);
+          if (cqi.at (i) != -1)
+            {
+              cqiSum += cqi.at (i);
+              activeSubChannels++;
+            }
+          NS_LOG_DEBUG (this << " subch " << i << " cqi " <<  cqi.at (i));
         }
       dlcqi.m_rnti = m_rnti;
       dlcqi.m_ri = 1; // not yet used
       dlcqi.m_cqiType = CqiListElement_s::P10; // Peridic CQI using PUCCH wideband
-      dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / nbSubChannels);
+      if (activeSubChannels > 0)
+        {
+          dlcqi.m_wbCqi.push_back ((uint16_t) cqiSum / activeSubChannels);
+        }
+      else
+        {
+          // approximate with the worst case -> CQI = 1
+          dlcqi.m_wbCqi.push_back (1);
+        }
+      //NS_LOG_DEBUG (this << " Generate P10 CQI feedback " << (uint16_t) cqiSum / activeSubChannels);
       dlcqi.m_wbPmi = 0; // not yet used
       // dl.cqi.m_sbMeasResult others CQI report modes: not yet implemented
     }
-  else if(Simulator::Now () > m_a30CqiLast + m_a30CqiPeriocity)
+  else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriocity)
     {
       int nbSubChannels = cqi.size ();
       int rbgSize = GetRbgSize ();
@@ -298,21 +356,25 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
       SbMeasResult_s rbgMeas;
       //NS_LOG_DEBUG (this << " Create A30 CQI feedback, RBG " << rbgSize << " cqiNum " << nbSubChannels << " band "  << (uint16_t)m_dlBandwidth);
       for (int i = 0; i < nbSubChannels; i++)
-      {
-        cqiSum += cqi.at (i);
-        cqiNum++;
-        if (cqiNum == rbgSize)
-          {
-            // average the CQIs of the different RBGs
-            //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
-            HigherLayerSelected_s hlCqi;
-            hlCqi.m_sbPmi = 0; // not yet used
-            hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize);  // only CW0 (SISO mode)
-            rbgMeas.m_higherLayerSelected.push_back (hlCqi);
-            cqiSum = 0.0;
-            cqiNum = 0;
-          }
-      }
+        {
+          if (cqi.at (i) != -1)
+            {
+              cqiSum += cqi.at (i);
+            }
+          // else "nothing" no CQI is treated as CQI = 0 (worst case scenario)
+          cqiNum++;
+          if (cqiNum == rbgSize)
+            {
+              // average the CQIs of the different RBGs
+              //NS_LOG_DEBUG (this << " RBG CQI "  << (uint16_t) cqiSum / rbgSize);
+              HigherLayerSelected_s hlCqi;
+              hlCqi.m_sbPmi = 0; // not yet used
+              hlCqi.m_sbCqi.push_back ((uint16_t) cqiSum / rbgSize); // only CW0 (SISO mode)
+              rbgMeas.m_higherLayerSelected.push_back (hlCqi);
+              cqiSum = 0.0;
+              cqiNum = 0;
+            }
+        }
       dlcqi.m_rnti = m_rnti;
       dlcqi.m_ri = 1; // not yet used
       dlcqi.m_cqiType = CqiListElement_s::A30; // Aperidic CQI using PUSCH
@@ -320,7 +382,7 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
       dlcqi.m_wbPmi = 0; // not yet used
       dlcqi.m_sbMeasResult = rbgMeas;
     }
-    
+
   msg->SetDlCqi (dlcqi);
   return msg;
 }
@@ -405,7 +467,7 @@ void
 LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 {
   // trigger from eNB
-  
+
   // send control messages
   std::list<Ptr<IdealControlMessage> > ctrlMsg = GetControlMessages ();
   if (ctrlMsg.size () > 0)
@@ -421,7 +483,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
           it = ctrlMsg.begin ();
         }
     }
-  
+
   // send packets in queue
   // send the current burts of packets
   Ptr<PacketBurst> pb = GetPacketBurst ();
@@ -429,7 +491,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
     {
       m_uplinkSpectrumPhy->StartTx (pb);
     }
-  
+
 }
 
 

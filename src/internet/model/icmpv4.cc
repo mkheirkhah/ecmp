@@ -35,32 +35,34 @@ Icmpv4Header::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Icmpv4Header")
     .SetParent<Header> ()
     .AddConstructor<Icmpv4Header> ()
-    ;
+  ;
   return tid;
 }
 Icmpv4Header::Icmpv4Header ()
   : m_type (0),
     m_code (0),
     m_calcChecksum (false)
-{}
+{
+}
 Icmpv4Header::~Icmpv4Header ()
-{}
-void 
+{
+}
+void
 Icmpv4Header::EnableChecksum (void)
 {
   m_calcChecksum = true;
 }
-TypeId 
+TypeId
 Icmpv4Header::GetInstanceTypeId (void) const
 {
   return GetTypeId ();
 }
-uint32_t 
+uint32_t
 Icmpv4Header::GetSerializedSize (void) const
 {
   return 4;
 }
-void 
+void
 Icmpv4Header::Serialize (Buffer::Iterator start) const
 {
   Buffer::Iterator i = start;
@@ -75,15 +77,14 @@ Icmpv4Header::Serialize (Buffer::Iterator start) const
       i.Next (2);
       i.WriteU16 (checksum);
     }
-  
+
 }
 uint32_t 
 Icmpv4Header::Deserialize (Buffer::Iterator start)
 {
   m_type = start.ReadU8 ();
   m_code = start.ReadU8 ();
-  uint16_t checksum;
-  checksum = start.ReadNtohU16 ();
+  start.Next (2); // uint16_t checksum = start.ReadNtohU16 ();
   return 4;
 }
 void 
@@ -175,7 +176,7 @@ Icmpv4Echo::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Icmpv4Echo")
     .SetParent<Header> ()
     .AddConstructor<Icmpv4Echo> ()
-    ;
+  ;
   return tid;
 }
 Icmpv4Echo::Icmpv4Echo ()
@@ -247,7 +248,7 @@ Icmpv4DestinationUnreachable::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Icmpv4DestinationUnreachable")
     .SetParent<Header> ()
     .AddConstructor<Icmpv4DestinationUnreachable> ()
-    ;
+  ;
   return tid;
 }
 Icmpv4DestinationUnreachable::Icmpv4DestinationUnreachable ()
@@ -294,18 +295,19 @@ Icmpv4DestinationUnreachable::GetHeader (void) const
 
 
 Icmpv4DestinationUnreachable::~Icmpv4DestinationUnreachable ()
-{}
-TypeId 
+{
+}
+TypeId
 Icmpv4DestinationUnreachable::GetInstanceTypeId (void) const
 {
   return GetTypeId ();
 }
-uint32_t 
+uint32_t
 Icmpv4DestinationUnreachable::GetSerializedSize (void) const
 {
   return 4 + m_header.GetSerializedSize () + 8;
 }
-void 
+void
 Icmpv4DestinationUnreachable::Serialize (Buffer::Iterator start) const
 {
   start.WriteU16 (0);
@@ -315,7 +317,7 @@ Icmpv4DestinationUnreachable::Serialize (Buffer::Iterator start) const
   start.Next (size);
   start.Write (m_data, 8);
 }
-  
+
 uint32_t 
 Icmpv4DestinationUnreachable::Deserialize (Buffer::Iterator start)
 {
@@ -339,9 +341,9 @@ Icmpv4DestinationUnreachable::Print (std::ostream &os) const
     {
       os << (uint32_t) m_data[i];
       if (i != 8)
-	{
-	  os << " ";
-	}
+        {
+          os << " ";
+        }
     }
 }
 
@@ -357,7 +359,7 @@ Icmpv4TimeExceeded::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Icmpv4TimeExceeded")
     .SetParent<Header> ()
     .AddConstructor<Icmpv4TimeExceeded> ()
-    ;
+  ;
   return tid;
 }
 Icmpv4TimeExceeded::Icmpv4TimeExceeded ()
@@ -394,18 +396,19 @@ Icmpv4TimeExceeded::GetHeader (void) const
 
 
 Icmpv4TimeExceeded::~Icmpv4TimeExceeded ()
-{}
-TypeId 
+{
+}
+TypeId
 Icmpv4TimeExceeded::GetInstanceTypeId (void) const
 {
   return GetTypeId ();
 }
-uint32_t 
+uint32_t
 Icmpv4TimeExceeded::GetSerializedSize (void) const
 {
   return 4 + m_header.GetSerializedSize () + 8;
 }
-void 
+void
 Icmpv4TimeExceeded::Serialize (Buffer::Iterator start) const
 {
   start.WriteU32 (0);
@@ -414,7 +417,7 @@ Icmpv4TimeExceeded::Serialize (Buffer::Iterator start) const
   start.Next (size);
   start.Write (m_data, 8);
 }
-  
+
 uint32_t 
 Icmpv4TimeExceeded::Deserialize (Buffer::Iterator start)
 {
@@ -437,9 +440,9 @@ Icmpv4TimeExceeded::Print (std::ostream &os) const
     {
       os << (uint32_t) m_data[i];
       if (i != 8)
-	{
-	  os << " ";
-	}
+        {
+          os << " ";
+        }
     }
 }
 

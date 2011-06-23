@@ -46,7 +46,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("RadvdExample");
+NS_LOG_COMPONENT_DEFINE ("RadvdTwoPrefixExample");
 
 /**
  * \class StackHelper
@@ -89,10 +89,10 @@ public:
       {
         route = routing->GetRoute (i);
         std::cout << route.GetDest () << "\t"
-          << route.GetGateway () << "\t"
-          << route.GetInterface () << "\t"
-          << route.GetPrefixToUse () << "\t"
-          << std::endl;
+                  << route.GetGateway () << "\t"
+                  << route.GetInterface () << "\t"
+                  << route.GetPrefixToUse () << "\t"
+                  << std::endl;
       }
   }
 };

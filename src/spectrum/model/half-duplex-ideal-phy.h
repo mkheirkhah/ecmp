@@ -32,13 +32,16 @@
 #include <ns3/spectrum-type.h>
 #include <ns3/spectrum-interference.h>
 #include <ns3/data-rate.h>
-#include <ns3/phy-mac.h>
+#include <ns3/generic-phy.h>
+#include <ns3/event-id.h>
 
 namespace ns3 {
 
 
 
 /**
+ * \ingroup spectrum
+ *
  * This PHY layer implementation realizes an ideal OFDM PHY which
  * transmits half-duplex (i.e., it can either receive or transmit at a
  * given time). The device is ideal in the sense that:
@@ -82,7 +85,8 @@ public:
    *  PHY states
    *
    */
-  enum State {
+  enum State
+  {
     IDLE, TX, RX
   };
 
@@ -96,7 +100,7 @@ public:
   Ptr<Object> GetDevice ();
   Ptr<const SpectrumModel> GetRxSpectrumModel () const;
   void StartRx (Ptr<PacketBurst> p, Ptr <const SpectrumValue> rxPsd, SpectrumType st, Time duration);
-  
+
 
 
   /**
@@ -153,7 +157,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacTxEndCallback (PhyMacTxEndCallback c);
+  void SetGenericPhyTxEndCallback (GenericPhyTxEndCallback c);
 
   /**
    * set the callback for the start of RX, as part of the
@@ -161,7 +165,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacRxStartCallback (PhyMacRxStartCallback c);
+  void SetGenericPhyRxStartCallback (GenericPhyRxStartCallback c);
 
   /**
    * set the callback for the end of a RX in error, as part of the
@@ -169,7 +173,7 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacRxEndErrorCallback (PhyMacRxEndErrorCallback c);
+  void SetGenericPhyRxEndErrorCallback (GenericPhyRxEndErrorCallback c);
 
   /**
    * set the callback for the successful end of a RX, as part of the
@@ -177,14 +181,13 @@ public:
    *
    * @param c the callback
    */
-  void SetPhyMacRxEndOkCallback (PhyMacRxEndOkCallback c);
+  void SetGenericPhyRxEndOkCallback (GenericPhyRxEndOkCallback c);
 
 
 
 private:
-
   virtual void DoDispose (void);
-  
+
   void ChangeState (State newState);
   void EndTx ();
   void AbortRx ();
@@ -212,10 +215,10 @@ private:
   TracedCallback<Ptr<const Packet> > m_phyRxEndOkTrace;
   TracedCallback<Ptr<const Packet> > m_phyRxEndErrorTrace;
 
-  PhyMacTxEndCallback        m_phyMacTxEndCallback;
-  PhyMacRxStartCallback      m_phyMacRxStartCallback;
-  PhyMacRxEndErrorCallback   m_phyMacRxEndErrorCallback;
-  PhyMacRxEndOkCallback      m_phyMacRxEndOkCallback;
+  GenericPhyTxEndCallback        m_phyMacTxEndCallback;
+  GenericPhyRxStartCallback      m_phyMacRxStartCallback;
+  GenericPhyRxEndErrorCallback   m_phyMacRxEndErrorCallback;
+  GenericPhyRxEndOkCallback      m_phyMacRxEndOkCallback;
 
   SpectrumInterference m_interference;
 

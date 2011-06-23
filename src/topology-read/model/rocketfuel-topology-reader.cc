@@ -86,8 +86,8 @@ RocketfuelTopologyReader::GenerateFromMapsFile (int argc, char *argv[])
   std::string nuid;
   bool dns = false;
   bool bb = false;
-  int num_neigh = 0;
-  int ext_conn = 0;
+  int num_neigh_s = 0;
+  unsigned int num_neigh = 0;
   int radius = 0;
   std::vector <std::string> neigh_list;
   NodeContainer nodes;
@@ -96,17 +96,24 @@ RocketfuelTopologyReader::GenerateFromMapsFile (int argc, char *argv[])
   loc = argv[1];
 
   if (argv[2])
-    dns = true;
+    {
+      dns = true;
+    }
 
   if (argv[3])
-    bb = true;
-
-  num_neigh = ::atoi (argv[4]);
-
-  /* the first char should be '&' */
-  if (argv[5])
     {
-      ext_conn = ::atoi (&argv[5][1]);
+      bb = true;
+    }
+
+  num_neigh_s = ::atoi (argv[4]);
+  if (num_neigh_s < 0)
+    {
+      num_neigh = 0;
+      NS_LOG_WARN ("Negative number of neighbors given");
+    }
+  else
+    {
+      num_neigh = num_neigh_s;
     }
 
   /* neighbors */
@@ -119,6 +126,10 @@ RocketfuelTopologyReader::GenerateFromMapsFile (int argc, char *argv[])
           nbr[strlen (nbr) - 1] = '\0';
           neigh_list.push_back (nbr + 1);
         }
+    }
+  if (num_neigh != neigh_list.size ())
+    {
+      NS_LOG_WARN ("Given number of neighbors = " << num_neigh << " != size of neighbors list = " << neigh_list.size ());
     }
 
   /* externs */
@@ -141,9 +152,14 @@ RocketfuelTopologyReader::GenerateFromMapsFile (int argc, char *argv[])
 
   /* uid @loc [+] [bb] (num_neigh) [&ext] -> <nuid-1> <nuid-2> ... {-euid} ... =name[!] rn */
   NS_LOG_INFO ("Load Node[" << uid << "]: location: " << loc << " dns: " << dns
-               << " bb: " << bb << " neighbors: " << neigh_list.size ()
-               << "(" << "%d" << ") externals: \"%s\"(%d) " 
-               << "name: " << name << " radius: " << radius); 
+                            << " bb: " << bb << " neighbors: " << neigh_list.size ()
+                            << "(" << "%d" << ") externals: \"%s\"(%d) "
+                            << "name: " << name << " radius: " << radius);
+
+  //cast bb and dns to void, to suppress variable set but not used compiler warning
+  //in optimized builds
+  (void) bb;
+  (void) dns;
 
   // Create node and link
   if (!uid.empty ())
@@ -187,13 +203,14 @@ RocketfuelTopologyReader::GenerateFromWeightsFile (int argc, char *argv[])
   /* uid @loc [+] [bb] (num_neigh) [&ext] -> <nuid-1> <nuid-2> ... {-euid} ... =name[!] rn */
   std::string sname;
   std::string tname;
-  double weight;
   char *endptr;
   NodeContainer nodes;
 
   sname = argv[0];
   tname = argv[1];
-  weight = strtod (argv[2], &endptr);
+  double v = strtod (argv[2], &endptr); // weight
+  // cast v to void , to suppress 'v' set but not used compiler warning
+  (void) v;
   if (*endptr != '\0')
     {
       NS_LOG_WARN ("invalid weight: " << argv[2]);
@@ -223,8 +240,8 @@ RocketfuelTopologyReader::GenerateFromWeightsFile (int argc, char *argv[])
       bool found = false;
       for (iter = LinksBegin (); iter != LinksEnd (); iter++)
         {
-          if ((iter->GetFromNode () == nodeMap[tname]) &&
-              (iter->GetToNode () == nodeMap[sname]))
+          if ((iter->GetFromNode () == nodeMap[tname])
+              && (iter->GetToNode () == nodeMap[sname]))
             {
               found = true;
               break;
@@ -250,7 +267,7 @@ RocketfuelTopologyReader::GetFileType (const char *line)
   char errbuf[512];
 
   // Check whether MAPS file or not
-  ret = regcomp (&regex, ROCKETFUEL_MAPS_LINE, REG_EXTENDED|REG_NEWLINE);
+  ret = regcomp (&regex, ROCKETFUEL_MAPS_LINE, REG_EXTENDED | REG_NEWLINE);
   if (ret != 0)
     {
       regerror (ret, &regex, errbuf, sizeof (errbuf));
@@ -265,7 +282,7 @@ RocketfuelTopologyReader::GetFileType (const char *line)
   regfree (&regex);
 
   // Check whether Weights file or not
-  ret = regcomp (&regex, ROCKETFUEL_WEIGHTS_LINE, REG_EXTENDED|REG_NEWLINE);
+  ret = regcomp (&regex, ROCKETFUEL_WEIGHTS_LINE, REG_EXTENDED | REG_NEWLINE);
   if (ret != 0)
     {
       regerror (ret, &regex, errbuf, sizeof (errbuf));
@@ -331,7 +348,7 @@ RocketfuelTopologyReader::Read (void)
 
       if (ftype == RF_MAPS)
         {
-          ret = regcomp (&regex, ROCKETFUEL_MAPS_LINE, REG_EXTENDED|REG_NEWLINE);
+          ret = regcomp (&regex, ROCKETFUEL_MAPS_LINE, REG_EXTENDED | REG_NEWLINE);
           if (ret != 0)
             {
               regerror (ret, &regex, errbuf, sizeof (errbuf));
@@ -349,7 +366,7 @@ RocketfuelTopologyReader::Read (void)
         }
       else if (ftype == RF_WEIGHTS)
         {
-          ret = regcomp (&regex, ROCKETFUEL_WEIGHTS_LINE, REG_EXTENDED|REG_NEWLINE);
+          ret = regcomp (&regex, ROCKETFUEL_WEIGHTS_LINE, REG_EXTENDED | REG_NEWLINE);
           if (ret != 0)
             {
               regerror (ret, &regex, errbuf, sizeof (errbuf));
@@ -374,12 +391,12 @@ RocketfuelTopologyReader::Read (void)
         {
           if (regmatch[i].rm_so == -1)
             {
-              argv[i-1] = NULL;
+              argv[i - 1] = NULL;
             }
           else
             {
               line[regmatch[i].rm_eo] = '\0';
-              argv[i-1] = &line[regmatch[i].rm_so];
+              argv[i - 1] = &line[regmatch[i].rm_so];
               argc = i;
             }
         }
@@ -410,73 +427,3 @@ RocketfuelTopologyReader::Read (void)
 } /* namespace ns3 */
 
 
-//-----------------------------------------------------------------------------
-// Unit tests
-//-----------------------------------------------------------------------------
-
-#include "ns3/log.h"
-#include "ns3/abort.h"
-#include "ns3/attribute.h"
-#include "ns3/object-factory.h"
-#include "ns3/object-factory.h"
-#include "ns3/simulator.h"
-#include "ns3/test.h"
-
-namespace ns3 {
-
-class RocketfuelTopologyReaderTest: public TestCase 
-{
-public:
-  RocketfuelTopologyReaderTest ();
-private:
-  virtual void DoRun (void);
-};
-
-RocketfuelTopologyReaderTest::RocketfuelTopologyReaderTest ()
-  : TestCase ("RocketfuelTopologyReaderTest") 
-{}
-
-
-void
-RocketfuelTopologyReaderTest::DoRun (void)
-{
-  Ptr<RocketfuelTopologyReader> inFile;
-  NodeContainer nodes;
-  
-  std::string input ("./src/topology-read/examples/RocketFuel_toposample_1239_weights.txt");
-
-  inFile = CreateObject<RocketfuelTopologyReader> ();
-  inFile->SetFileName(input);
-
-  if (inFile != 0)
-    {
-      nodes = inFile->Read ();
-    }
-
-  NS_TEST_ASSERT_MSG_NE (nodes.GetN (), 0, "Problems reading node information the topology file..");
-
-  NS_TEST_ASSERT_MSG_NE (inFile->LinksSize (), 0, "Problems reading the topology file.");
-
-  NS_LOG_INFO ("Rocketfuel topology created with " << nodes.GetN () << " nodes and " << 
-               inFile->LinksSize () << " links (from " << input << ")");
-
-  NS_TEST_EXPECT_MSG_EQ (nodes.GetN (),315, "noes");
-  NS_TEST_EXPECT_MSG_EQ (inFile->LinksSize (),972, "links");
-  Simulator::Destroy ();
-}
-
-static class RocketfuelTopologyReaderTestSuite : public TestSuite
-{
-public:
-  RocketfuelTopologyReaderTestSuite ();
-private:
-} g_rocketfueltopologyreaderTests;
-
-RocketfuelTopologyReaderTestSuite::RocketfuelTopologyReaderTestSuite ()
-  : TestSuite ("rocketfuel-topology-reader", UNIT)
-{
-  AddTestCase (new RocketfuelTopologyReaderTest ());
-}
-
-
-}

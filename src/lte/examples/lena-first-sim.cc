@@ -37,14 +37,21 @@ int main (int argc, char *argv[])
   //
   // to load a previously created default attribute file
   // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Load --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-first-sim
-  // note that the latter will override any of the defaults set via command-line arguments
-  //
+
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
-  LenaHelper lena;
+  // parse again so you can override default values from the command line
+  cmd.Parse (argc, argv);
 
-  lena.EnableLogComponents ();
+  Ptr<LenaHelper> lena = CreateObject<LenaHelper> ();
+
+  //lena->EnableLogComponents ();
+
+  //   LogComponentEnable ("LtePhy", LOG_LEVEL_ALL);
+  LogComponentEnable ("LteEnbPhy", LOG_LEVEL_ALL);
+  //   LogComponentEnable ("LteUePhy", LOG_LEVEL_ALL);
+  LogComponentEnable ("PfFfMacScheduler", LOG_LEVEL_ALL);
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
@@ -62,21 +69,21 @@ int main (int argc, char *argv[])
   // Create Devices and install them in the Nodes (eNB and UE)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
-  //lena.SetScheduler ("RrFfMacScheduler");
-  lena.SetScheduler ("PfFfMacScheduler");
-  enbDevs = lena.InstallEnbDevice (enbNodes);
-  ueDevs = lena.InstallUeDevice (ueNodes);
+  //lena->SetSchedulerType ("ns3::RrFfMacScheduler");
+  lena->SetSchedulerType ("ns3::PfFfMacScheduler");
+  enbDevs = lena->InstallEnbDevice (enbNodes);
+  ueDevs = lena->InstallUeDevice (ueNodes);
 
   // Attach a UE to a eNB
-  lena.Attach (ueDevs, enbDevs.Get (0));
+  lena->Attach (ueDevs, enbDevs.Get (0));
 
   // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
-  lena.ActivateEpsBearer (ueDevs, bearer);
+  lena->ActivateEpsBearer (ueDevs, bearer);
 
 
-  Simulator::Stop (Seconds (0.005));
+  Simulator::Stop (Seconds (0.010));
 
   Simulator::Run ();
 

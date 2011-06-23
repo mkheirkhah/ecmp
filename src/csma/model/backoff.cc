@@ -41,12 +41,11 @@ Backoff::Backoff(Time slotTime, uint32_t minSlots, uint32_t maxSlots, uint32_t c
   m_ceiling = ceiling;
   m_maxRetries = maxRetries;
   m_rng = UniformVariable ();
-}  
+}
 
 Time
 Backoff::GetBackoffTime (void)
 {
-  Time backoff;
   uint32_t ceiling;
 
   if ((m_ceiling > 0) &&(m_numBackoffRetries > m_ceiling))
@@ -67,8 +66,8 @@ Backoff::GetBackoffTime (void)
 
   uint32_t backoffSlots = (uint32_t)m_rng.GetValue(minSlot, maxSlot);
 
-  backoff = Scalar (backoffSlots) * m_slotTime;
-  return (backoff);
+  Time backoff = Time (backoffSlots * m_slotTime);
+  return backoff;
 }
 
 void 

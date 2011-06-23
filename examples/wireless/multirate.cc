@@ -52,7 +52,7 @@
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/contrib-module.h"
+#include "ns3/tools-module.h"
 #include "ns3/random-variable.h"
 #include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
@@ -334,6 +334,11 @@ Experiment::ApplicationSetup (Ptr<Node> client, Ptr<Node> server, double start, 
                                        << " position (" << clientPos.x << "," << clientPos.y << "," << clientPos.z << ")"
                                        << "\n");
 
+  //cast serverPos,clientPos,iaddrClient to void, to suppress variable set but not
+  //used compiler warning in optimized builds
+  (void) serverPos;
+  (void) clientPos;
+  (void) ipv4AddrClient;
 
   // Equipping the source  node with OnOff Application used for sending 
   OnOffHelper onoff ("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address("10.0.0.1"), port)));
@@ -383,7 +388,7 @@ Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
 
   if (enableRouting)
     {
-      internet.SetRoutingHelper(list);
+      internet.SetRoutingHelper(list);  // has effect on the next Install ()
     }
   internet.Install (c);
 

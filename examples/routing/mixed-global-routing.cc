@@ -41,7 +41,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/internet-module.h"
 
 using namespace ns3;
 
@@ -87,8 +87,8 @@ main (int argc, char *argv[])
   csma.SetChannelAttribute ("DataRate", StringValue ("5Mbps"));
   csma.SetChannelAttribute ("Delay", StringValue ("2ms"));
   NetDeviceContainer d2345 = csma.Install (n2345);
-  
-  // Later, we add IP addresses.  
+
+  // Later, we add IP addresses.
   NS_LOG_INFO ("Assign IP Addresses.");
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");

@@ -40,6 +40,7 @@ class DcfManager;
 
 /**
  * \brief base class for all MAC-level wifi objects.
+ * \ingroup wifi
  *
  * This class encapsulates all the low-level MAC functionality
  * DCA, EDCA, etc) and all the high-level MAC functionality
@@ -313,6 +314,9 @@ protected:
   /** Get accessor for the \c m_qosSupported member */
   bool GetQosSupported () const;
 private:
+  RegularWifiMac (const RegularWifiMac &);
+  RegularWifiMac & operator= (const RegularWifiMac &);
+
   /**
    * This method is a private utility invoked to configure the channel
    * access function for the specified Access Category.

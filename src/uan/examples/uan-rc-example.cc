@@ -59,7 +59,7 @@
 #include "ns3/log.h"
 #include "ns3/config.h"
 #include "ns3/callback.h"
-#include "ns3/contrib-module.h"
+#include "ns3/tools-module.h"
 
 #include <fstream>
 
@@ -149,7 +149,7 @@ Experiment::Run (uint32_t param)
 {
 
   UanHelper uan;
-  
+
   m_bytesTotal=0;
 
   uint32_t nNodes;
@@ -277,7 +277,7 @@ main(int argc, char *argv[])
 
   exp.CreateDualModes (12000);
 
-;
+  ;
 
   Gnuplot2dDataset ds;
   for (uint32_t param=exp.m_simMin; param<=exp.m_simMax; param += exp.m_simStep)

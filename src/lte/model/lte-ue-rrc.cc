@@ -102,7 +102,17 @@ LteUeRrc::GetTypeId (void)
                    ObjectMapValue (),
                    MakeObjectMapAccessor (&LteUeRrc::m_rlcMap),
                    MakeObjectMapChecker<LteRlc> ())
-    ;
+    .AddAttribute ("CellId",
+                   "Serving cell identifier",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&LteUeRrc::m_cellId),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("C-RNTI",
+                   "Cell Radio Network Temporary Identifier",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&LteUeRrc::m_rnti),
+                   MakeUintegerChecker<uint16_t> ())
+  ;
   return tid;
 }
 
@@ -131,10 +141,11 @@ LteUeRrc::SetLteMacSapProvider (LteMacSapProvider * s)
 
 
 void
-LteUeRrc::ConfigureUe (uint16_t rnti)
+LteUeRrc::ConfigureUe (uint16_t rnti, uint16_t cellId)
 {
   NS_LOG_FUNCTION (this << (uint32_t) rnti);
   m_rnti = rnti;
+  m_cellId = cellId;
   m_cmacSapProvider->ConfigureUe (rnti);
 }
 
@@ -178,6 +189,17 @@ LteUeRrc::GetRnti ()
 {
   NS_LOG_FUNCTION (this);
   return m_rnti;
+}
+
+std::vector<uint8_t>
+LteUeRrc::GetLcIdVector ()
+{
+  std::vector<uint8_t> v;
+  for (std::map<uint8_t, Ptr<LteRlc> >::iterator it = m_rlcMap.begin (); it != m_rlcMap.end (); ++it)
+    {
+      v.push_back (it->first);
+    }
+  return v;
 }
 
 

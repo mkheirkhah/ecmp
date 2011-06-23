@@ -32,6 +32,7 @@
 #include "ns3/network-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/internet-module.h"
 
 using namespace ns3;
 
@@ -98,7 +99,7 @@ main (int argc, char *argv[])
 
   // Create an optional packet sink to receive these packets
   PacketSinkHelper sink ("ns3::UdpSocketFactory",
-    Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
+                         Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
   app = sink.Install (nodes.Get (1));
   app.Start (Seconds (0.0));
 

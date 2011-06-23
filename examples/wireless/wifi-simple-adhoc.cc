@@ -54,7 +54,7 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/contrib-module.h"
+#include "ns3/config-store-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
 
@@ -79,7 +79,7 @@ static void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize,
     {
       socket->Send (Create<Packet> (pktSize));
       Simulator::Schedule (pktInterval, &GenerateTraffic, 
-                                      socket, pktSize,pktCount-1, pktInterval);
+                           socket, pktSize,pktCount-1, pktInterval);
     }
   else
     {
@@ -105,7 +105,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("numPackets", "number of packets generated", numPackets);
   cmd.AddValue ("interval", "interval (seconds) between packets", interval);
   cmd.AddValue ("verbose", "turn on all WifiNetDevice log components", verbose);
-  
+
   cmd.Parse (argc, argv);
   // Convert to time object
   Time interPacketInterval = Seconds (interval);
@@ -147,7 +147,7 @@ int main (int argc, char *argv[])
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode",StringValue(phyMode),
-                                   "ControlMode",StringValue(phyMode));
+                                "ControlMode",StringValue(phyMode));
   // Set it to adhoc mode
   wifiMac.SetType ("ns3::AdhocWifiMac");
   NetDeviceContainer devices = wifi.Install (wifiPhy, wifiMac, c);

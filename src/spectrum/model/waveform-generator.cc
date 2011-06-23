@@ -83,7 +83,7 @@ WaveformGenerator::GetTypeId (void)
     .AddTraceSource ("TxEnd",
                      "Trace fired when a previosuly started transmission is finished",
                      MakeTraceSourceAccessor (&WaveformGenerator::m_phyTxEndTrace))
-    ;
+  ;
   return tid;
 }
 
@@ -103,7 +103,7 @@ WaveformGenerator::GetMobility ()
 }
 
 
-Ptr<const SpectrumModel> 
+Ptr<const SpectrumModel>
 WaveformGenerator::GetRxSpectrumModel () const
 {
   // this device is not interested in RX
@@ -173,12 +173,12 @@ WaveformGenerator::GetPeriod () const
 void
 WaveformGenerator::SetDutyCycle (double dutyCycle)
 {
-  m_dutyCycle = Scalar (dutyCycle);
+  m_dutyCycle = dutyCycle;
 }
 
 double WaveformGenerator::GetDutyCycle () const
 {
-  return m_dutyCycle.GetDouble ();
+  return m_dutyCycle;
 }
 
 
@@ -189,12 +189,12 @@ WaveformGenerator::GenerateWaveform ()
   NS_LOG_FUNCTION (this);
 
   Ptr<PacketBurst> pb = Create<PacketBurst> ();
-  Time duration = m_period * m_dutyCycle;
-  
+  Time duration = Time (m_period * m_dutyCycle);
+
   NS_LOG_LOGIC ("generating waveform : " << *m_txPowerSpectralDensity);
   m_phyTxStartTrace (0);
   m_channel->StartTx (pb, m_txPowerSpectralDensity, GetSpectrumType (), duration, GetObject<SpectrumPhy> ());
-  
+
   if (m_active)
     {
       NS_LOG_LOGIC ("scheduling next waveform");
@@ -220,7 +220,7 @@ WaveformGenerator::Start ()
 void
 WaveformGenerator::Stop ()
 {
-  NS_LOG_FUNCTION (this);  
+  NS_LOG_FUNCTION (this);
   m_active = false;
 }
 

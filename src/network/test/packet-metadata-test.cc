@@ -47,20 +47,21 @@ HistoryHeaderBase::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::HistoryHeaderBase")
     .SetParent<Header> ()
-    ;
+  ;
   return tid;
 }
 
 HistoryHeaderBase::HistoryHeaderBase ()
   : m_ok (true)
-{}
+{
+}
 
-bool 
+bool
 HistoryHeaderBase::IsOk (void) const
 {
   return m_ok;
 }
-void 
+void
 HistoryHeaderBase::ReportError (void)
 {
   m_ok = false;
@@ -83,7 +84,8 @@ public:
 template <int N>
 HistoryHeader<N>::HistoryHeader ()
   : HistoryHeaderBase ()
-{}
+{
+}
 
 template <int N>
 TypeId
@@ -94,7 +96,7 @@ HistoryHeader<N>::GetTypeId (void)
   static TypeId tid = TypeId (oss.str ().c_str ())
     .SetParent<HistoryHeaderBase> ()
     .AddConstructor<HistoryHeader<N> > ()
-    ;
+  ;
   return tid;
 }
 
@@ -153,18 +155,19 @@ HistoryTrailerBase::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::HistoryTrailerBase")
     .SetParent<Trailer> ()
-    ;
+  ;
   return tid;
 }
 HistoryTrailerBase::HistoryTrailerBase ()
   : m_ok (true)
-{}
-bool 
+{
+}
+bool
 HistoryTrailerBase::IsOk (void) const
 {
   return m_ok;
 }
-void 
+void
 HistoryTrailerBase::ReportError (void)
 {
   m_ok = false;
@@ -189,7 +192,8 @@ private:
 
 template <int N>
 HistoryTrailer<N>::HistoryTrailer ()
-{}
+{
+}
 
 template <int N>
 TypeId
@@ -200,7 +204,7 @@ HistoryTrailer<N>::GetTypeId (void)
   static TypeId tid = TypeId (oss.str ().c_str ())
     .SetParent<HistoryTrailerBase> ()
     .AddConstructor<HistoryTrailer<N> > ()
-    ;
+  ;
   return tid;
 }
 
@@ -252,7 +256,7 @@ class PacketMetadataTest : public TestCase {
 public:
   PacketMetadataTest ();
   virtual ~PacketMetadataTest ();
-  bool CheckHistory (Ptr<Packet> p, const char *file, int line, uint32_t n, ...);
+  void CheckHistory (Ptr<Packet> p, const char *file, int line, uint32_t n, ...);
   virtual void DoRun (void);
 private:
   Ptr<Packet> DoAddHeader (Ptr<Packet> p);
@@ -260,12 +264,14 @@ private:
 
 PacketMetadataTest::PacketMetadataTest ()
   : TestCase ("Packet metadata")
-{}
+{
+}
 
 PacketMetadataTest::~PacketMetadataTest ()
-{}
+{
+}
 
-bool 
+void
 PacketMetadataTest::CheckHistory (Ptr<Packet> p, const char *file, int line, uint32_t n, ...)
 {
   std::list<int> expected;
@@ -324,7 +330,7 @@ PacketMetadataTest::CheckHistory (Ptr<Packet> p, const char *file, int line, uin
     }
 
   for (std::list<int>::iterator i = got.begin (),
-         j = expected.begin (); 
+                                j = expected.begin ();
        i != got.end (); i++, j++)
     {
       NS_ASSERT (j != expected.end ());
@@ -333,8 +339,8 @@ PacketMetadataTest::CheckHistory (Ptr<Packet> p, const char *file, int line, uin
           goto error;
         }
     }
-  return true;
- error:
+  return;
+error:
   std::ostringstream failure;
   failure << "PacketMetadata error. Got:\"";
   for (std::list<int>::iterator i = got.begin (); 
@@ -348,9 +354,8 @@ PacketMetadataTest::CheckHistory (Ptr<Packet> p, const char *file, int line, uin
     {
       failure << *j << ", ";
     }
-  failure << "\"" << std::endl;
-  ReportTestFailure ("", "", "", failure.str(), file, line);
-  return false;
+  failure << "\"";
+  NS_TEST_ASSERT_MSG_EQ_INTERNAL (false, true, failure.str(), file, line);
 }
 
 #define ADD_HEADER(p, n)                                           \
@@ -375,21 +380,13 @@ PacketMetadataTest::CheckHistory (Ptr<Packet> p, const char *file, int line, uin
   }
 #define CHECK_HISTORY(p, ...)                                      \
   {                                                                \
-    if (!CheckHistory (p, __FILE__,                                \
-                      __LINE__, __VA_ARGS__))                      \
-      {                                                            \
-        result = false;                                            \
-      }                                                            \
+    CheckHistory (p, __FILE__, __LINE__, __VA_ARGS__);             \
     uint32_t size = p->GetSerializedSize ();                       \
     uint8_t* buffer = new uint8_t[size];                           \
     p->Serialize (buffer, size);                                   \
     Ptr<Packet> otherPacket = Create<Packet> (buffer, size, true); \
     delete [] buffer;                                              \
-    if (!CheckHistory (otherPacket, __FILE__,                      \
-                      __LINE__, __VA_ARGS__))                      \
-      {                                                            \
-        result = false;                                            \
-      }                                                            \
+    CheckHistory (otherPacket, __FILE__, __LINE__, __VA_ARGS__);   \
   }
 
 
@@ -403,8 +400,6 @@ PacketMetadataTest::DoAddHeader (Ptr<Packet> p)
 void
 PacketMetadataTest::DoRun (void)
 {
-  bool result = true;
-
   PacketMetadata::Enable ();
 
   Ptr<Packet> p = Create<Packet> (0);
@@ -414,7 +409,7 @@ PacketMetadataTest::DoRun (void)
   ADD_TRAILER (p, 100);
   CHECK_HISTORY (p, 2, 10, 100);
 
-  
+
   p = Create<Packet> (10);
   ADD_HEADER (p, 1);
   ADD_HEADER (p, 2);
@@ -609,7 +604,7 @@ PacketMetadataTest::DoRun (void)
 
   p = Create<Packet> (2000);
   CHECK_HISTORY (p, 1, 2000);
-  
+
   p = Create<Packet> ();
   ADD_TRAILER (p, 10);
   ADD_HEADER (p, 5);
@@ -723,7 +718,7 @@ PacketMetadataTest::DoRun (void)
   REM_TRAILER (p1, 5);
   NS_TEST_EXPECT_MSG_EQ (p->GetSize (), 1015, "Correct size");
 
-  
+
   p = Create<Packet> (1510);
   ADD_HEADER (p, 8);
   ADD_HEADER (p, 25);
@@ -774,6 +769,57 @@ PacketMetadataTest::DoRun (void)
   CHECK_HISTORY (p, 1, 500);
   p->RemoveAtStart (10);
   CHECK_HISTORY (p, 1, 490);
+
+  // bug 1072
+  p = Create<Packet> (500);
+  ADD_HEADER (p, 10);
+  ADD_HEADER (p, 20);
+  ADD_HEADER (p, 5);
+  CHECK_HISTORY (p, 4, 5, 20, 10, 500);
+  p1 = p->CreateFragment (0,6);
+  p2 = p->CreateFragment (6,535-6);
+  p1->AddAtEnd(p2);
+
+  // bug 1072#2
+  p = Create<Packet> (reinterpret_cast<const uint8_t*> ("hello world"), 11);
+  ADD_HEADER (p, 2);
+  CHECK_HISTORY(p, 2, 2, 11);
+  p1 = p->CreateFragment (0, 5);
+  CHECK_HISTORY(p1, 2, 2, 3);
+  p2 = p->CreateFragment (5, 8);
+  CHECK_HISTORY(p2, 1, 8);
+
+  ADD_HEADER (p1, 8+2+2*6);
+  ADD_TRAILER (p1, 4);
+  CHECK_HISTORY(p1, 4, 22, 2, 3, 4);
+  ADD_HEADER (p2, 8+2+2*6);
+  ADD_TRAILER (p2, 4);
+  CHECK_HISTORY(p2, 3, 22, 8, 4);
+
+  REM_TRAILER (p1, 4);
+  REM_HEADER (p1, 8+2+2*6);
+  CHECK_HISTORY(p1, 2, 2, 3);
+  REM_TRAILER (p2, 4);
+  REM_HEADER (p2, 8+2+2*6);
+  CHECK_HISTORY(p2, 1, 8);
+
+  p3 = p1->Copy();
+  CHECK_HISTORY(p3, 2, 2, 3);
+  p3->AddAtEnd(p2);
+  CHECK_HISTORY(p3, 2, 2, 11);
+
+  CHECK_HISTORY(p, 2, 2, 11);
+  REM_HEADER (p, 2);
+  CHECK_HISTORY(p, 1, 11);
+  REM_HEADER (p3, 2);
+  CHECK_HISTORY(p3, 1, 11);
+
+  uint8_t *buf = new uint8_t[p3->GetSize ()];
+  p3->CopyData (buf, p3->GetSize ());
+  std::string msg = std::string (reinterpret_cast<const char *>(buf),
+                                 p3->GetSize ());
+  delete [] buf;
+  NS_TEST_EXPECT_MSG_EQ(msg, std::string("hello world"), "Could not find original data in received packet");
 }
 //-----------------------------------------------------------------------------
 class PacketMetadataTestSuite : public TestSuite
@@ -789,4 +835,4 @@ PacketMetadataTestSuite::PacketMetadataTestSuite ()
 }
 
 PacketMetadataTestSuite g_packetMetadataTest;
-}//namespace ns3
+} //namespace ns3

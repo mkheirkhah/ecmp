@@ -39,6 +39,13 @@ class PacketBurst;
 
 
 /**
+ * \defgroup lte LTE Models
+ *
+ */
+
+/**
+ * \ingroup lte
+ *
  * LteNetDevice provides  basic implementation for all LTE network devices
  */
 class LteNetDevice : public NetDevice
@@ -50,13 +57,6 @@ public:
   virtual ~LteNetDevice (void);
 
   virtual void DoDispose (void);
-
-  /**
-   * \brief set the callback used to instruct the lower layer to start a TX
-   * \param c
-   */
-  void SetPhyMacTxStartCallback (PhyMacTxStartCallback c);
-
 
   // inherited from NetDevice
   virtual void SetIfIndex (const uint32_t index);
@@ -139,7 +139,7 @@ private:
 
   NetDevice::ReceiveCallback m_rxCallback;
   NetDevice::PromiscReceiveCallback m_promiscRxCallback;
-  PhyMacTxStartCallback m_phyMacTxStartCallback;
+
   TracedCallback<> m_linkChangeCallbacks;
 
   uint32_t m_ifIndex;

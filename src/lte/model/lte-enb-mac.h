@@ -31,6 +31,8 @@
 #include <ns3/ff-mac-csched-sap.h>
 #include <ns3/ff-mac-sched-sap.h>
 #include <ns3/lte-enb-phy-sap.h>
+#include "ns3/traced-value.h"
+#include "ns3/trace-source-accessor.h"
 
 namespace ns3 {
 
@@ -130,7 +132,7 @@ public:
   * \param msg the BSR message
   */
   void ReceiveBsrMessage  (MacCeListElement_s bsr);
-  
+
   void DoUlCqiReport (UlCqi_s ulcqi);
 
 
@@ -181,18 +183,18 @@ public:
 private:
 private:
   // std::map <uint16_t, std::map <uint8_t,Ptr<LteMacSapUser> > > m_rlcAttached;
-  std::map <lteFlowId_t, LteMacSapUser*> m_rlcAttached;
+  std::map <LteFlowId_t, LteMacSapUser*> m_rlcAttached;
 
   std::vector <CqiListElement_s> m_dlCqiReceived; // DL-CQI received
   std::vector <UlCqi_s> m_ulCqiReceived; // UL-CQI received
   std::vector <MacCeListElement_s> m_ulCeReceived; // CE received (BSR up to now)
-  
-  
+
+
   /*
   * Map of UE's info element (see 4.3.12 of FF MAC Scheduler API)
   */
   std::map <uint16_t,UlInfoListElement_s> m_ulInfoListElements; 
-  
+
 
 
   LteMacSapProvider* m_macSapProvider;
@@ -209,6 +211,20 @@ private:
   // PHY-SAP
   LteEnbPhySapProvider* m_enbPhySapProvider;
   LteEnbPhySapUser* m_enbPhySapUser;
+
+  uint32_t m_frameNo;
+  uint32_t m_subframeNo;
+  /**
+   * Trace information regarding DL scheduling
+   * Frame number, Subframe number, RNTI, MCS of TB1, size of TB1,
+   * MCS of TB2 (0 if not present), size of TB2 (0 if not present)
+   */
+  TracedCallback<uint32_t, uint32_t, uint16_t, uint8_t, uint16_t, uint8_t, uint16_t> m_dlScheduling;
+  /**
+   * Trace information regarding UL scheduling
+   * Frame number, Subframe number, RNTI, MCS of TB, size of TB
+   */
+  TracedCallback<uint32_t, uint32_t, uint16_t, uint8_t, uint16_t> m_ulScheduling;
 
 };
 

@@ -44,6 +44,7 @@ class LteUeMac;
 class LteUeRrc;
 
 /**
+ * \ingroup lte
  * The LteUeNetDevice class implements the UE net device
  */
 class LteUeNetDevice : public LteNetDevice
@@ -80,6 +81,13 @@ public:
    */
   Ptr<LteEnbNetDevice> GetTargetEnb (void);
 
+  uint64_t GetImsi ();
+
+
+protected:
+  // inherited from Object
+  virtual void DoStart (void);
+
 
 private:
   bool DoSend (Ptr<Packet> packet,
@@ -96,6 +104,9 @@ private:
   Ptr<LteUeMac> m_mac;
   Ptr<LteUePhy> m_phy;
   Ptr<LteUeRrc> m_rrc;
+
+  uint64_t m_imsi;
+  static uint64_t m_imsiCounter;
 
 
 };

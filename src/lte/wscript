@@ -29,6 +29,7 @@ def build(bld):
         'model/ideal-control-messages.cc',
         'helper/lena-helper.cc',
         'helper/rlc-stats-calculator.cc',
+        'helper/mac-stats-calculator.cc',
         'model/ff-mac-csched-sap.cc',
         'model/ff-mac-sched-sap.cc',
         'model/lte-mac-sap.cc',
@@ -45,6 +46,20 @@ def build(bld):
         'model/lte-interference.cc',
         'model/lte-sinr-chunk-processor.cc',
         'model/pf-ff-mac-scheduler.cc',
+        ]
+
+    module_test = bld.create_ns3_module_test_library('lte')
+    module_test.source = [
+        'test/lte-test-downlink-sinr.cc',
+        'test/lte-test-uplink-sinr.cc',
+        'test/lte-test-link-adaptation.cc',
+        'test/lte-test-interference.cc',
+        'test/lte-test-sinr-chunk-processor.cc',
+        'test/lte-test-ue-phy.cc',
+        'test/lte-test-rr-ff-mac-scheduler.cc',
+        'test/lte-test-pf-ff-mac-scheduler.cc',
+        'test/lte-test-earfcn.cc',
+        'test/lte-test-spectrum-value-helper.cc',
         ]
     
     headers = bld.new_task_gen('ns3header')
@@ -74,6 +89,7 @@ def build(bld):
         'model/lte-ue-net-device.h',
         'model/ideal-control-messages.h',
         'helper/lena-helper.h',
+        'helper/mac-stats-calculator.h',
         'helper/rlc-stats-calculator.h',
         'model/ff-mac-common.h',
         'model/ff-mac-csched-sap.h',
@@ -92,7 +108,17 @@ def build(bld):
         'model/lte-interference.h',
         'model/lte-sinr-chunk-processor.h',
         'model/pf-ff-mac-scheduler.h',
+        'test/lte-test-downlink-sinr.h',
+        'test/lte-test-uplink-sinr.h',
+        'test/lte-test-link-adaptation.h',
+        'test/lte-test-interference.h',
+        'test/lte-test-sinr-chunk-processor.h',
+        'test/lte-test-ue-phy.h',
+        'test/lte-test-rr-ff-mac-scheduler.h',
+        'test/lte-test-pf-ff-mac-scheduler.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):
       bld.add_subdirs('examples')
+
+    bld.ns3_python_bindings()

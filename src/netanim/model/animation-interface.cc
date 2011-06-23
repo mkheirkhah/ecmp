@@ -21,8 +21,6 @@
 #include <stdio.h>
 #include <sstream>
 
-#include "ns3/net-anim-config.h"
-
 // Socket related includes
 #if defined(HAVE_SYS_SOCKET_H) && defined(HAVE_NETINET_IN_H)
 #include <sys/socket.h>
@@ -36,7 +34,7 @@
 #include "ns3/channel.h"
 #include "ns3/config.h"
 #include "ns3/node.h"
-#include "ns3/canvas-location.h"
+#include "ns3/mobility-model.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 
@@ -99,14 +97,14 @@ void AnimationInterface::StartAnimation ()
   for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
     {
       Ptr<Node> n = *i;
-      Ptr<CanvasLocation> loc = n->GetObject<CanvasLocation> ();
+      Ptr<MobilityModel> loc = n->GetObject<MobilityModel> ();
       if (loc)
         {
           // Location exists, dump it
-          Vector v = loc->GetLocation ();
+          Vector v = loc->GetPosition ();
           ostringstream oss;
           oss << "0.0 N " << n->GetId () 
-               << " " << v.x << " " << v.y << endl;
+              << " " << v.x << " " << v.y << endl;
           WriteN (m_fHandle, oss.str ().c_str (), oss.str ().length ());
         }
     }
@@ -138,7 +136,7 @@ void AnimationInterface::StartAnimation ()
                       ostringstream oss;
                       oss << "0.0 L "  << n1Id << " " << n2Id << endl;
                       WriteN (m_fHandle, oss.str ().c_str (),
-                             oss.str ().length ());
+                              oss.str ().length ());
                     }
                 }
             }
@@ -148,7 +146,7 @@ void AnimationInterface::StartAnimation ()
             }
         }
     }
-  
+
   // Connect the callback for packet tx events
   Config::Connect ("/ChannelList/*/TxRxPointToPoint",
                    MakeCallback (&AnimationInterface::DevTxTrace, this));
@@ -183,7 +181,7 @@ int AnimationInterface::WriteN (int h, const char* data, uint32_t count)
     }
   return written;
 }
-  
+
 void AnimationInterface::DevTxTrace (std::string context, Ptr<const Packet> p,
                                      Ptr<NetDevice> tx, Ptr<NetDevice> rx,
                                      Time txTime, Time rxTime)

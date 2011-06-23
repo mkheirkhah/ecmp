@@ -29,6 +29,7 @@
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/internet-module.h"
 
 using namespace ns3;
 
@@ -114,7 +115,7 @@ main (int argc, char *argv[])
 
   client.SetFill(apps.Get (0), 0xa5, 1024);
 
-  uint8_t fill[] = {0, 1, 2, 3, 4, 5, 6};
+  uint8_t fill[] = { 0, 1, 2, 3, 4, 5, 6};
   client.SetFill(apps.Get (0), fill, sizeof(fill), 1024);
 #endif
 

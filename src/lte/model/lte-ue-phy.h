@@ -39,6 +39,8 @@ class LteNetDevice;
 class LteEnbPhy;
 
 /**
+ * \ingroup lte
+ *
  * The LteSpectrumPhy models the physical layer of LTE
  */
 class LteUePhy : public LtePhy
@@ -47,12 +49,24 @@ class LteUePhy : public LtePhy
   friend class UeMemberLteUePhySapProvider;
 
 public:
-
+  /**
+   * @warning the default constructor should not be used
+   */
   LteUePhy ();
-  virtual ~LteUePhy ();
-  virtual void DoDispose ();
-  static TypeId GetTypeId (void);
 
+  /**
+   *
+   * \param dlPhy the downlink LteSpectrumPhy instance
+   * \param ulPhy the uplink LteSpectrumPhy instance
+   */
+  LteUePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy);
+
+  virtual ~LteUePhy ();
+
+  // inherited from Object
+  static TypeId GetTypeId (void);
+  virtual void DoStart (void);
+  virtual void DoDispose (void);
 
   /**
    * \brief Get the PHY SAP provider
@@ -67,15 +81,24 @@ public:
   void SetLteUePhySapUser (LteUePhySapUser* s);
 
 
-  /**     
+  /**
    * \param pw the transmission power in dBm
    */
-   void SetTxPower (double pow);
+  void SetTxPower (double pow);
 
   /**
    * \return the transmission power in dBm
    */
-   double GetTxPower () const;
+  double GetTxPower () const;
+  /**
+   * \param pw the noise figure in dB
+   */
+  void SetNoiseFigure (double pow);
+
+  /**
+   * \return the noise figure in dB
+   */
+  double GetNoiseFigure () const;
 
   /**
    * \brief Queue the MAC PDU to be sent
@@ -138,8 +161,8 @@ public:
    * \brief PhySpectrum received a new PHY-PDU
    */
   void PhyPduReceived (Ptr<Packet> p);
-  
-  
+
+
   /**
   * \brief trigger from eNB the start from a new frame
   *
@@ -155,12 +178,12 @@ public:
   void SetRnti (uint16_t rnti);
 
 
-  /** 
-   * set the cellId of the eNb this PHY is synchronized with 
-   * 
+  /**
+   * set the cellId of the eNb this PHY is synchronized with
+   *
    * \param cellId the cell identifier of the eNB
    */
-  void SetEnbCellId (uint16_t cellId);    
+  void SetEnbCellId (uint16_t cellId);
 
 
 private:
@@ -169,7 +192,7 @@ private:
 
   Time m_p10CqiPeriocity; /**< Wideband Periodic CQI: 2, 5, 10, 16, 20, 32, 40, 64, 80 or 160 ms */
   Time m_p10CqiLast;
-  
+
   /**< SubBand Aperiodic CQI: activated by  DCI format 0 or Random Access Response Grant */
   // NOTE defines a periodicity for academic studies
   Time m_a30CqiPeriocity;
@@ -181,7 +204,7 @@ private:
   uint16_t  m_rnti;
 
   uint16_t m_enbCellId;
-  
+
 };
 
 

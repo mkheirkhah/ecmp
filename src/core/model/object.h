@@ -76,7 +76,7 @@ public:
    */
   class AggregateIterator
   {
-  public:
+public:
     AggregateIterator ();
 
     /**
@@ -89,7 +89,7 @@ public:
      * \returns the next aggregated object.
      */
     Ptr<const Object> Next (void);
-  private:
+private:
     friend class Object;
     AggregateIterator (Ptr<const Object> object);
     Ptr<const Object> m_object;
@@ -120,8 +120,10 @@ public:
    * objects aggregated to it.
    * After calling this method, the object is expected to be
    * totally unusable except for the Ref and Unref methods.
-   * It is an error to call Dispose twice on the same object 
-   * instance.
+   *
+   * Note that you can call Dispose many times on the same object or
+   * different objects aggregated together, and DoDispose will be
+   * called only once for each aggregated object.
    *
    * This method is typically used to break reference cycles.
    */
@@ -162,13 +164,13 @@ public:
   void Start (void);
 
 protected:
- /**
-  * This method is invoked whenever two sets of objects are aggregated together.
-  * It is invoked exactly once for each object in both sets.
-  * This method can be overriden by subclasses who wish to be notified of aggregation
-  * events. These subclasses must chain up to their base class NotifyNewAggregate method.
-  * It is safe to call GetObject and AggregateObject from within this method.
-  */
+  /**
+   * This method is invoked whenever two sets of objects are aggregated together.
+   * It is invoked exactly once for each object in both sets.
+   * This method can be overriden by subclasses who wish to be notified of aggregation
+   * events. These subclasses must chain up to their base class NotifyNewAggregate method.
+   * It is safe to call GetObject and AggregateObject from within this method.
+   */
   virtual void NotifyNewAggregate (void);
   /**
    * This method is called only once by Object::Start. If the user
@@ -257,14 +259,14 @@ private:
    * keep track of the type of this object instance.
    */
   void SetTypeId (TypeId tid);
-   /**
-   * \param attributes the attribute values used to initialize 
-   *        the member variables of this object's instance.
-   *
-   * Invoked from ns3::ObjectFactory::Create and ns3::CreateObject only.
-   * Initialize all the member variables which were
-   * registered with the associated TypeId.
-   */
+  /**
+  * \param attributes the attribute values used to initialize
+  *        the member variables of this object's instance.
+  *
+  * Invoked from ns3::ObjectFactory::Create and ns3::CreateObject only.
+  * Initialize all the member variables which were
+  * registered with the associated TypeId.
+  */
   void Construct (const AttributeList &attributes);
 
   void UpdateSortedArray (struct Aggregates *aggregates, uint32_t i) const;
@@ -357,15 +359,15 @@ Ptr<T> CreateObjectWithAttributes (const AttributeList &attributes);
 template <typename T>
 Ptr<T> 
 CreateObjectWithAttributes (std::string n1 = "", const AttributeValue & v1 = EmptyAttributeValue (),
-              std::string n2 = "", const AttributeValue & v2 = EmptyAttributeValue (),
-              std::string n3 = "", const AttributeValue & v3 = EmptyAttributeValue (),
-              std::string n4 = "", const AttributeValue & v4 = EmptyAttributeValue (),
-              std::string n5 = "", const AttributeValue & v5 = EmptyAttributeValue (),
-              std::string n6 = "", const AttributeValue & v6 = EmptyAttributeValue (),
-              std::string n7 = "", const AttributeValue & v7 = EmptyAttributeValue (),
-              std::string n8 = "", const AttributeValue & v8 = EmptyAttributeValue (),
-              std::string n9 = "", const AttributeValue & v9 = EmptyAttributeValue ());
-  
+                            std::string n2 = "", const AttributeValue & v2 = EmptyAttributeValue (),
+                            std::string n3 = "", const AttributeValue & v3 = EmptyAttributeValue (),
+                            std::string n4 = "", const AttributeValue & v4 = EmptyAttributeValue (),
+                            std::string n5 = "", const AttributeValue & v5 = EmptyAttributeValue (),
+                            std::string n6 = "", const AttributeValue & v6 = EmptyAttributeValue (),
+                            std::string n7 = "", const AttributeValue & v7 = EmptyAttributeValue (),
+                            std::string n8 = "", const AttributeValue & v8 = EmptyAttributeValue (),
+                            std::string n9 = "", const AttributeValue & v9 = EmptyAttributeValue ());
+
 
 
 } // namespace ns3
@@ -386,15 +388,18 @@ template <typename T>
 Ptr<T> 
 Object::GetObject () const
 {
+  // This is an optimization: if the cast works (which is likely),
+  // things will be pretty fast.
   T *result = dynamic_cast<T *> (m_aggregates->buffer[0]);
   if (result != 0)
     {
       return Ptr<T> (result);
     }
+  // if the cast does not work, we try to do a full type check.
   Ptr<Object> found = DoGetObject (T::GetTypeId ());
   if (found != 0)
     {
-      return Ptr<T> (dynamic_cast<T *> (PeekPointer (found)));
+      return Ptr<T> (static_cast<T *> (PeekPointer (found)));
     }
   return 0;
 }
@@ -406,7 +411,7 @@ Object::GetObject (TypeId tid) const
   Ptr<Object> found = DoGetObject (tid);
   if (found != 0)
     {
-      return Ptr<T> (dynamic_cast<T *> (PeekPointer (found)));
+      return Ptr<T> (static_cast<T *> (PeekPointer (found)));
     }
   return 0;
 }
@@ -444,20 +449,20 @@ Ptr<T> CreateObjectWithAttributes (const AttributeList &attributes)
   Ptr<T> p = Ptr<T> (new T (), false);
   p->SetTypeId (T::GetTypeId ());
   p->Object::Construct (attributes);
-  return p;  
+  return p;
 }
 
 template <typename T>
 Ptr<T> 
-CreateObjectWithAttributes (std::string n1 , const AttributeValue & v1,
-              std::string n2 , const AttributeValue & v2,
-              std::string n3 , const AttributeValue & v3,
-              std::string n4 , const AttributeValue & v4,
-              std::string n5 , const AttributeValue & v5,
-              std::string n6 , const AttributeValue & v6,
-              std::string n7 , const AttributeValue & v7,
-              std::string n8 , const AttributeValue & v8,
-              std::string n9 , const AttributeValue & v9)
+CreateObjectWithAttributes (std::string n1, const AttributeValue & v1,
+                            std::string n2, const AttributeValue & v2,
+                            std::string n3, const AttributeValue & v3,
+                            std::string n4, const AttributeValue & v4,
+                            std::string n5, const AttributeValue & v5,
+                            std::string n6, const AttributeValue & v6,
+                            std::string n7, const AttributeValue & v7,
+                            std::string n8, const AttributeValue & v8,
+                            std::string n9, const AttributeValue & v9)
 {
   AttributeList attributes;
   if (n1 == "")
@@ -505,7 +510,7 @@ CreateObjectWithAttributes (std::string n1 , const AttributeValue & v1,
       goto end;
     }
   attributes.SetWithTid (T::GetTypeId (), n9, v9);
- end:
+end:
   return CreateObjectWithAttributes<T> (attributes);
 }
 

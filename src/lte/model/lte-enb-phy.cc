@@ -102,13 +102,19 @@ NS_OBJECT_ENSURE_REGISTERED (LteEnbPhy);
 
 
 LteEnbPhy::LteEnbPhy ()
-  : m_nrFrames (0),
+{
+  NS_LOG_FUNCTION (this);
+  NS_FATAL_ERROR ("This constructor should not be called");
+}
+
+LteEnbPhy::LteEnbPhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
+  : LtePhy (dlPhy, ulPhy),
+    m_nrFrames (0),
     m_nrSubFrames (0)
 {
   m_enbPhySapProvider = new EnbMemberLteEnbPhySapProvider (this);
   Simulator::ScheduleNow (&LteEnbPhy::StartFrame, this);
 }
-
 
 TypeId
 LteEnbPhy::GetTypeId (void)
@@ -121,6 +127,18 @@ LteEnbPhy::GetTypeId (void)
                    DoubleValue (30.0),
                    MakeDoubleAccessor (&LteEnbPhy::SetTxPower, 
                                        &LteEnbPhy::GetTxPower),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("NoiseFigure",
+                   "Loss (dB) in the Signal-to-Noise-Ratio due to non-idealities in the receiver."
+                   " According to Wikipedia (http://en.wikipedia.org/wiki/Noise_figure), this is "
+                   "\"the difference in decibels (dB) between"
+                   " the noise output of the actual receiver to the noise output of an "
+                   " ideal receiver with the same overall gain and bandwidth when the receivers "
+                   " are connected to sources at the standard noise temperature T0.\" "
+                   "In this model, we consider T0 = 290K.",
+                   DoubleValue (5.0),
+                   MakeDoubleAccessor (&LteEnbPhy::SetNoiseFigure, 
+                                       &LteEnbPhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
   ;
   return tid;
@@ -139,6 +157,16 @@ LteEnbPhy::DoDispose ()
   delete m_enbPhySapProvider;
   LtePhy::DoDispose ();
 }
+
+void
+LteEnbPhy::DoStart ()
+{
+  NS_LOG_FUNCTION (this);
+  Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_ulEarfcn, m_ulBandwidth, m_noiseFigure);
+  m_uplinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
+  LtePhy::DoStart ();
+}
+
 
 void
 LteEnbPhy::SetLteEnbPhySapUser (LteEnbPhySapUser* s)
@@ -164,6 +192,20 @@ LteEnbPhy::GetTxPower () const
 {
   NS_LOG_FUNCTION (this);
   return m_txPower;
+}
+
+void
+LteEnbPhy::SetNoiseFigure (double nf)
+{
+  NS_LOG_FUNCTION (this << nf);
+  m_noiseFigure = nf;
+}
+
+double
+LteEnbPhy::GetNoiseFigure () const
+{
+  NS_LOG_FUNCTION (this);
+  return m_noiseFigure;
 }
 
 bool
@@ -234,8 +276,7 @@ LteEnbPhy::CreateTxPowerSpectralDensity ()
 {
   NS_LOG_FUNCTION (this);
 
-  LteSpectrumValueHelper psdHelper;
-  Ptr<SpectrumValue> psd = psdHelper.CreateDownlinkTxPowerSpectralDensity (GetTxPower (), GetDownlinkSubChannels ());
+  Ptr<SpectrumValue> psd = LteSpectrumValueHelper::CreateTxPowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_txPower, GetDownlinkSubChannels ());
 
   return psd;
 }
@@ -286,7 +327,7 @@ LteEnbPhy::StartSubFrame (void)
 
   ++m_nrSubFrames;
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
-  
+
   // send the current burst of control messages
   std::list<Ptr<IdealControlMessage> > ctrlMsg = GetControlMessages ();
   std::vector <int> dlRb;
@@ -302,7 +343,7 @@ LteEnbPhy::StartSubFrame (void)
               std::map <uint8_t, Ptr<LteUePhy> >::iterator it2;
               Ptr<DlDciIdealControlMessage> dci = DynamicCast<DlDciIdealControlMessage> (msg);
               it2 = m_ueAttached.find (dci->GetDci ().m_rnti);
-              
+
               if (it2 == m_ueAttached.end ())
                 {
                   NS_LOG_ERROR ("UE not attached");
@@ -332,15 +373,15 @@ LteEnbPhy::StartSubFrame (void)
               std::map <uint8_t, Ptr<LteUePhy> >::iterator it2;
               Ptr<UlDciIdealControlMessage> dci = DynamicCast<UlDciIdealControlMessage> (msg);
               it2 = m_ueAttached.find (dci->GetDci ().m_rnti);
-             
+
               if (it2 == m_ueAttached.end ())
-              {
-                NS_LOG_ERROR ("UE not attached");
-              }
+                {
+                  NS_LOG_ERROR ("UE not attached");
+                }
               else
-              {
-                (*it2).second->ReceiveIdealControlMessage (msg);
-              }
+                {
+                  (*it2).second->ReceiveIdealControlMessage (msg);
+                }
             }
           ctrlMsg.pop_front ();
           it = ctrlMsg.begin ();
@@ -359,8 +400,8 @@ LteEnbPhy::StartSubFrame (void)
   Ptr<LteEnbMac> macEntity = GetDevice ()->GetObject<LteEnbNetDevice> ()->GetMac ();
 
   m_enbPhySapUser->SubframeIndication (m_nrFrames, m_nrSubFrames);
-  
-  
+
+
   // trigger the UE(s)
   std::map <uint8_t, Ptr<LteUePhy> >::iterator it;
   for (it = m_ueAttached.begin (); it != m_ueAttached.end (); it++)
@@ -402,32 +443,30 @@ void
 LteEnbPhy::GenerateCqiFeedback (const SpectrumValue& sinr)
 {
   NS_LOG_FUNCTION (this << sinr);
-    Ptr<LteEnbNetDevice> thisDevice = GetDevice ()->GetObject<LteEnbNetDevice> ();
-    
-    m_enbPhySapUser->UlCqiReport (CreateUlCqiReport (sinr));
-  
-  
+  Ptr<LteEnbNetDevice> thisDevice = GetDevice ()->GetObject<LteEnbNetDevice> ();
+
+  m_enbPhySapUser->UlCqiReport (CreateUlCqiReport (sinr));
+
+
 }
 
 
 UlCqi_s
 LteEnbPhy::CreateUlCqiReport (const SpectrumValue& sinr)
 {
-	NS_LOG_FUNCTION (this << sinr);
+  NS_LOG_FUNCTION (this << sinr);
   Values::const_iterator it;
   UlCqi_s ulcqi;
   ulcqi.m_type = UlCqi_s::PUSCH;
   int i = 0;
-  NS_LOG_DEBUG (this << "EVALUATING UL-CQI");
   for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
-  {
-  	double sinrdb = 10*log10 ((*it));
- 	  // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
- 	  int16_t sinrFp = LteFfConverter::double2fpS11dot3 (sinrdb);
-    ulcqi.m_sinr.push_back (sinrFp);
-    NS_LOG_DEBUG(this << " RB " << i << " SINR FP " << sinrFp << " orig " << sinrdb);
-    i++;
-  }
+    {
+      double sinrdb = 10 * log10 ((*it));
+      // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
+      int16_t sinrFp = LteFfConverter::double2fpS11dot3 (sinrdb);
+      ulcqi.m_sinr.push_back (sinrFp);
+      i++;
+    }
   return (ulcqi);
 	
 }

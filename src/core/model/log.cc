@@ -19,8 +19,6 @@
  */
 #include "log.h"
 
-#ifdef NS3_LOG_ENABLE
-
 #include <list>
 #include <utility>
 #include <iostream>
@@ -78,7 +76,7 @@ PrintList::PrintList ()
         }
       cur = next + 1;
     }
-#endif  
+#endif
 }
 
 
@@ -263,11 +261,11 @@ LogComponentEnable (char const *name, enum LogLevel level)
        i++)
     {
       if (i->first.compare (name) == 0) 
-	{
-	  i->second->Enable (level);
-	  break;
-	}
-    }  
+        {
+          i->second->Enable (level);
+          break;
+        }
+    }
 }
 
 void 
@@ -279,7 +277,7 @@ LogComponentEnableAll (enum LogLevel level)
        i++)
     {
       i->second->Enable (level);
-    }  
+    }
 }
 
 void 
@@ -291,11 +289,11 @@ LogComponentDisable (char const *name, enum LogLevel level)
        i++)
     {
       if (i->first.compare (name) == 0) 
-	{
-	  i->second->Disable (level);
-	  break;
-	}
-    }  
+        {
+          i->second->Disable (level);
+          break;
+        }
+    }
 }
 
 void 
@@ -307,7 +305,7 @@ LogComponentDisableAll (enum LogLevel level)
        i++)
     {
       i->second->Disable (level);
-    }  
+    }
 }
 
 void 
@@ -378,38 +376,7 @@ LogNodePrinter LogGetNodePrinter(void)
 ParameterLogger::ParameterLogger (std::ostream &os)
   : m_itemNumber (0),
     m_os (os)
-{}
-
-} // namespace ns3
-
-#else // NS3_LOG_ENABLE
-
-namespace ns3 {
-
-void 
-LogComponentEnable (char const *name, enum LogLevel level)
 {
-
-}
-
-void 
-LogComponentEnableAll (enum LogLevel level)
-{
-
-}
-
-void 
-LogComponentDisable (char const *name, enum LogLevel level)
-{
-
-}
-
-void 
-LogComponentDisableAll (enum LogLevel level)
-{
-
 }
 
 } // namespace ns3
-
-#endif

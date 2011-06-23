@@ -47,6 +47,8 @@ namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED ( LteUeNetDevice);
 
+uint64_t LteUeNetDevice::m_imsiCounter = 0;
+
 
 TypeId LteUeNetDevice::GetTypeId (void)
 {
@@ -59,7 +61,13 @@ TypeId LteUeNetDevice::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&LteUeNetDevice::m_rrc),
                    MakePointerChecker <LteUeRrc> ())
-    ;
+    .AddAttribute ("Imsi",
+                   "International Mobile Subscriber Identity assigned to this UE",
+                   TypeId::ATTR_GET,
+                   UintegerValue (0), // not used because the attribute is read-only
+                   MakeUintegerAccessor (&LteUeNetDevice::m_imsi),
+                   MakeUintegerChecker<uint64_t> ())
+  ;
 
   return tid;
 }
@@ -79,7 +87,7 @@ LteUeNetDevice::LteUeNetDevice (Ptr<Node> node, Ptr<LteUePhy> phy, Ptr<LteUeMac>
   m_mac = mac;
   m_rrc = rrc;
   SetNode (node);
-  UpdateConfig ();
+  m_imsi = ++m_imsiCounter;
 }
 
 LteUeNetDevice::~LteUeNetDevice (void)
@@ -138,7 +146,7 @@ LteUeNetDevice::SetTargetEnb (Ptr<LteEnbNetDevice> enb)
   NS_LOG_FUNCTION (this << enb);
   m_targetEnb = enb;
 
-  // WILD HACK - should go through RRC and then through PHY SAP
+  // should go through RRC and then through PHY SAP
   m_phy->DoSetCellId (enb->GetCellId ());
 }
 
@@ -150,10 +158,28 @@ LteUeNetDevice::GetTargetEnb (void)
   return m_targetEnb;
 }
 
+uint64_t
+LteUeNetDevice::GetImsi ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_imsi;
+}
+
+
+void 
+LteUeNetDevice::DoStart (void)
+{
+  NS_LOG_FUNCTION (this);
+  UpdateConfig ();
+  m_phy->Start ();
+  m_mac->Start ();
+  m_rrc->Start ();
+}
+
 
 bool
 LteUeNetDevice::DoSend (Ptr<Packet> packet, const Mac48Address& source,
-                     const Mac48Address& dest, uint16_t protocolNumber)
+                        const Mac48Address& dest, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this);
 
