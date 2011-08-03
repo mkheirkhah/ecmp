@@ -19,32 +19,29 @@ PrintAttributes (TypeId tid, std::ostream &os)
   os << "<ul>"<<std::endl;
   for (uint32_t j = 0; j < tid.GetAttributeN (); j++)
     {
-      os << "<li><b>" << tid.GetAttributeName (j) << "</b>: "
-		<< tid.GetAttributeHelp (j) << std::endl;
-      Ptr<const AttributeChecker> checker = tid.GetAttributeChecker (j);
+      struct TypeId::AttributeInformation info = tid.GetAttribute(j);
+      os << "<li><b>" << info.name << "</b>: "
+		<< info.help << std::endl;
       os << "  <ul>" << std::endl 
-	 << "    <li>Set with class: \\ref " <<  checker->GetValueTypeName () << "</li>" << std::endl;
-      if (checker->HasUnderlyingTypeInformation ())
+	 << "    <li>Set with class: \\ref " <<  info.checker->GetValueTypeName () << "</li>" << std::endl;
+      if (info.checker->HasUnderlyingTypeInformation ())
 	{
-	  os << "    <li>Underlying type: \\ref " << checker->GetUnderlyingTypeInformation () << "</li>" << std::endl;
+	  os << "    <li>Underlying type: \\ref " << info.checker->GetUnderlyingTypeInformation () << "</li>" << std::endl;
 	}
-      uint32_t flags = tid.GetAttributeFlags (j);
-      Ptr<const AttributeAccessor> accessor = tid.GetAttributeAccessor (j);
-      if (flags & TypeId::ATTR_CONSTRUCT && accessor->HasSetter ())
+      if (info.flags & TypeId::ATTR_CONSTRUCT && info.accessor->HasSetter ())
 	{
-	  Ptr<const AttributeValue> initial = tid.GetAttributeInitialValue (j);
-	  os << "    <li>Initial value: " << initial->SerializeToString (checker) << "</li>" << std::endl;
+	  os << "    <li>Initial value: " << info.initialValue->SerializeToString (info.checker) << "</li>" << std::endl;
 	}
       os << "    <li>Flags: ";
-      if (flags & TypeId::ATTR_CONSTRUCT && accessor->HasSetter ())
+      if (info.flags & TypeId::ATTR_CONSTRUCT && info.accessor->HasSetter ())
 	{
 	  os << "construct ";
 	}
-      if (flags & TypeId::ATTR_SET && accessor->HasSetter ())
+      if (info.flags & TypeId::ATTR_SET && info.accessor->HasSetter ())
 	{
 	  os << "write ";
 	}
-      if (flags & TypeId::ATTR_GET && accessor->HasGetter ())
+      if (info.flags & TypeId::ATTR_GET && info.accessor->HasGetter ())
 	{
 	  os << "read ";
 	}
@@ -61,8 +58,9 @@ PrintTraceSources (TypeId tid, std::ostream &os)
   os << "<ul>"<<std::endl;
   for (uint32_t i = 0; i < tid.GetTraceSourceN (); ++i)
     {
-      os << "<li><b>" << tid.GetTraceSourceName (i) << "</b>: "
-	 << tid.GetTraceSourceHelp (i)
+      struct TypeId::TraceSourceInformation info = tid.GetTraceSource (i);
+      os << "<li><b>" << info.name << "</b>: "
+	 << info.help
 	 << std::endl;
       os << "</li>" << std::endl;
     }
@@ -173,12 +171,12 @@ StaticInformation::DoGather (TypeId tid)
   RecordOutput (tid);
   for (uint32_t i = 0; i < tid.GetAttributeN (); ++i)
     {
-      Ptr<const AttributeChecker> checker = tid.GetAttributeChecker (i);
-      const PointerChecker *ptrChecker = dynamic_cast<const PointerChecker *> (PeekPointer (checker));
+      struct TypeId::AttributeInformation info = tid.GetAttribute(i);
+      const PointerChecker *ptrChecker = dynamic_cast<const PointerChecker *> (PeekPointer (info.checker));
       if (ptrChecker != 0)
         {
           TypeId pointee = ptrChecker->GetPointeeTypeId ();
-          m_currentPath.push_back (tid.GetAttributeName (i));
+          m_currentPath.push_back (info.name);
           m_alreadyProcessed.push_back (tid);
           DoGather (pointee);
           m_alreadyProcessed.pop_back ();
@@ -186,11 +184,11 @@ StaticInformation::DoGather (TypeId tid)
           continue;
         }
       // attempt to cast to an object vector.
-      const ObjectVectorChecker *vectorChecker = dynamic_cast<const ObjectVectorChecker *> (PeekPointer (checker));
+      const ObjectVectorChecker *vectorChecker = dynamic_cast<const ObjectVectorChecker *> (PeekPointer (info.checker));
       if (vectorChecker != 0)
         {
           TypeId item = vectorChecker->GetItemTypeId ();
-          m_currentPath.push_back (tid.GetAttributeName (i) + "/[i]");
+          m_currentPath.push_back (info.name + "/[i]");
           m_alreadyProcessed.push_back (tid);
           DoGather (item);
           m_alreadyProcessed.pop_back ();
@@ -365,7 +363,8 @@ int main (int argc, char *argv[])
 		<< "<ul>" << std::endl;
       for (uint32_t j = 0; j < tid.GetTraceSourceN (); ++j)
 	{
-	  std::cout << "<li>" << tid.GetTraceSourceName (j) << ": " << tid.GetTraceSourceHelp (j) << "</li>" << std::endl;
+	  struct TypeId::TraceSourceInformation info = tid.GetTraceSource(j);
+	  std::cout << "<li>" << info.name << ": " << info.help << "</li>" << std::endl;
 	}
       std::cout << "</ul>" << std::endl;
     }
@@ -387,7 +386,8 @@ int main (int argc, char *argv[])
 		<< "<ul>" << std::endl;
       for (uint32_t j = 0; j < tid.GetAttributeN (); ++j)
 	{
-	  std::cout << "<li>" << tid.GetAttributeName (j) << ": " << tid.GetAttributeHelp (j) << "</li>" << std::endl;
+	  struct TypeId::AttributeInformation info = tid.GetAttribute(j);
+	  std::cout << "<li>" << info.name << ": " << info.help << "</li>" << std::endl;
 	}
       std::cout << "</ul>" << std::endl;
     }
