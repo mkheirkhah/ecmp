@@ -63,7 +63,6 @@ def build(bld):
         'test/lte-test-earfcn.cc',
         'test/lte-test-spectrum-value-helper.cc',
         'test/epc-test-gtpu-v1.cc',
-        'test/lte-test-fading.cc',
         'test/lte-test-pathloss-model.cc'
         ]
     
@@ -125,7 +124,6 @@ def build(bld):
         'test/lte-test-pf-ff-mac-scheduler.h',
         'test/lte-test-pf-ff-mac-scheduler.h',
         'test/epc-test-gtpu-v1.h',
-        'test/lte-test-fading.h',
         'test/lte-test-pathloss-model.h'
         ]
 
