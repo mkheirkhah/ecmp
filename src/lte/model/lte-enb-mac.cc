@@ -538,7 +538,15 @@ LteEnbMac::DoReceivePhyPdu (Ptr<Packet> p)
     }
   else
     {
-      (*it).second.m_ulReception.at (tag.GetLcid () - 1) += p->GetSize ();
+      if ((*it).second.m_ulReception.size () < tag.GetLcid ())
+        {
+          std::vector <uint16_t>::iterator itV = (*it).second.m_ulReception.begin ();
+          (*it).second.m_ulReception.insert (itV + (tag.GetLcid () - 1), p->GetSize ());
+        }
+      else
+        {
+          (*it).second.m_ulReception.at (tag.GetLcid () - 1) += p->GetSize ();
+        }
       (*it).second.m_receptionStatus = UlInfoListElement_s::Ok;
     }
 
@@ -694,12 +702,12 @@ LteEnbMac::DoSchedDlConfigInd (FfMacSchedSapUser::SchedDlConfigIndParameters ind
               it = m_rlcAttached.find (flow);
               NS_ASSERT_MSG (it != m_rlcAttached.end (), "rnti=" << flow.m_rnti << " lcid=" << (uint32_t) flow.m_lcId);
               (*it).second->NotifyTxOpportunity (ind.m_buildDataList.at (i).m_rlcPduList.at (j).at (k).m_size);
-              // send the relative DCI
-              Ptr<DlDciIdealControlMessage> msg = Create<DlDciIdealControlMessage> ();
-              msg->SetDci (ind.m_buildDataList.at (i).m_dci);
-              m_enbPhySapProvider->SendIdealControlMessage (msg);
             }
         }
+      // send the relative DCI
+      Ptr<DlDciIdealControlMessage> msg = Create<DlDciIdealControlMessage> ();
+      msg->SetDci (ind.m_buildDataList.at (i).m_dci);
+      m_enbPhySapProvider->SendIdealControlMessage (msg);
     }
 
   // Fire the trace with the DL information

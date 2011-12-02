@@ -6,29 +6,20 @@ use Cwd;
 
 my $nIterations = 1;
 
-open( FILE, '>times.csv' );
-print FILE "#sTime\tnFloors\tnEnb\tnUe\trTime\trTDev\n";
+open( FILE, '>epcTimes.csv' );
+print FILE "#sTime\tnodes\trTime\trTDev\n";
 
-my @nUe = ( 1, 5, 10, 15, 20, 25, 30 );
-my @nEnb = ( 1, 2, 4, 6, 8, 12, 14, 18, 22 );
-my @nFloors = ( 0, 1 );
-my @simTime = ( 1, 5);
-
-my $traceDirectory = ".";
-my $traceDirectory = getcwd() . "/"; 
+my @nodes = ( 1,2,3,4,5,6,7, 8, 12, 14);
+my @simTime = ( 1, 2, 5, 7, 10);
 
 foreach my $time (@simTime)
 {
-   foreach my $floor (@nFloors)
-   {
-      foreach my $enb (@nEnb)
-      {
-         foreach my $ue (@nUe)
+         foreach my $node (@nodes)
          {
             my $timeStats = Statistics::Descriptive::Full->new();
             for ( my $iteration = 0 ; $iteration < $nIterations ; $iteration++ )
             {
-               my $launch = "time ./waf --run \'lena-profiling --simTime=$time --nUe=$ue --nEnb=$enb --nFloors=$floor --traceDirectory=$traceDirectory\'";
+               my $launch = "time ./waf --run \'lena-simple-epc --simTime=$time --numberOfNodes=$node'";
                my $out, my $err;
                print "$launch\n";
                capture { system($launch ) } \$out, \$err;
@@ -37,10 +28,8 @@ foreach my $time (@simTime)
                my $seconds = $minutes * 60 + $2;
                $timeStats->add_data($seconds);
             }
-            print FILE "$time\t$floor\t$enb\t$ue\t";
+            print FILE "$time\t$node\t";
             print FILE $timeStats->mean() . "\t"
               . $timeStats->standard_deviation() . "\n";
          }
-      }
-   }
 }
