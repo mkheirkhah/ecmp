@@ -23,12 +23,11 @@
 #include "ns3/mobility-module.h"
 #include "ns3/lte-module.h"
 #include "ns3/config-store.h"
-//#include "ns3/gtk-config-store.h"
 #include <ns3/buildings-propagation-loss-model.h>
-
 #include <iomanip>
 #include <string>
 #include <vector>
+//#include "ns3/gtk-config-store.h"
 
 using namespace ns3;
 using std::vector;
@@ -200,7 +199,7 @@ main (int argc, char *argv[])
       lena->Attach(ueDev, enbDevs.Get(i));
       enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
       EpsBearer bearer(q);
-      lena->ActivateEpsBearer(ueDev, bearer);
+      lena->ActivateEpsBearer(ueDev, bearer, LteTft::Default ());
     }
 
   Simulator::Stop(Seconds(simTime));

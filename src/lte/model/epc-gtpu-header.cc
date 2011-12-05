@@ -18,11 +18,13 @@
  * Author: Jaume Nin <jnin@cttc.cat>
  */
 
-#include "epc-gtpu-v1.h"
+#include "epc-gtpu-header.h"
+#include "ns3/log.h"
 #include "ns3/packet.h"
 
-namespace ns3
-{
+NS_LOG_COMPONENT_DEFINE ("GtpuHeader");
+
+namespace ns3 {
 
 /********************************************************
  *        GTP-U-v1 Header
@@ -34,15 +36,22 @@ TypeId
 GtpuHeader::GetTypeId (void)
 {
   static TypeId tid =
-      TypeId("ns3::GtpuHeader") .SetParent<Header> () .AddConstructor<
-          GtpuHeader> ();
+    TypeId ("ns3::GtpuHeader").SetParent<Header> ().AddConstructor<
+      GtpuHeader> ();
   return tid;
 }
-GtpuHeader::GtpuHeader () :
-  m_version(1), m_protocolType(true), m_extensionHeaderFlag(false),
-      m_sequenceNumberFlag(false), m_nPduNumberFlag(false), m_messageType(0),
-      m_length(0), m_teid(0), m_sequenceNumber(0), m_nPduNumber(0),
-      m_nextExtensionType(0)
+GtpuHeader::GtpuHeader ()
+  : m_version (1),
+    m_protocolType (true),
+    m_extensionHeaderFlag (false),
+    m_sequenceNumberFlag (true),
+    m_nPduNumberFlag (true),
+    m_messageType (255),
+    m_length (0),
+    m_teid (0),
+    m_sequenceNumber (0),
+    m_nPduNumber (0),
+    m_nextExtensionType (0)
 {
 
 }
@@ -54,7 +63,7 @@ GtpuHeader::~GtpuHeader ()
 TypeId
 GtpuHeader::GetInstanceTypeId (void) const
 {
-  return GetTypeId();
+  return GetTypeId ();
 }
 
 uint32_t
@@ -68,8 +77,8 @@ GtpuHeader::Serialize (Buffer::Iterator start) const
   Buffer::Iterator i = start;
   uint8_t firstByte = m_version << 5 | m_protocolType << 4 | 0x1 << 3;
   firstByte |=  m_extensionHeaderFlag << 2 |  m_sequenceNumberFlag << 1 | m_nPduNumberFlag;
-  i.WriteU8(firstByte);
-  i.WriteU8(m_messageType);
+  i.WriteU8 (firstByte);
+  i.WriteU8 (m_messageType);
   i.WriteHtonU16 (m_length);
   i.WriteHtonU32 (m_teid);
   i.WriteHtonU16 (m_sequenceNumber);
@@ -80,42 +89,43 @@ GtpuHeader::Serialize (Buffer::Iterator start) const
 uint32_t
 GtpuHeader::Deserialize (Buffer::Iterator start)
 {
-  uint8_t firstByte = start.ReadU8 ();
+  Buffer::Iterator i = start;
+  uint8_t firstByte = i.ReadU8 ();
   m_version = firstByte >> 5 & 0x7;
   m_protocolType = firstByte >> 4 & 0x1;
   m_extensionHeaderFlag = firstByte >> 2 & 0x1;
   m_sequenceNumberFlag  = firstByte >> 1 & 0x1;
   m_nPduNumberFlag = firstByte & 0x1;
-  m_messageType = start.ReadU8 ();
-  m_length = start.ReadNtohU16 ();
-  m_teid= start.ReadNtohU32 ();
-  m_sequenceNumber= start.ReadNtohU16 ();
-  m_nPduNumber= start.ReadU8 ();
-  m_nextExtensionType= start.ReadU8 ();
-  return 4;
+  m_messageType = i.ReadU8 ();
+  m_length = i.ReadNtohU16 ();
+  m_teid = i.ReadNtohU32 ();
+  m_sequenceNumber = i.ReadNtohU16 ();
+  m_nPduNumber = i.ReadU8 ();
+  m_nextExtensionType = i.ReadU8 ();
+  return GetSerializedSize ();
 }
 void
 GtpuHeader::Print (std::ostream &os) const
 {
-  os << "version=" << (uint32_t) m_version << " [";
+  os << " version=" << (uint32_t) m_version << " [";
   if (m_protocolType)
     {
-     os << " PT ";
+      os << " PT ";
     }
   if (m_extensionHeaderFlag)
-      {
-       os << " E ";
-      }
+    {
+      os << " E ";
+    }
   if (m_sequenceNumberFlag)
-      {
-       os << " S ";
-      }
+    {
+      os << " S ";
+    }
   if (m_nPduNumberFlag)
-      {
-       os << " PN ";
-      }
+    {
+      os << " PN ";
+    }
   os << "], messageType=" << (uint32_t) m_messageType << ", length=" << (uint32_t) m_length;
-  os << ", teid=" << (uint32_t) m_teid<< ", sequenceNumber=" << (uint32_t) m_sequenceNumber;
+  os << ", teid=" << (uint32_t) m_teid << ", sequenceNumber=" << (uint32_t) m_sequenceNumber;
   os << ", nPduNumber=" << (uint32_t) m_nPduNumber << ", nextExtensionType=" << (uint32_t) m_nextExtensionType;
 }
 
@@ -253,19 +263,19 @@ GtpuHeader::SetVersion (uint8_t m_version)
 }
 
 bool
-GtpuHeader::operator ==(const GtpuHeader& b) const
+GtpuHeader::operator == (const GtpuHeader& b) const
 {
-  if (m_version == b.m_version &&
-      m_protocolType == b.m_protocolType &&
-      m_extensionHeaderFlag == b.m_extensionHeaderFlag &&
-      m_sequenceNumberFlag == b.m_sequenceNumberFlag &&
-      m_nPduNumberFlag == b.m_nPduNumberFlag  &&
-      m_messageType == b.m_messageType &&
-      m_length == b.m_length &&
-      m_teid == b.m_teid &&
-      m_sequenceNumber == b.m_sequenceNumber &&
-      m_nPduNumber == b.m_nPduNumber &&
-      m_nextExtensionType == b.m_nextExtensionType
+  if (m_version == b.m_version
+      && m_protocolType == b.m_protocolType
+      && m_extensionHeaderFlag == b.m_extensionHeaderFlag
+      && m_sequenceNumberFlag == b.m_sequenceNumberFlag
+      && m_nPduNumberFlag == b.m_nPduNumberFlag
+      && m_messageType == b.m_messageType
+      && m_length == b.m_length
+      && m_teid == b.m_teid
+      && m_sequenceNumber == b.m_sequenceNumber
+      && m_nPduNumber == b.m_nPduNumber
+      && m_nextExtensionType == b.m_nextExtensionType
       )
     {
       return true;

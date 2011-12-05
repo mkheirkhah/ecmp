@@ -15,39 +15,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Jaume Nin <jaume.nin@cttc.cat>
+ * Author: Nicola Baldo <nbaldo@cttc.es>
  */
 
-#ifndef EPC_TEST_GTPU_V1_H
-#define EPC_TEST_GTPU_V1_H
 
-#include "ns3/epc-gtpu-v1.h"
+#include <ns3/object.h>
+#include <ns3/pointer.h>
 
-#include "ns3/test.h"
+namespace ns3 {
 
-
-using namespace ns3;
-
-
-
-class EpsGtpuTestSuite : public TestSuite
-{
-public:
-  EpsGtpuTestSuite ();
-};
+class LteRlc;
+class LtePdcp;
 
 /**
- * Test 1.Check header coding and decoding
+ * store information on active radio bearer instance
+ * 
  */
-class EpsGtpuHeaderTestCase : public TestCase
+class LteRadioBearerInfo : public Object
 {
-public:
-  EpsGtpuHeaderTestCase ();
-  virtual ~EpsGtpuHeaderTestCase ();
 
-private:
-  virtual void DoRun (void);
+public:
+  LteRadioBearerInfo (void);
+  virtual ~LteRadioBearerInfo (void);
+  static TypeId GetTypeId (void);
+
+  Ptr<LteRlc> m_rlc;
+  Ptr<LtePdcp> m_pdcp;  
+
 };
 
 
-#endif /* EPC_TEST_GTPU_V1_H */
+} // namespace ns3

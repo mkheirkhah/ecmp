@@ -77,14 +77,13 @@ LtePathlossModelTestSuite::LtePathlossModelTestSuite ()
 {
  
   
-  LogLevel logLevel = (LogLevel)(LOG_PREFIX_FUNC | LOG_PREFIX_TIME | LOG_LEVEL_ALL);
-  // 
-  LogComponentEnable ("LenaHelper", logLevel);
-  LogComponentEnable ("LtePathlossModelTest", logLevel);
-  //   LogComponentEnable ("BuildingsPropagationLossModel", logLevel);
-  //   LogComponentEnable ("LteInterference", logLevel);
-  //   LogComponentEnable ("LteSpectrumValueHelper", logLevel);
-  LogComponentEnable ("LteEnbNetDevice", logLevel);
+  // LogLevel logLevel = (LogLevel)(LOG_PREFIX_FUNC | LOG_PREFIX_TIME | LOG_LEVEL_ALL);
+  // LogComponentEnable ("LenaHelper", logLevel);
+  // LogComponentEnable ("LtePathlossModelTest", logLevel);
+  // LogComponentEnable ("BuildingsPropagationLossModel", logLevel);
+  // LogComponentEnable ("LteInterference", logLevel);
+  // LogComponentEnable ("LteSpectrumValueHelper", logLevel);
+  // LogComponentEnable ("LteEnbNetDevice", logLevel);
 
   struct SnrEfficiencyMcs
   {
@@ -261,7 +260,7 @@ LtePathlossModelSystemTestCase::DoRun (void)
   // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
-  lena->ActivateEpsBearer (ueDevs, bearer);
+  lena->ActivateEpsBearer (ueDevs, bearer, LteTft::Default ());
   
   // Use testing chunk processor in the PHY layer
   // It will be used to test that the SNR is as intended

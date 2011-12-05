@@ -98,6 +98,26 @@ tolerance of :math:`10^{-7}` which, as for the downlink SINR test,
 deals with floating point arithmetic approximation issues. 
 
 
+E-UTRA Absolute Radio Frequency Channel Number (EARFCN)
+-------------------------------------------------------
+
+The test suite ``lte-earfcn`` checks that the carrier frequency used
+by the LteSpectrumValueHelper class (which implements the LTE spectrum
+model) is done in compliance with [TS36.101]_, where the E-UTRA
+Absolute Radio Frequency Channel Number (EARFCN) is defined. The test
+vector for this test suite comprises a set of EARFCN values and the
+corresponding carrier frequency calculated by hand following the
+specification of [TS36.101]_. The test passes if the carrier frequency
+returned by LteSpectrumValueHelper is the same as the known value for
+each element in the test vector.
+
+
+
+
+
+
+
+
 System Tests
 ~~~~~~~~~~~~
 
@@ -331,4 +351,130 @@ more resources to the users that use a higher MCS index.
 Building Propagation Loss Model
 -------------------------------
 
-The aim of the system test is to verify the integration of the BuildingPathlossModel with the lte module. The test exploits a set of three pre calculated losses for generating the expected SINR at the receiver counting the transmission and the noise powers. These SINR values are compared with the results obtained from a lte simulation. The losses are calculated off-line with an Octave script (/test/reference/lte_pathloss.m).
+The aim of the system test is to verify the integration of the
+BuildingPathlossModel with the lte module. The test exploits a set of
+three pre calculated losses for generating the expected SINR at the
+receiver counting the transmission and the noise powers. These SINR
+values are compared with the results obtained from a LTE
+simulation that uses the BuildingPathlossModel. The reference loss values are
+calculated off-line with an Octave script
+(/test/reference/lte_pathloss.m). Each test case passes if the
+reference loss value is equal to the value calculated by the simulator
+within a tolerance of :math:`0.001` dB, which accouns for numerical
+errors in the calculations. 
+
+
+
+RLC
+---
+
+Two test suites ``lte-rlc-um-transmitter`` and
+``lte-rlc-am-transmitter`` check that the RLC/UM and the RLC/AM
+implementation work correctly. Both these suites work by testing RLC
+instances connected to special test entities that play the role of the
+MAC and of the PDCP, implementing respectively the LteMacSapProvider
+and LteRlcSapUser interfaces. Different test cases (i.e., input test
+vector consisting of series of primitive calls by the MAC and the
+PDCP) are provided that check the behavior in the following cases:
+
+ #. one SDU, one PDU: the MAC notifies a TX opportunity causes the creation of a PDU which exactly
+    contains a whole SDU
+ #. segmentation: the MAC notifies a TX opportunity that is smaller than the SDU
+    size, which is then to be fragmented;
+ #. concatenation: the MAC notifies a TX opportunity that is bigger than the SDU, hence
+    multiple SDUs are concatenated in the same PDU
+ #. buffer status report: a series of new SDUs notifications by the
+    PDCP is inteleaved with a series of TX opportunity notification in
+    order to verify that the buffer status report procedure is
+    correct.
+
+In all these cases, an output test vector is determine manually from
+knowledge of the input test vector and knowledge of the expected
+behavior. These test vector are specialized for RLC/UM and
+RLC/AM due to their different behavior. Each test case passes if the
+sequence of primitives triggered by the RLC instance being tested is
+exacly equal to the output test vector. In particular, for each PDU
+transmitted by the RLC instance, both the size and the content of the
+PDU are verified to check for an exact match with the test vector.
+
+
+
+
+
+GTP-U protocol
+--------------
+
+The unit test suite ``epc-gtpu`` checks that the encoding and decoding of the GTP-U
+header is done correctly. The test fills in a header with a set of
+known values, adds the header to a packet, and then removes the header
+from the packet. The test fails if, upon removing, any of the fields
+in the GTP-U header is not decoded correctly. This is detected by
+comparing the decoded value from the known value.
+
+
+S1-U interface
+--------------
+
+Two test suites (``epc-s1u-uplink`` and ``epc-s1u-downlink``) make
+sure that the S1-U interface implementation works correctly in
+isolation. This is achieved by creating a set of simulation scenarios
+where the EPC model alone is used, without the LTE model (i.e.,
+without the LTE radio protocol stack, which is replaced by simple CSMA
+devices). This checks that the
+interoperation between multiple EpcEnbApplication instances in
+multiple eNBs and the EpcSgwPgwApplication instance in the SGW/PGW
+node works correctly in a variety of scenarios, with varying numbers
+of end users (nodes with a CSMA device installed), eNBs, and different
+traffic patterns (packet sizes and number of total packets).
+Each test case works by injecting the chosen traffic pattern in the
+network (at the considered UE or at the remote host for in the uplink or the
+downlink test suite respectively) and checking that at the receiver
+(the remote host or each  considered UE, respectively) that exactly the same
+traffic patterns is received. If any mismatch in the transmitted and
+received traffic pattern is detected for any UE, the test fails.
+
+
+TFT classifier
+--------------
+
+The test suite ``eps-tft-classifier`` checks in isolation that the
+behavior of the EpsTftClassifier class is correct. This is performed
+by creating different classifier instances where different TFT
+instances are activated, and testing for each classifier that an
+heterogeneous set of packets (including IP and TCP/UDP headers) is
+classified correctly. Several test cases are provided that check the
+different matching aspects of a TFT (e.g. local/remote IP address, local/remote port) both for uplink and
+downlink traffic.  Each test case corresponds to a specific packet and
+a specific classifier instance with a given set of TFTs. The test case
+passes if the bearer identifier returned by the classifier exactly
+matches with the one that is expected for the considered packet.
+
+
+
+End-to-end LTE-EPC data plane functionality
+-------------------------------------------
+
+The test suite ``lte-epc-e2e-data`` ensures the correct end-to-end
+functionality of the LTE-EPC data plane. For each test case in this
+suite, a complete LTE-EPC simulation
+scenario is created with the following characteristics:
+
+ * a given number of eNBs
+ * for each eNB, a given number of UEs
+ * for each UE, a given number of active EPS bearers
+ * for each active EPS bearer, a given traffic pattern (number of UDP
+   packets to be transmitted and packet size)
+
+Each test is executed by transmitting the given traffic pattern both
+in the uplink and in the downlink, at subsequent time intervals. The
+test passes if all the following conditions are satisfied:
+
+ * for each active EPS bearer, the transmitted and received traffic
+   pattern (respectively  at the UE and the remote host for uplink,
+   and vice versa for downlink) is exactly the same
+ * for each active EPS bearer and each direction (uplink or downlink),
+   exactly the expected number of packet flows over the corresponding
+   RadioBearer instance  
+
+
+
