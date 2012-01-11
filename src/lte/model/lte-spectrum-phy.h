@@ -44,6 +44,9 @@ class LteNetDevice;
  * \ingroup lte
  *
  * The LteSpectrumPhy models the physical layer of LTE
+ *
+ * It supports a single antenna model instance which is
+ * used for both transmission and reception.  
  */
 class LteSpectrumPhy : public SpectrumPhy
 {
@@ -71,6 +74,7 @@ public:
   Ptr<MobilityModel> GetMobility ();
   Ptr<NetDevice> GetDevice ();
   Ptr<const SpectrumModel> GetRxSpectrumModel () const;
+  Ptr<AntennaModel> GetRxAntenna ();
   void StartRx (Ptr<SpectrumSignalParameters> params);
 
   /**
@@ -87,6 +91,13 @@ public:
    */
   void SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd);
  
+  /**
+   * set the AntennaModel to be used
+   * 
+   * \param a the Antenna Model
+   */
+  void SetAntenna (Ptr<AntennaModel> a);
+
   /**
    * Start a transmission
    *
@@ -150,7 +161,7 @@ private:
   void EndRx ();
 
   Ptr<MobilityModel> m_mobility;
-
+  Ptr<AntennaModel> m_antenna;
   Ptr<NetDevice> m_device;
 
   Ptr<SpectrumChannel> m_channel;

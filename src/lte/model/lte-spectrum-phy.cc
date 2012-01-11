@@ -25,6 +25,7 @@
 #include <math.h>
 #include <ns3/simulator.h>
 #include <ns3/trace-source-accessor.h>
+#include <ns3/antenna-model.h>
 #include "lte-spectrum-phy.h"
 #include "lte-spectrum-signal-parameters.h"
 #include "lte-net-device.h"
@@ -208,6 +209,18 @@ LteSpectrumPhy::SetGenericPhyRxEndOkCallback (GenericPhyRxEndOkCallback c)
   m_genericPhyRxEndOkCallback = c;
 }
 
+Ptr<AntennaModel>
+LteSpectrumPhy::GetRxAntenna ()
+{
+  return m_antenna;
+}
+
+void
+LteSpectrumPhy::SetAntenna (Ptr<AntennaModel> a)
+{
+  NS_LOG_FUNCTION (this << a);
+  m_antenna = a;
+}
 
 void
 LteSpectrumPhy::SetState (State newState)
