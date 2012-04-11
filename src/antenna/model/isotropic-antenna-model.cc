@@ -1,4 +1,4 @@
-/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 CTTC
  *
@@ -19,43 +19,40 @@
  */
 
 
-#include <ns3/spectrum-signal-parameters.h>
-#include <ns3/spectrum-phy.h>
-#include <ns3/spectrum-value.h>
 #include <ns3/log.h>
-#include <ns3/antenna-model.h>
+
+#include "antenna-model.h"
+#include "isotropic-antenna-model.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("SpectrumSignalParameters");
+NS_LOG_COMPONENT_DEFINE ("IsotropicAntennaModel");
 
 namespace ns3 {
 
-SpectrumSignalParameters::SpectrumSignalParameters ()
+NS_OBJECT_ENSURE_REGISTERED (IsotropicAntennaModel);
+
+
+TypeId 
+IsotropicAntennaModel::GetTypeId ()
+{
+  static TypeId tid = TypeId ("ns3::IsotropicAntennaModel")
+    .SetParent<AntennaModel> ()
+    .AddConstructor<IsotropicAntennaModel> ()
+    ;
+  return tid;
+}
+
+IsotropicAntennaModel::IsotropicAntennaModel ()
 {
   NS_LOG_FUNCTION (this);
 }
 
-SpectrumSignalParameters::~SpectrumSignalParameters ()
+double 
+IsotropicAntennaModel::GetGainDb (Angles a)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << a);
+  return 0.0;
 }
 
-SpectrumSignalParameters::SpectrumSignalParameters (const SpectrumSignalParameters& p)
-{
-  NS_LOG_FUNCTION (this << &p);
-  psd = p.psd->Copy ();
-  duration = p.duration;
-  txPhy = p.txPhy;
-  txAntenna = p.txAntenna;
 }
 
-Ptr<SpectrumSignalParameters>
-SpectrumSignalParameters::Copy ()
-{
-  NS_LOG_FUNCTION (this);
-  return Create<SpectrumSignalParameters> (*this);
-}
-
-
-
-} // namespace ns3
