@@ -29,7 +29,7 @@
 #include <iostream>
 #include <ns3/radio-bearer-stats-calculator.h>
 #include <ns3/buildings-mobility-model.h>
-#include <ns3/buildings-propagation-loss-model.h>
+#include <ns3/hybrid-buildings-propagation-loss-model.h>
 #include "ns3/lte-test-phy-error-model.h"
 #include <ns3/eps-bearer.h>
 #include <ns3/node-container.h>
@@ -45,7 +45,7 @@
 #include <ns3/lte-ue-phy.h>
 #include <ns3/config.h>
 #include <ns3/boolean.h>
-
+#include <ns3/enum.h>
 
 
 NS_LOG_COMPONENT_DEFINE ("LenaTestPhyErrorModel");
@@ -109,6 +109,7 @@ LenaPhyErrorModelTestCase::DoRun (void)
   
    double ber = 0.01;
   Config::SetDefault ("ns3::LteAmc::Ber", DoubleValue (ber));
+  Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
   Config::SetDefault ("ns3::LteSpectrumPhy::PemEnabled", BooleanValue (true));
   
 //   LogComponentEnable ("LteEnbRrc", LOG_LEVEL_ALL);
@@ -175,7 +176,7 @@ LenaPhyErrorModelTestCase::DoRun (void)
   mobility.Install (ueNodes);
   
   // remove random shadowing component
-  lena->SetAttribute ("PathlossModel", StringValue ("ns3::BuildingsPropagationLossModel"));
+  lena->SetAttribute ("PathlossModel", StringValue ("ns3::HybridBuildingsPropagationLossModel"));
   lena->SetPathlossModelAttribute ("ShadowSigmaOutdoor", DoubleValue (0.0));
   lena->SetPathlossModelAttribute ("ShadowSigmaIndoor", DoubleValue (0.0));
   lena->SetPathlossModelAttribute ("ShadowSigmaExtWalls", DoubleValue (0.0));

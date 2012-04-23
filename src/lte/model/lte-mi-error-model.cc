@@ -1,25 +1,34 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011 SIGNET LAB. Department of Information Engineering (DEI), University of Padua
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Original Authors: Marco Mezzavilla <mezzavil@dei.unipd.it>
- *                   Giovanni Tomasi <tomasigv@gmail.com>
- *             
- * Integration in LENA done by: Marco Miozzo <marco.miozzo@cttc.es>
- */
+* Copyright (c) 2011 SIGNET LAB. Department of Information Engineering (DEI), University of Padua
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation;
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*
+*
+* Original Work Authors:
+*      Marco Mezzavilla <mezzavil@dei.unipd.it>
+*      Giovanni Tomasi <tomasigv@gmail.com>
+* Original Work Acknowldegments:
+*      This work was supported by the MEDIEVAL (MultiMEDia transport
+*      for mobIlE Video AppLications) project, which is a
+*      medium-scale focused research project (STREP) of the 7th
+*      Framework Programme (FP7)
+*
+* Subsequent integration in LENA and extension done by:
+*      Marco Miozzo <marco.miozzo@cttc.es>
+*/ 
+
 
 #include <list>
 #include <tr1/functional>
@@ -202,35 +211,23 @@ double cEcrTable [9][27] = {
 };
 
 
-
-LteMiErrorModel::LteMiErrorModel (void)
-{
-  //NS_LOG_FUNCTION (this);
-}
-
-
-LteMiErrorModel::~LteMiErrorModel (void)
-{
-}
-
-
 double 
-LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
+LteMiErrorModel::Mib (const SpectrumValue& sinr, const std::vector<int>& map, uint8_t mcs)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (sinr << &map << (uint32_t) mcs);
   
   double MI;
   double MIsum = 0.0;
   
   for (uint i = 0; i < map.size (); i++)
     {
-//       int id = map.at (i);
-      double sinrLin = sinr[map.at (i)];
+      SpectrumValue sinrCopy = sinr;
+      double sinrLin = sinrCopy[map.at (i)];
       double sinr_db = 10*log10 (sinrLin);
       if (mcs <= 10) // QPSK
         {
           int tr = 0;
-          while (MI_map_qpsk_axis[tr] < sinr_db)
+          while ((tr<MI_MAP_QPSK_SIZE)&&(MI_map_qpsk_axis[tr] < sinr_db))
             {
               tr++;
             }
@@ -240,6 +237,7 @@ LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
             }
           else 
             {
+              NS_ASSERT_MSG (tr<MI_MAP_QPSK_SIZE, "MI map out of data");
               MI = MI_map_qpsk[tr];
             }
         }
@@ -248,7 +246,7 @@ LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
           if (mcs > 10 && mcs < 20 )	// 16-QAM
             {
               int tr = 0;
-              while (MI_map_16qam_axis[tr] < sinr_db)
+              while ((tr<MI_MAP_16QAM_SIZE)&&(MI_map_16qam_axis[tr] < sinr_db))
                 {
                   tr++;
                 }
@@ -258,13 +256,14 @@ LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
                 }
               else 
                 {
+                  NS_ASSERT_MSG (tr<MI_MAP_16QAM_SIZE, "MI map out of data");
                   MI = MI_map_16qam[tr];
                 }
             }
           else // 64-QAM
             {
               int tr = 0;
-              while (MI_map_64qam_axis[tr] < sinr_db)
+              while ((tr<MI_MAP_64QAM_SIZE)&&(MI_map_64qam_axis[tr] < sinr_db))
                 {
                   tr++;
                 }
@@ -274,15 +273,16 @@ LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
                 }
               else
                 {
+                  NS_ASSERT_MSG (tr<MI_MAP_64QAM_SIZE, "MI map out of data");
                   MI = MI_map_64qam[tr];
                 }
             }
         }
-     NS_LOG_FUNCTION (" RB " << map.at (i) << "Minimum SNR = " << sinr_db << " dB, MCS = " << (uint16_t)mcs << ", MI = " << MI);
+     NS_LOG_LOGIC (" RB " << map.at (i) << "Minimum SNR = " << sinr_db << " dB, MCS = " << (uint16_t)mcs << ", MI = " << MI);
       MIsum += MI;
     }
   MI = MIsum / map.size ();
-  NS_LOG_FUNCTION (" MI = " << MI);
+  NS_LOG_LOGIC (" MI = " << MI);
   return MI;
 }
 
@@ -290,17 +290,18 @@ LteMiErrorModel::Mib (SpectrumValue& sinr, std::vector<int> map, uint8_t mcs)
 double 
 LteMiErrorModel::MappingMiBler (double mib, uint8_t mcs, uint16_t cbSize)
 {
-  //NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (mib << (uint32_t) mcs << (uint32_t) cbSize);
   double b = 0;
   double c = 0;
+  NS_ASSERT_MSG (mcs>=0 && mcs < 32, "MCS out of range");
   int tbsIndex = TbsIndex[mcs];
   int cbIndex = 1;
-  while (cbMiSizeTable[cbIndex]< cbSize)
+  while ((cbIndex < 9)&&(cbMiSizeTable[cbIndex]< cbSize))
     {
       cbIndex++;
     }
   cbIndex--;
-  NS_LOG_FUNCTION (" MCS " << (uint16_t)mcs << " TBS " << tbsIndex << " CB size " << cbSize << " CB size curve " << cbMiSizeTable[cbIndex]);
+  NS_LOG_LOGIC (" MCS " << (uint16_t)mcs << " TBS " << tbsIndex << " CB size " << cbSize << " CB size curve " << cbMiSizeTable[cbIndex]);
 
   b = bEcrTable[cbIndex][tbsIndex];
   if (b<0.0)
@@ -308,7 +309,7 @@ LteMiErrorModel::MappingMiBler (double mib, uint8_t mcs, uint16_t cbSize)
       //take the lowest CB size including this CB for removing CB size
       //quatization errors
       int i = cbIndex;
-      while (b<0)
+      while ((i<9)&&(b<0))
         {
           b = bEcrTable[i++][tbsIndex];
         }
@@ -319,22 +320,22 @@ LteMiErrorModel::MappingMiBler (double mib, uint8_t mcs, uint16_t cbSize)
       //take the lowest CB size including this CB for removing CB size
       //quatization errors
       int i = cbIndex;
-      while (c<0)
+      while ((i<9)&&(c<0))
         {
           c = cEcrTable[i++][tbsIndex];
         }
     }
   // see IEEE802.16m EMD formula 55 of section 4.3.2.1
   double bler = 0.5*( 1 - erf((mib-b)/(sqrt(2)*c)) );
-  NS_LOG_FUNCTION ("MIB: " << mib << " BLER:" << bler);
+  NS_LOG_LOGIC ("MIB: " << mib << " BLER:" << bler);
   return bler;
 }
 
 
 double
-LteMiErrorModel::GetTbError (SpectrumValue& sinr, std::vector<int> map, uint16_t size, uint8_t mcs)
+LteMiErrorModel::GetTbError (const SpectrumValue& sinr, const std::vector<int>& map, uint16_t size, uint8_t mcs)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (sinr << &map << (uint32_t) size << (uint32_t) mcs);
   
   double MI = Mib(sinr, map, mcs);
   // estimate CB size (according to sec 5.1.2 of TS 36.212)
@@ -448,7 +449,7 @@ LteMiErrorModel::GetTbError (SpectrumValue& sinr, std::vector<int> map, uint16_t
       errorRate = MappingMiBler (MI, mcs, Kplus);
     }
   
-  NS_LOG_FUNCTION (" Error rate " << errorRate);
+  NS_LOG_LOGIC (" Error rate " << errorRate);
   
   return errorRate;
 }

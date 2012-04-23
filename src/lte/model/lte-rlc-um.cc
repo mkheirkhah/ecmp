@@ -69,7 +69,7 @@ LteRlcUm::GetTypeId (void)
 void
 LteRlcUm::DoTransmitPdcpPdu (Ptr<Packet> p)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
 
   /** Store arrival time */
   RlcTag timeTag (Simulator::Now ());
@@ -100,11 +100,11 @@ LteRlcUm::DoTransmitPdcpPdu (Ptr<Packet> p)
 void
 LteRlcUm::DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer)
 {
-  NS_LOG_FUNCTION (this << bytes);
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << bytes);
 
   if (bytes <= 2)
     {
-      // TODO ERROR: Header fix part is 2 bytes, we need more bytes for the data
+      // Stingy MAC: Header fix part is 2 bytes, we need more bytes for the data
       NS_LOG_LOGIC ("TX opportunity too small = " << bytes);
       return;
     }
@@ -374,7 +374,7 @@ LteRlcUm::DoNotifyHarqDeliveryFailure ()
 void
 LteRlcUm::DoReceivePdu (Ptr<Packet> p)
 {
-  NS_LOG_FUNCTION (this << p->GetSize ());
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
 
   // Receiver timestamp
   RlcTag rlcTag;
@@ -383,7 +383,7 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
     {
       delay = Simulator::Now() - rlcTag.GetSenderTimestamp ();
     }
-  m_rxPdu(m_rnti, m_lcid, p->GetSize (), delay.GetNanoSeconds ());
+  m_rxPdu (m_rnti, m_lcid, p->GetSize (), delay.GetNanoSeconds ());
 
   // 5.1.2.2 Receive operations
 
@@ -425,13 +425,13 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
        ( ((m_vrUh - m_windowSize) <= seqNumber) && (seqNumber < m_vrUr) )
      )
     {
-      // TODO discard the received UMD PDU. How a packet is discarded?
-      NS_LOG_LOGIC ("UMD PDU discarded");
+      NS_LOG_LOGIC ("PDU discarded");
+      p = 0;
       return;
     }
   else
     {
-      NS_LOG_LOGIC ("Place UMD PDU in the reception buffer");
+      NS_LOG_LOGIC ("Place PDU in the reception buffer");
       m_rxBuffer[seqNumber.GetValue ()] = p;
     }
 
@@ -476,6 +476,7 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
 
       std::map <uint16_t, Ptr<Packet> >::iterator it;
       uint16_t newVrUr;
+      SequenceNumber10 oldVrUr = m_vrUr;
 
       it = m_rxBuffer.find (m_vrUr.GetValue ());
       newVrUr = (it->first) + 1;
@@ -486,8 +487,14 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
       m_vrUr = newVrUr;
       NS_LOG_LOGIC ("New VR(UR) = " << m_vrUr);
 
-      ReassembleSnLessThan (m_vrUr);
+      ReassembleSnInterval (oldVrUr, m_vrUr);
     }
+
+  // m_vrUh can change previously, set new modulus base
+  // for the t-Reordering timer-related comparisons
+  m_vrUr.SetModulusBase (m_vrUh - m_windowSize);
+  m_vrUx.SetModulusBase (m_vrUh - m_windowSize);
+  m_vrUh.SetModulusBase (m_vrUh - m_windowSize);
 
   // - if t-Reordering is running:
   //    - if VR(UX) <= VR(UR); or
@@ -513,11 +520,11 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
     {
       NS_LOG_LOGIC ("Reordering timer is not running");
 
-      if ( m_vrUx > m_vrUr )
+      if ( m_vrUh > m_vrUr )
         {
-          NS_LOG_LOGIC ("VR(UX) > VR(UR). " << m_vrUx << " > " << m_vrUr);
+          NS_LOG_LOGIC ("VR(UH) > VR(UR)");
           NS_LOG_LOGIC ("Start reordering timer");
-          m_reorderingTimer = Simulator::Schedule (Time ("1.0s"),
+          m_reorderingTimer = Simulator::Schedule (Time ("0.1s"),
                                                    &LteRlcUm::ExpireReorderingTimer ,this);
           m_vrUx = m_vrUh;
           NS_LOG_LOGIC ("New VR(UX) = " << m_vrUx);
@@ -548,12 +555,12 @@ LteRlcUm::IsInsideReorderingWindow (SequenceNumber10 seqNumber)
 
   if ( ((m_vrUh - m_windowSize) <= seqNumber) && (seqNumber < m_vrUh))
     {
-      NS_LOG_LOGIC (seqNumber << "is INSIDE the reordering window");
+      NS_LOG_LOGIC (seqNumber << " is INSIDE the reordering window");
       return true;
     }
   else
     {
-      NS_LOG_LOGIC (seqNumber << "is OUTSIDE the reordering window");
+      NS_LOG_LOGIC (seqNumber << " is OUTSIDE the reordering window");
       return false;
     }
 }
@@ -571,7 +578,6 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
   if ( currSeqNumber != m_expectedSeqNumber )
     {
       expectedSnLost = true;
-      // TODO LOSSES
       NS_LOG_LOGIC ("There are losses. Expected SN = " << m_expectedSeqNumber << ". Current SN = " << currSeqNumber);
       m_expectedSeqNumber = currSeqNumber + 1;
     }
@@ -603,7 +609,6 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
           if ( lengthIndicator >= packet->GetSize () )
             {
               NS_LOG_LOGIC ("INTERNAL ERROR: Not enough data in the packet (" << packet->GetSize () << "). Needed LI=" << lengthIndicator);
-              // TODO What to do in this case? Discard packet and continue? Or Assert?
             }
 
           // Split packet in two fragments
@@ -666,12 +671,62 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
                       break;
 
                       case (LteRlcHeader::NO_FIRST_BYTE | LteRlcHeader::LAST_BYTE):
+                              m_reassemblingState = WAITING_S0_FULL;
+
+                              /**
+                               * Discard SI or SN
+                               */
+                              m_sdusBuffer.pop_front ();
+
+                              /**
+                               * Deliver zero, one or multiple PDUs
+                               */
+                              while ( ! m_sdusBuffer.empty () )
+                                {
+                                  m_rlcSapUser->ReceivePdcpPdu (m_sdusBuffer.front ());
+                                  m_sdusBuffer.pop_front ();
+                                }
+                      break;
+
                       case (LteRlcHeader::NO_FIRST_BYTE | LteRlcHeader::NO_LAST_BYTE):
+                              if ( m_sdusBuffer.size () == 1 )
+                                {
+                                  m_reassemblingState = WAITING_S0_FULL;
+                                }
+                              else
+                                {
+                                  m_reassemblingState = WAITING_SI_SF;
+                                }
+
+                              /**
+                               * Discard SI or SN
+                               */
+                              m_sdusBuffer.pop_front ();
+
+                              if ( m_sdusBuffer.size () > 0 )
+                                {
+                                  /**
+                                   * Deliver zero, one or multiple PDUs
+                                   */
+                                  while ( m_sdusBuffer.size () > 1 )
+                                    {
+                                      m_rlcSapUser->ReceivePdcpPdu (m_sdusBuffer.front ());
+                                      m_sdusBuffer.pop_front ();
+                                    }
+
+                                  /**
+                                   * Keep S0
+                                   */
+                                  m_keepS0 = m_sdusBuffer.front ();
+                                  m_sdusBuffer.pop_front ();
+                                }
+                      break;
+
                       default:
                               /**
                               * ERROR: Transition not possible
                               */
-                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << framingInfo);
+                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << (uint32_t) framingInfo);
                       break;
                     }
           break;
@@ -742,13 +797,13 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
                               /**
                                 * ERROR: Transition not possible
                                 */
-                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << framingInfo);
+                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << (uint32_t) framingInfo);
                       break;
                     }
           break;
 
           default:
-                NS_LOG_LOGIC ("INTERNAL ERROR: Wrong reassembling state = " << m_reassemblingState);
+                NS_LOG_LOGIC ("INTERNAL ERROR: Wrong reassembling state = " << (uint32_t) m_reassemblingState);
           break;
         }
     }
@@ -847,7 +902,7 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
                               /**
                                * ERROR: Transition not possible
                                */
-                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << framingInfo);
+                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << (uint32_t) framingInfo);
                       break;
                     }
           break;
@@ -964,13 +1019,13 @@ LteRlcUm::ReassembleAndDeliver (Ptr<Packet> packet)
                               /**
                                 * ERROR: Transition not possible
                                 */
-                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << framingInfo);
+                              NS_LOG_LOGIC ("INTERNAL ERROR: Transition not possible. FI = " << (uint32_t) framingInfo);
                       break;
                     }
           break;
 
           default:
-                NS_LOG_LOGIC ("INTERNAL ERROR: Wrong reassembling state = " << m_reassemblingState);
+                NS_LOG_LOGIC ("INTERNAL ERROR: Wrong reassembling state = " << (uint32_t) m_reassemblingState);
           break;
         }
     }
@@ -1005,28 +1060,32 @@ LteRlcUm::ReassembleOutsideWindow (void)
 }
 
 void
-LteRlcUm::ReassembleSnLessThan (SequenceNumber10 seqNumber)
+LteRlcUm::ReassembleSnInterval (SequenceNumber10 lowSeqNumber, SequenceNumber10 highSeqNumber)
 {
-  NS_LOG_LOGIC ("Reassemble SN < updated VR(UR)" );
+  NS_LOG_LOGIC ("Reassemble SN between " << lowSeqNumber << " and " << highSeqNumber);
 
   std::map <uint16_t, Ptr<Packet> >::iterator it;
-  it = m_rxBuffer.begin ();
 
-  while ( (it != m_rxBuffer.end ()) && (it->first < seqNumber.GetValue ()) )
+  SequenceNumber10 reassembleSn = lowSeqNumber;
+  NS_LOG_LOGIC ("reassembleSN = " << reassembleSn);
+  NS_LOG_LOGIC ("highSeqNumber = " << highSeqNumber);
+  while (reassembleSn < highSeqNumber)
     {
-      NS_LOG_LOGIC ("SN = " << it->first);
+      NS_LOG_LOGIC ("reassembleSn < highSeqNumber");
+      it = m_rxBuffer.find (reassembleSn.GetValue ());
+      NS_LOG_LOGIC ("it->first  = " << it->first);
+      NS_LOG_LOGIC ("it->second = " << it->second);
+      if (it != m_rxBuffer.end () )
+        {
+          NS_LOG_LOGIC ("SN = " << it->first);
 
-      // Reassemble RLC SDUs and deliver the PDCP PDU to upper layer
-      ReassembleAndDeliver (it->second);
+          // Reassemble RLC SDUs and deliver the PDCP PDU to upper layer
+          ReassembleAndDeliver (it->second);
 
-      std::map <uint16_t, Ptr<Packet> >::iterator it_tmp = it;
-      ++it;
-      m_rxBuffer.erase (it_tmp);
-    }
-
-  if (it != m_rxBuffer.end ())
-    {
-      NS_LOG_LOGIC ("(SN = " << it->first << ") >= " << m_vrUr.GetValue ());
+          m_rxBuffer.erase (it);
+        }
+        
+      reassembleSn++;
     }
 }
 
@@ -1063,7 +1122,8 @@ LteRlcUm::DoReportBufferStatus (void)
 void
 LteRlcUm::ExpireReorderingTimer (void)
 {
-  NS_LOG_LOGIC ("TODO: Reordering Timer has expired...");
+  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid);
+  NS_LOG_LOGIC ("Reordering timer has expired");
 
   // 5.1.2.2.4 Actions when t-Reordering expires
   // When t-Reordering expires, the receiving UM RLC entity shall:
@@ -1081,16 +1141,19 @@ LteRlcUm::ExpireReorderingTimer (void)
     {
       newVrUr++;
     }
+  SequenceNumber10 oldVrUr = m_vrUr;
   m_vrUr = newVrUr;
+  NS_LOG_LOGIC ("New VR(UR) = " << m_vrUr);
 
-  ReassembleSnLessThan (m_vrUr);
+  ReassembleSnInterval (oldVrUr, m_vrUr);
 
   if ( m_vrUh > m_vrUr)
     {
       NS_LOG_LOGIC ("Start reordering timer");
-      m_reorderingTimer = Simulator::Schedule (Time ("1.0s"),
+      m_reorderingTimer = Simulator::Schedule (Time ("0.1s"),
                                                &LteRlcUm::ExpireReorderingTimer, this);
       m_vrUx = m_vrUh;
+      NS_LOG_LOGIC ("New VR(UX) = " << m_vrUx);
     }
 }
 

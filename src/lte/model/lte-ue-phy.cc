@@ -251,6 +251,19 @@ LteUePhy::GetTxPower () const
 }
 
 void
+LteUePhy::SetMacChDelay (uint8_t delay)
+{
+  m_macChTtiDelay = delay;
+  m_packetBurstQueue.resize (delay);
+}
+
+uint8_t
+LteUePhy::GetMacChDelay (void) const
+{
+  return (m_macChTtiDelay);
+}
+
+void
 LteUePhy::DoSendMacPdu (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
@@ -325,7 +338,7 @@ LteUePhy::CreateTxPowerSpectralDensity ()
 }
 
 void
-LteUePhy::GenerateCqiFeedback (const SpectrumValue& sinr)
+LteUePhy::GenerateCqiReport (const SpectrumValue& sinr)
 {
   NS_LOG_FUNCTION (this);
   // check periodic wideband CQI
@@ -354,20 +367,21 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
   NS_LOG_FUNCTION (this);
   
   // apply transmission mode gain
-  NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode));
   NS_ASSERT (m_transmissionMode < m_txModeGain.size ());
   SpectrumValue newSinr = sinr;
   newSinr *= m_txModeGain.at (m_transmissionMode);
-  std::vector<int> cqi = m_amc->CreateCqiFeedbacks (newSinr);
+//   std::vector<int> cqi = m_amc->CreateCqiFeedbacks (newSinr);
 
 
 
   // CREATE DlCqiIdealControlMessage
   Ptr<DlCqiIdealControlMessage> msg = Create<DlCqiIdealControlMessage> ();
   CqiListElement_s dlcqi;
-
+  std::vector<int> cqi;
   if (Simulator::Now () > m_p10CqiLast + m_p10CqiPeriocity)
     {
+      cqi = m_amc->CreateCqiFeedbacks (newSinr, m_dlBandwidth);
+      
       int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
       int nbSubChannels = cqi.size ();
       double cqiSum = 0.0;
@@ -405,6 +419,7 @@ LteUePhy::CreateDlCqiFeedbackMessage (const SpectrumValue& sinr)
     }
   else if (Simulator::Now () > m_a30CqiLast + m_a30CqiPeriocity)
     {
+      cqi = m_amc->CreateCqiFeedbacks (newSinr, GetRbgSize ());
       int nLayer = TransmissionModesLayers::TxMode2LayerNum (m_transmissionMode);
       int nbSubChannels = cqi.size ();
       int rbgSize = GetRbgSize ();

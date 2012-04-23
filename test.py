@@ -518,9 +518,14 @@ def sigint_hook(signal, frame):
 #
 def read_waf_config():
     for line in open(".lock-waf_" + sys.platform + "_build", "rt"):
+        if line.startswith("top_dir ="):
+            key, val = line.split('=')
+            top_dir = eval(val.strip())
         if line.startswith("out_dir ="):
             key, val = line.split('=')
             out_dir = eval(val.strip())
+    global NS3_BASEDIR
+    NS3_BASEDIR = top_dir
     global NS3_BUILDDIR
     NS3_BUILDDIR = out_dir
     for line in open("%s/c4che/_cache.py" % out_dir).readlines():
@@ -679,11 +684,10 @@ def make_paths():
 VALGRIND_SUPPRESSIONS_FILE = "testpy.supp"
 
 def run_job_synchronously(shell_command, directory, valgrind, is_python, build_path=""):
-    (base, build) = os.path.split (NS3_BUILDDIR)
-    suppressions_path = os.path.join (base, VALGRIND_SUPPRESSIONS_FILE)
+    suppressions_path = os.path.join (NS3_BASEDIR, VALGRIND_SUPPRESSIONS_FILE)
 
     if is_python:
-        path_cmd = PYTHON[0] + " " + os.path.join (base, shell_command)
+        path_cmd = PYTHON[0] + " " + os.path.join (NS3_BASEDIR, shell_command)
     else:
         if len(build_path):
             path_cmd = os.path.join (build_path, shell_command)
@@ -902,8 +906,8 @@ class worker_thread(threading.Thread):
                 if job.is_example or job.is_pyexample:
                     #
                     # If we have an example, the shell command is all we need to
-                    # know.  It will be something like "examples/udp-echo" or 
-                    # "examples/mixed-wireless.py"
+                    # know.  It will be something like "examples/udp/udp-echo" or 
+                    # "examples/wireless/mixed-wireless.py"
                     #
                     (job.returncode, standard_out, standard_err, et) = run_job_synchronously(job.shell_command, 
                         job.cwd, options.valgrind, job.is_pyexample, job.build_path)
@@ -1136,10 +1140,10 @@ def run_tests():
     #  ./test,py:                                           run all of the suites and examples
     #  ./test.py --constrain=core:                          run all of the suites of all kinds
     #  ./test.py --constrain=unit:                          run all unit suites
-    #  ./test,py --suite=some-test-suite:                   run a single suite
-    #  ./test,py --example=udp/udp-echo:                    run no test suites
-    #  ./test,py --pyexample=wireless/mixed-wireless.py:    run no test suites
-    #  ./test,py --suite=some-suite --example=some-example: run the single suite
+    #  ./test.py --suite=some-test-suite:                   run a single suite
+    #  ./test.py --example=examples/udp/udp-echo:           run single example
+    #  ./test.py --pyexample=examples/wireless/mixed-wireless.py:  run python example
+    #  ./test.py --suite=some-suite --example=some-example: run the single suite
     #
     # We can also use the --constrain option to provide an ordering of test 
     # execution quite easily.
