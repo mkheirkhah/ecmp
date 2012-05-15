@@ -159,11 +159,11 @@ LteRlcAmE2eTestCase::DoRun (void)
   // Error models: downlink and uplink
   Ptr<RateErrorModel> dlEm = CreateObjectWithAttributes<RateErrorModel> ("RanVar", RandomVariableValue (UniformVariable (0.0, 1.0)));
   dlEm->SetAttribute ("ErrorRate", DoubleValue (m_losses));
-  dlEm->SetAttribute ("ErrorUnit", StringValue ("EU_PKT"));
+  dlEm->SetAttribute ("ErrorUnit", StringValue ("ERROR_UNIT_PACKET"));
 
 //   Ptr<RateErrorModel> ueEm = CreateObjectWithAttributes<RateErrorModel> ("RanVar", RandomVariableValue (UniformVariable (0.0, 1.0)));
 //   ueEm->SetAttribute ("ErrorRate", DoubleValue (m_losses));
-//   ueEm->SetAttribute ("ErrorUnit", StringValue ("EU_PKT"));
+//   ueEm->SetAttribute ("ErrorUnit", StringValue ("ERROR_UNIT_PACKET"));
 
   // The below hooks will cause drops and receptions to be counted
   ueLteDevs.Get (0)->SetAttribute ("ReceiveErrorModel", PointerValue (dlEm));

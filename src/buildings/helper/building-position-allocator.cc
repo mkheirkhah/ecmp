@@ -18,6 +18,8 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>
  */
 #include "building-position-allocator.h"
+#include "ns3/buildings-mobility-model.h"
+#include "ns3/buildings-helper.h"
 #include "ns3/random-variable.h"
 #include "ns3/double.h"
 #include "ns3/uinteger.h"
@@ -163,6 +165,94 @@ RandomRoomPositionAllocator::GetNext () const
   double y2 = box.yMin + rdy * (r.roomy + 1);
   double z1 = box.zMin + rdz * r.floor;
   double z2 = box.zMin + rdz * (r.floor + 1);
+  NS_LOG_LOGIC ("randomly allocating position in "
+                << " (" << x1 << "," << x2 << ") "
+                << "x (" << y1 << "," << y2 << ") "
+                << "x (" << z1 << "," << z2 << ") ");
+
+  double x = v.GetValue (x1, x2);
+  double y = v.GetValue (y1, y2);
+  double z = v.GetValue (z1, z2);
+  
+  return Vector (x, y, z);
+}
+
+
+
+
+
+NS_OBJECT_ENSURE_REGISTERED (SameRoomPositionAllocator);
+
+SameRoomPositionAllocator::SameRoomPositionAllocator ()
+{
+  NS_FATAL_ERROR (" Constructor \"SameRoomPositionAllocator ()\" should not be used");
+}
+
+
+SameRoomPositionAllocator::SameRoomPositionAllocator (NodeContainer c)
+  : m_nodes (c)
+{
+  m_nodeIt = m_nodes.Begin ();
+  // this is needed to make sure the building models associated with c have been initialized
+  for (NodeContainer::Iterator it = m_nodes.Begin (); it != m_nodes.End (); ++it)
+    {
+      Ptr<MobilityModel> mm = (*it)->GetObject<MobilityModel> ();
+      NS_ASSERT_MSG (mm, "no mobility model aggregated to this node");
+      Ptr<BuildingsMobilityModel> bmm = DynamicCast<BuildingsMobilityModel> (mm);
+      NS_ASSERT_MSG (bmm, "mobility model aggregated to this node is not a BuildingsMobilityModel");
+      BuildingsHelper::MakeConsistent (bmm);
+    }
+}
+
+TypeId
+SameRoomPositionAllocator::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::SameRoomPositionAllocator")
+    .SetParent<PositionAllocator> ()
+    .SetGroupName ("Mobility")
+    .AddConstructor<SameRoomPositionAllocator> ();
+  return tid;
+}
+
+Vector 
+SameRoomPositionAllocator::GetNext () const
+{
+  NS_LOG_FUNCTION (this);
+  UniformVariable rand;
+  if (m_nodeIt == m_nodes.End ())
+    {
+      m_nodeIt  = m_nodes.Begin ();
+    }
+  
+  NS_ASSERT_MSG (m_nodeIt != m_nodes.End (), "no node in container");
+
+  NS_LOG_LOGIC ("considering node " << (*m_nodeIt)->GetId ());
+  Ptr<MobilityModel> mm = (*m_nodeIt)->GetObject<MobilityModel> ();
+  NS_ASSERT_MSG (mm, "no mobility model aggregated to this node");
+  Ptr<BuildingsMobilityModel> bmm = DynamicCast<BuildingsMobilityModel> (mm);
+  NS_ASSERT_MSG (bmm, "mobility model aggregated to this node is not a BuildingsMobilityModel");
+
+  ++m_nodeIt;
+  uint32_t roomx = bmm->GetRoomNumberX ();
+  uint32_t roomy = bmm->GetRoomNumberY ();
+  uint32_t floor = bmm->GetFloorNumber ();
+  NS_LOG_LOGIC ("considering building " << bmm->GetBuilding ()->GetId () << " room (" << roomx << ", " << roomy << ", " << floor << ")");
+
+  Ptr<Building> b = bmm->GetBuilding ();
+  Ptr<RandomBoxPositionAllocator> pa = CreateObject<RandomBoxPositionAllocator> ();
+  UniformVariable v;
+  BoxValue bv;
+  b->GetAttribute ("Boundaries", bv);
+  Box box = bv.Get ();
+  double rdx =  (box.xMax - box.xMin) / b->GetNRoomsX ();
+  double rdy =  (box.yMax - box.yMin) / b->GetNRoomsY ();
+  double rdz =  (box.zMax - box.zMin) / b->GetNFloors ();
+  double x1 = box.xMin + rdx * roomx;
+  double x2 = box.xMin + rdx * (roomx + 1);
+  double y1 = box.yMin + rdy * roomy;
+  double y2 = box.yMin + rdy * (roomy + 1);
+  double z1 = box.zMin + rdz * floor;
+  double z2 = box.zMin + rdz * (floor + 1);
   NS_LOG_LOGIC ("randomly allocating position in "
                 << " (" << x1 << "," << x2 << ") "
                 << "x (" << y1 << "," << y2 << ") "

@@ -155,11 +155,11 @@ LteRlcUmE2eTestCase::DoRun (void)
   // Error models: downlink and uplink
   Ptr<RateErrorModel> dlEm = CreateObjectWithAttributes<RateErrorModel> ("RanVar", RandomVariableValue (UniformVariable (0.0, 1.0)));
   dlEm->SetAttribute ("ErrorRate", DoubleValue (m_losses));
-  dlEm->SetAttribute ("ErrorUnit", StringValue ("EU_PKT"));
+  dlEm->SetAttribute ("ErrorUnit", StringValue ("ERROR_UNIT_PACKET"));
 
   Ptr<RateErrorModel> ulEm = CreateObjectWithAttributes<RateErrorModel> ("RanVar", RandomVariableValue (UniformVariable (0.0, 1.0)));
   ulEm->SetAttribute ("ErrorRate", DoubleValue (m_losses));
-  ulEm->SetAttribute ("ErrorUnit", StringValue ("EU_PKT"));
+  ulEm->SetAttribute ("ErrorUnit", StringValue ("ERROR_UNIT_PACKET"));
 
   // The below hooks will cause drops to be counted at simple phy layer
   ueLteDevs.Get (0)->SetAttribute ("ReceiveErrorModel", PointerValue (dlEm));
