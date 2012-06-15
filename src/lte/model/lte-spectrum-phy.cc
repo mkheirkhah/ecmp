@@ -17,6 +17,7 @@
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
  *         Giuseppe Piro  <g.piro@poliba.it>
+ *         Marco Miozzo <marco.miozzo@cttc.es> (add physical error model)
  */
 
 
@@ -25,31 +26,66 @@
 #include <math.h>
 #include <ns3/simulator.h>
 #include <ns3/trace-source-accessor.h>
+#include <ns3/antenna-model.h>
 #include "lte-spectrum-phy.h"
 #include "lte-spectrum-signal-parameters.h"
 #include "lte-net-device.h"
 #include "lte-radio-bearer-tag.h"
 #include "lte-sinr-chunk-processor.h"
 #include "lte-phy-tag.h"
+#include <ns3/lte-mi-error-model.h>
+#include <ns3/lte-radio-bearer-tag.h>
+#include <ns3/boolean.h>
+#include <ns3/double.h>
 
 NS_LOG_COMPONENT_DEFINE ("LteSpectrumPhy");
 
 namespace ns3 {
+  
+  
+TbId_t::TbId_t ()
+{
+}
 
+TbId_t::TbId_t (const uint16_t a, const uint8_t b)
+: m_rnti (a),
+  m_layer (b)
+{
+}
+
+bool
+operator == (const TbId_t &a, const TbId_t &b)
+{
+  return ( (a.m_rnti == b.m_rnti) && (a.m_layer == b.m_layer) );
+}
+
+bool
+operator < (const TbId_t& a, const TbId_t& b)
+{
+  return ( (a.m_rnti < b.m_rnti) || ( (a.m_rnti == b.m_rnti) && (a.m_layer < b.m_layer) ) );
+}
 
 NS_OBJECT_ENSURE_REGISTERED (LteSpectrumPhy);
 
 LteSpectrumPhy::LteSpectrumPhy ()
-  : m_state (IDLE)
+  : m_state (IDLE),
+  m_random (0.0, 1.0),
+  m_transmissionMode (0)
 {
   NS_LOG_FUNCTION (this);
   m_interference = CreateObject<LteInterference> ();
+  for (uint8_t i = 0; i < 7; i++)
+    {
+      m_txModeGain.push_back (1.0);
+    }
 }
 
 
 LteSpectrumPhy::~LteSpectrumPhy ()
 {
   NS_LOG_FUNCTION (this);
+  m_expectedTbs.clear ();
+  m_txModeGain.clear ();
 }
 
 void LteSpectrumPhy::DoDispose ()
@@ -107,6 +143,11 @@ LteSpectrumPhy::GetTypeId (void)
     .AddTraceSource ("RxEndError",
                      "Trace fired when a previosuly started RX terminates with an error",
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyRxEndErrorTrace))
+    .AddAttribute ("PemEnabled",
+                    "Activate/Deactivate the error model (by default is active).",
+                    BooleanValue (true),
+                    MakeBooleanAccessor (&LteSpectrumPhy::m_pemEnabled),
+                    MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -155,14 +196,7 @@ LteSpectrumPhy::SetChannel (Ptr<SpectrumChannel> c)
 Ptr<const SpectrumModel>
 LteSpectrumPhy::GetRxSpectrumModel () const
 {
-  if (m_txPsd)
-    {
-      return m_txPsd->GetSpectrumModel ();
-    }
-  else
-    {
-      return 0;
-    }
+  return m_rxSpectrumModel;
 }
 
 
@@ -180,6 +214,7 @@ LteSpectrumPhy::SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd)
 {
   NS_LOG_FUNCTION (this << noisePsd);
   NS_ASSERT (noisePsd);
+  m_rxSpectrumModel = noisePsd->GetSpectrumModel ();
   m_interference->SetNoisePowerSpectralDensity (noisePsd);
 }
 
@@ -208,6 +243,18 @@ LteSpectrumPhy::SetGenericPhyRxEndOkCallback (GenericPhyRxEndOkCallback c)
   m_genericPhyRxEndOkCallback = c;
 }
 
+Ptr<AntennaModel>
+LteSpectrumPhy::GetRxAntenna ()
+{
+  return m_antenna;
+}
+
+void
+LteSpectrumPhy::SetAntenna (Ptr<AntennaModel> a)
+{
+  NS_LOG_FUNCTION (this << a);
+  m_antenna = a;
+}
 
 void
 LteSpectrumPhy::SetState (State newState)
@@ -267,6 +314,7 @@ LteSpectrumPhy::StartTx (Ptr<PacketBurst> pb)
       Ptr<LteSpectrumSignalParameters> txParams = Create<LteSpectrumSignalParameters> ();
       txParams->duration = Seconds (tti);
       txParams->txPhy = GetObject<SpectrumPhy> ();
+      txParams->txAntenna = m_antenna;
       txParams->psd = m_txPsd;
       txParams->packetBurst = pb;
       m_channel->StartTx (txParams);
@@ -394,6 +442,34 @@ LteSpectrumPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 }
 
 void
+LteSpectrumPhy::UpdateSinrPerceived (const SpectrumValue& sinr)
+{
+  NS_LOG_FUNCTION (this << sinr);
+  m_sinrPerceived = sinr;
+}
+
+
+void
+LteSpectrumPhy::AddExpectedTb (uint16_t  rnti, uint16_t size, uint8_t mcs, std::vector<int> map, uint8_t layer)
+{
+  NS_LOG_LOGIC (this << " rnti: " << rnti << " size " << size << " mcs " << (uint16_t)mcs << " layer " << (uint8_t)layer);
+  TbId_t tbId;
+  tbId.m_rnti = rnti;
+  tbId.m_layer = layer;
+  expectedTbs_t::iterator it;
+  it = m_expectedTbs.find (tbId);
+  if (it != m_expectedTbs.end ())
+  {
+    // migth be a TB of an unreceived packet (due to high progpalosses)
+    m_expectedTbs.erase (it);
+  }
+  // insert new entry
+  tbInfo_t tbInfo = {size, mcs, map, false};
+  m_expectedTbs.insert (std::pair<TbId_t, tbInfo_t> (tbId,tbInfo ));
+}
+
+
+void
 LteSpectrumPhy::EndRx ()
 {
   NS_LOG_FUNCTION (this);
@@ -404,39 +480,66 @@ LteSpectrumPhy::EndRx ()
   // this will trigger CQI calculation and Error Model evaluation
   // as a side effect, the error model should update the error status of all TBs
   m_interference->EndRx ();
-
-  for (std::list<Ptr<PacketBurst> >::const_iterator i = m_rxPacketBurstList.begin (); 
-       i != m_rxPacketBurstList.end (); ++i)
+  NS_LOG_DEBUG (this << " No. of burts " << m_rxPacketBurstList.size ());
+  NS_LOG_DEBUG (this << " Expected TBs " << m_expectedTbs.size ());
+  expectedTbs_t::iterator itTb = m_expectedTbs.begin ();
+  
+  // apply transmission mode gain
+  NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode));
+  NS_ASSERT (m_transmissionMode < m_txModeGain.size ());
+  m_sinrPerceived *= m_txModeGain.at (m_transmissionMode);
+  
+  while (itTb!=m_expectedTbs.end ())
     {
-      // here we should determine whether this TB has been received
-      // correctly or not
-      bool tbRxOk = true;
-
-      if (tbRxOk)
+      if (m_pemEnabled)
         {
-          m_phyRxEndOkTrace (*i);
-
-          // forward each PDU in the PacketBurst separately to the MAC 
-          // WILD HACK: we currently don't model properly the aggregation
-          // of PDUs into TBs. In reality, the PHY is concerned only with
-          // TBs, and it should be left to the MAC to decompose the TB into PDUs
-          for (std::list<Ptr<Packet> >::const_iterator j = (*i)->Begin (); 
-               j != (*i)->End (); ++j)
-            {
-              if (!m_genericPhyRxEndOkCallback.IsNull ())
-                {
-                  m_genericPhyRxEndOkCallback (*j);
-                }
-            }
-        }
-      else
-        {
-          // TB received with errors
-          m_phyRxEndErrorTrace (*i);
-        }
+          double errorRate = LteMiErrorModel::GetTbError (m_sinrPerceived, (*itTb).second.rbBitmap, (*itTb).second.size, (*itTb).second.mcs);
+          (*itTb).second.corrupt = m_random.GetValue () > errorRate ? false : true;
+          NS_LOG_DEBUG (this << "RNTI " << (*itTb).first.m_rnti << " size " << (*itTb).second.size << " mcs " << (uint32_t)(*itTb).second.mcs << " bitmap " << (*itTb).second.rbBitmap.size () << " layer " << (uint16_t)(*itTb).first.m_layer << " ErrorRate " << errorRate << " corrupted " << (*itTb).second.corrupt);
+       }
+      
+//       for (uint16_t i = 0; i < (*itTb).second.rbBitmap.size (); i++)
+//         {
+//           NS_LOG_DEBUG (this << " RB " << (*itTb).second.rbBitmap.at (i) << " SINR " << m_sinrPerceived[(*itTb).second.rbBitmap.at (i)]);
+//         }
+      itTb++;
     }
+    
+    for (std::list<Ptr<PacketBurst> >::const_iterator i = m_rxPacketBurstList.begin (); 
+    i != m_rxPacketBurstList.end (); ++i)
+      {
+        for (std::list<Ptr<Packet> >::const_iterator j = (*i)->Begin (); j != (*i)->End (); ++j)
+          {
+            // retrieve TB info of this packet 
+            LteRadioBearerTag tag;
+            (*j)->PeekPacketTag (tag);
+            TbId_t tbId;
+            tbId.m_rnti = tag.GetRnti ();
+            tbId.m_layer = tag.GetLayer ();
+            itTb = m_expectedTbs.find (tbId);
+            NS_LOG_INFO (this << " Packet of " << tbId.m_rnti << " layer " <<  (uint8_t) tbId.m_layer);
+            if (itTb!=m_expectedTbs.end ())
+              {
+                if (!(*itTb).second.corrupt)
+                  {
+                    m_phyRxEndOkTrace (*j);
+                
+                    if (!m_genericPhyRxEndOkCallback.IsNull ())
+                      {
+                        m_genericPhyRxEndOkCallback (*j);
+                      }
+                  }
+                else
+                  {
+                    // TB received with errors
+                    m_phyRxEndErrorTrace (*j);
+                  }
+              }
+          }
+      }
   ChangeState (IDLE);
   m_rxPacketBurstList.clear ();
+  m_expectedTbs.clear ();
 }
 
 void 
@@ -450,6 +553,42 @@ LteSpectrumPhy::AddSinrChunkProcessor (Ptr<LteSinrChunkProcessor> p)
 {
   m_interference->AddSinrChunkProcessor (p);
 }
+
+void 
+LteSpectrumPhy::SetTransmissionMode (uint8_t txMode)
+{
+  NS_LOG_FUNCTION (this << (uint16_t) txMode);
+  NS_ASSERT_MSG (txMode < m_txModeGain.size (), "TransmissionMode not available: 1.." << m_txModeGain.size ());
+  m_transmissionMode = txMode;
+}
+
+
+void 
+LteSpectrumPhy::SetTxModeGain (uint8_t txMode, double gain)
+{
+  NS_LOG_FUNCTION (this << " txmode " << (uint16_t)txMode << " gain " << gain);
+  // convert to linear
+  gain = pow (10.0, (gain / 10.0));
+  if (m_txModeGain.size () < txMode)
+  {
+    m_txModeGain.resize (txMode);
+  }
+  std::vector <double> temp;
+  temp = m_txModeGain;
+  m_txModeGain.clear ();
+  for (uint8_t i = 0; i < temp.size (); i++)
+  {
+    if (i==txMode-1)
+    {
+      m_txModeGain.push_back (gain);
+    }
+    else
+    {
+      m_txModeGain.push_back (temp.at (i));
+    }
+  }
+}
+
 
 
 } // namespace ns3

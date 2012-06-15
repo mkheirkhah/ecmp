@@ -17,6 +17,7 @@
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
  *         Giuseppe Piro  <g.piro@poliba.it>
+ * Modified by: Marco Miozzo <mmiozzo@cttc.es> (introduce physical error model)
  */
 
 #ifndef LTE_SPECTRUM_PHY_H
@@ -35,15 +36,45 @@
 #include <ns3/generic-phy.h>
 #include <ns3/packet-burst.h>
 #include <ns3/lte-interference.h>
+#include <ns3/random-variable.h>
+#include <map>
 
 namespace ns3 {
 
+struct TbId_t
+{
+  uint16_t m_rnti;
+  uint8_t m_layer;
+  
+  public:
+  TbId_t ();
+  TbId_t (const uint16_t a, const uint8_t b);
+  
+  friend bool operator == (const TbId_t &a, const TbId_t &b);
+  friend bool operator < (const TbId_t &a, const TbId_t &b);
+};
+
+  
+struct tbInfo_t
+{
+  uint16_t size;
+  uint8_t mcs;
+  std::vector<int> rbBitmap;
+  bool corrupt;
+};
+
+typedef std::map<TbId_t, tbInfo_t> expectedTbs_t;
+
 class LteNetDevice;
+class AntennaModel;
 
 /**
  * \ingroup lte
  *
  * The LteSpectrumPhy models the physical layer of LTE
+ *
+ * It supports a single antenna model instance which is
+ * used for both transmission and reception.  
  */
 class LteSpectrumPhy : public SpectrumPhy
 {
@@ -71,6 +102,7 @@ public:
   Ptr<MobilityModel> GetMobility ();
   Ptr<NetDevice> GetDevice ();
   Ptr<const SpectrumModel> GetRxSpectrumModel () const;
+  Ptr<AntennaModel> GetRxAntenna ();
   void StartRx (Ptr<SpectrumSignalParameters> params);
 
   /**
@@ -87,6 +119,13 @@ public:
    */
   void SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd);
  
+  /**
+   * set the AntennaModel to be used
+   * 
+   * \param a the Antenna Model
+   */
+  void SetAntenna (Ptr<AntennaModel> a);
+
   /**
    * Start a transmission
    *
@@ -143,18 +182,50 @@ public:
    * \param p the new LteSinrChunkProcessor to be added to the processing chain
    */
   void AddSinrChunkProcessor (Ptr<LteSinrChunkProcessor> p);
+  
+  /** 
+  * 
+  * 
+  * \param rnti the rnti of the source of the TB
+  * \param size the size of the TB
+  * \param mcs the MCS of the TB
+  * \param map the map of RB(s) used
+  * \param layer the layer (in case of MIMO tx)
+  */
+  void AddExpectedTb (uint16_t  rnti, uint16_t size, uint8_t mcs, std::vector<int> map, uint8_t layer);
+  
+  /** 
+  * 
+  * 
+  * \param sinr vector of sinr perceived per each RB
+  */
+  void UpdateSinrPerceived (const SpectrumValue& sinr);
+  
+  /** 
+  * 
+  * 
+  * \param txMode UE transmission mode (SISO, MIMO tx diversity, ...)
+  */
+  void SetTransmissionMode (uint8_t txMode);
+  
+  friend class LteUePhy;
+  
 
 private:
   void ChangeState (State newState);
   void EndTx ();
   void EndRx ();
+  
+  void SetTxModeGain (uint8_t txMode, double gain);
+  
 
   Ptr<MobilityModel> m_mobility;
-
+  Ptr<AntennaModel> m_antenna;
   Ptr<NetDevice> m_device;
 
   Ptr<SpectrumChannel> m_channel;
 
+  Ptr<const SpectrumModel> m_rxSpectrumModel;
   Ptr<SpectrumValue> m_txPsd;
   Ptr<PacketBurst> m_txPacketBurst;
   std::list<Ptr<PacketBurst> > m_rxPacketBurstList;
@@ -166,8 +237,8 @@ private:
   TracedCallback<Ptr<const PacketBurst> > m_phyTxStartTrace;
   TracedCallback<Ptr<const PacketBurst> > m_phyTxEndTrace;
   TracedCallback<Ptr<const PacketBurst> > m_phyRxStartTrace;
-  TracedCallback<Ptr<const PacketBurst> > m_phyRxEndOkTrace;
-  TracedCallback<Ptr<const PacketBurst> > m_phyRxEndErrorTrace;
+  TracedCallback<Ptr<const Packet> > m_phyRxEndOkTrace;
+  TracedCallback<Ptr<const Packet> > m_phyRxEndErrorTrace;
 
   GenericPhyTxEndCallback        m_genericPhyTxEndCallback;
   GenericPhyRxEndErrorCallback   m_genericPhyRxEndErrorCallback;
@@ -175,7 +246,17 @@ private:
 
   Ptr<LteInterference> m_interference;
 
-  uint16_t m_cellId; 
+  uint16_t m_cellId;
+  
+  expectedTbs_t m_expectedTbs;
+  SpectrumValue m_sinrPerceived;
+  
+  UniformVariable m_random;
+  bool m_pemEnabled; // when true (default) the phy error model is enabled
+  
+  uint8_t m_transmissionMode; // for UEs: store the transmission mode
+  std::vector <double> m_txModeGain; // duplicate value of LteUePhy
+  
 };
 
 

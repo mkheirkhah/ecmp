@@ -111,7 +111,7 @@ public:
     }; 
   /**
    * \brief Set ECN Field
-   * \param ECN Type
+   * \param ecn ECN Type
    */
   void SetEcn (EcnType ecn);
   /**
@@ -244,6 +244,7 @@ private:
   Ipv4Address m_destination;
   uint16_t m_checksum;
   bool m_goodChecksum;
+  uint16_t m_headerSize;
 };
 
 } // namespace ns3

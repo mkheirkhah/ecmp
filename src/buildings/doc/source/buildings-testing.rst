@@ -6,13 +6,12 @@
 Overview
 ********
 
-To test and validate the ns-3 Building Pathloss module, a test suites is provided which are integrated with the ns-3 test framework in the lte module.
-To run them, you need to have configured the build of the simulator in this way::
+To test and validate the ns-3 Building Pathloss module, some test suites is provided which are integrated with the ns-3 test framework. To run them, you need to have configured the build of the simulator in this way::
 
-    ./waf configure --enable-tests --enable-modules=lte --enable-examples
+    ./waf configure --enable-tests --enable-modules=buildings
     ./test.py
 
-The above will run not only the test suites belonging to the LTE module, but also those belonging to all the other ns-3 modules on which the LTE module depends. See the ns-3 manual for generic information on the testing framework.
+The above will run not only the test suites belonging to the buildings module, but also those belonging to all the other ns-3 modules on which the buildings module depends. See the ns-3 manual for generic information on the testing framework.
 
 You can get a more detailed report in HTML format in this way::
 
@@ -28,16 +27,26 @@ For more details about ``test.py`` and the ns-3 testing framework, please refer 
 
 
 
-Description of the test suite
-*****************************
+Description of the test suites
+******************************
 
-The test suite ``lte-pathloss-model`` creates different test cases with
-both unit and system tests. The formers validate the single component model and the pathloss logic behavior. The latter proof the integration of the pathloss model in the ns3 framework and more in specifically in the lte module. Finally. a unit test is provided in order to test the shadowing characterization.
 
-Unit Tests
-~~~~~~~~~~
+BuildingsHelper test
+~~~~~~~~~~~~~~~~~~~~
 
-The unit tests are carried out by comparing the expected results of the pathloss module in specific scenarios with pre calculated values obtained offline with an Octave script (/test/reference/lte-pathloss.m). The tests are considered passed if the two values differs only for a predefined tolerance (0.1) that accounts for the approximations due to floating point arithmetics.
+The test suite ``buildings-helper`` checks that the method ``BuildingsHelper::MakeAllInstancesConsistent ()`` works properly, i.e., that the BuildingsHelper is successful in locating if nodes are outdoor or indoor, and if indoor that they are located in the correct building, room and floor. Several test cases are provided with different buildings (having different size, position, rooms and floors) and different node positions. The test passes if each every node is located correctly.
+
+
+BuildingPositionAllocator test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The test suite ``building-position-allocator`` feature two test cases that check that respectively RandomRoomPositionAllocator and SameRoomPositionAllocator work properly. Each test cases involves a single 2x3x2 room building (total 12 rooms) at known coordinates and respectively 24 and 48 nodes. Both tests check that the number of nodes allocated in each room is the expected one and that the position of the nodes is also correct.
+
+
+Buildings Pathloss tests
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The test suite ``buildings-pathloss-model`` provides different unit tests that compare the expected results of the buildings pathloss module in specific scenarios with pre calculated values obtained offline with an Octave script (test/reference/buildings-pathloss.m). The tests are considered passed if the two values are equal up to a tolerance of 0.1, which is deemed appropriate for the typical usage of pathloss values (which are in dB).
 
 In the following we detailed the scenarios considered, their selection has been done for covering the wide set of possible pathloss logic combinations. The pathloss logic results therefore implicitly tested.
 
@@ -54,7 +63,7 @@ This test is aimed at validating the COST231 model. The test is similar to the O
 Test #3 2.6 GHz model
 ---------------------
 
-This test validates the 2.6 empirical model [pl26ghz]_. The test is similar to Okumura Hata one except that the frequency is the EUTRA band #7 (2620 MHz) and the test can be performed only in urban scenario.
+This test validates the 2.6 GHz Kun model. The test is similar to Okumura Hata one except that the frequency is the EUTRA band #7 (2620 MHz) and the test can be performed only in urban scenario.
 
 Test #4 ITU1411 LoS model
 -------------------------
@@ -93,9 +102,9 @@ Test #10 Indoor -> Outdoor with ITU1411 model
 This test validates the outdoor to indoor transmissions for short distances. In this case the eNB is placed in the second floor of a residential building with walls made of concrete with windows and distances 500 meters from the outdoor UE (i.e., NLoS communication). Therefore the height gain has to be included in the pathloss evaluation.
 
 
-Shadowing Test
-~~~~~~~~~~~~~~
+Buildings Shadowing Test
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-This unit test is intended to verify the statistics distribution characteristics of the shadowing are the one expected. The shadowing is modeled according to a normal distribution with mean 0 and variable standard deviation (usually called sigma), according to the standard models used in literature.
+The test suite ``buildings-shadowing-test`` is a unit test intended to verify the statistics distribution characteristics of the shadowing are the one expected. The shadowing is modeled according to a normal distribution with mean :math:`\mu = 0` and variable standard deviation :math:`\sigma`, according to models commonly used in literature.
 The test generates 10,000 samples of shadowing by subtracting the deterministic component from the total loss returned by the ``BuildingPathlossModel``. The mean and variance of the shadowing samples are then used to verify whether the 99% confidence interval is respected by the sequence generated by the simulator.
 

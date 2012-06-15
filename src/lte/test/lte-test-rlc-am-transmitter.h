@@ -23,10 +23,12 @@
 
 #include "ns3/test.h"
 
-#include "ns3/lte-test-entities.h"
 
-using namespace ns3;
+namespace ns3 {
 
+class LteTestRrc;
+class LteTestMac;
+class LteTestPdcp;
 
 /**
  * TestSuite 4.1.1 RLC AM: Only transmitter
@@ -44,12 +46,17 @@ class LteRlcAmTransmitterTestCase : public TestCase
     LteRlcAmTransmitterTestCase ();
     virtual ~LteRlcAmTransmitterTestCase ();
 
+    void CheckDataReceived (Time time, std::string shouldReceived, std::string assertMsg);
+
   protected:
     virtual void DoRun (void);
 
     Ptr<LteTestPdcp> txPdcp;
     Ptr<LteRlc> txRlc;
     Ptr<LteTestMac> txMac;
+
+  private:
+    void DoCheckDataReceived (std::string shouldReceived, std::string assertMsg);
 
 };
 
@@ -112,5 +119,7 @@ class LteRlcAmTransmitterReportBufferStatusTestCase : public LteRlcAmTransmitter
     virtual void DoRun (void);
 
 };
+
+} // namespace ns3
 
 #endif // LTE_TEST_RLC_AM_TRANSMITTER_H

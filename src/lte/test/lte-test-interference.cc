@@ -23,6 +23,7 @@
 #include "ns3/log.h"
 #include "ns3/string.h"
 #include "ns3/double.h"
+#include <ns3/enum.h>
 
 #include "ns3/mobility-helper.h"
 #include "ns3/lte-helper.h"
@@ -33,13 +34,13 @@
 #include "ns3/lte-ue-phy.h"
 #include "ns3/lte-ue-net-device.h"
 
-#include "ns3/lte-test-interference.h"
+#include "lte-test-interference.h"
 
 #include "lte-test-sinr-chunk-processor.h"
 
 NS_LOG_COMPONENT_DEFINE ("LteInterferenceTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 void
@@ -112,6 +113,8 @@ LteInterferenceTestCase::~LteInterferenceTestCase ()
 void
 LteInterferenceTestCase::DoRun (void)
 {
+  Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
+  Config::SetDefault ("ns3::LteAmc::Ber", DoubleValue (0.00005));
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
 //   lteHelper->EnableLogComponents ();
   lteHelper->EnableMacTraces ();
@@ -199,20 +202,20 @@ LteInterferenceTestCase::DoRun (void)
                    MakeBoundCallback (&LteTestUlSchedulingCallback, this));
 
 
-  Simulator::Stop (Seconds (0.006));
+  Simulator::Stop (Seconds (0.020));
   Simulator::Run ();
   
 
-  double dlSinr1Db = 10.0 * log10 (testDlSinr1->GetSinr ()[0]);
+  double dlSinr1Db = 10.0 * log10 (testDlSinr1->GetSinr ()->operator[] (0));
   NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr1Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB1 --> UE1)");
 
-  double ulSinr1Db = 10.0 * log10 (testUlSinr1->GetSinr ()[0]);
+  double ulSinr1Db = 10.0 * log10 (testUlSinr1->GetSinr ()->operator[] (0));
   NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr1Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE1 --> eNB1)");
 
-  double dlSinr2Db = 10.0 * log10 (testDlSinr2->GetSinr ()[0]);
+  double dlSinr2Db = 10.0 * log10 (testDlSinr2->GetSinr ()->operator[] (0));
   NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr2Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB2 --> UE2)");
   
-  double ulSinr2Db = 10.0 * log10 (testUlSinr2->GetSinr ()[0]);
+  double ulSinr2Db = 10.0 * log10 (testUlSinr2->GetSinr ()->operator[] (0));
   NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr2Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE2 --> eNB2)");
 
   Simulator::Destroy ();
@@ -229,7 +232,7 @@ LteInterferenceTestCase::DlScheduling (uint32_t frameNo, uint32_t subframeNo, ui
    *    For first 4 subframeNo in the first frameNo, the MCS cannot be properly evaluated,
    *    because CQI feedback is still not available at the eNB.
    */
-  if ( (frameNo > 1) || (subframeNo > 4) )
+  if ( (frameNo > 1) || (subframeNo > 9) )
     {
       NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcsTb1, m_dlMcs, "Wrong DL MCS ");
     }
@@ -244,8 +247,11 @@ LteInterferenceTestCase::UlScheduling (uint32_t frameNo, uint32_t subframeNo, ui
    *    For first 5 subframeNo in the first frameNo, the MCS cannot be properly evaluated,
    *    because CQI feedback is still not available at the eNB.
    */
-  if ( (frameNo > 1) || (subframeNo > 5) )
+  if ( (frameNo > 1) && (subframeNo > 4) )
     {
       NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcs, m_ulMcs, "Wrong UL MCS");
     }
 }
+
+} // namespace ns3
+

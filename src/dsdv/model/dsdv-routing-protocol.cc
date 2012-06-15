@@ -47,13 +47,13 @@ namespace ns3 {
 namespace dsdv {
 NS_OBJECT_ENSURE_REGISTERED (RoutingProtocol);
 
-// / UDP Port for DSDV control traffic
+/// UDP Port for DSDV control traffic
 const uint32_t RoutingProtocol::DSDV_PORT = 269;
 
-// / Tag used by DSDV implementation
+/// Tag used by DSDV implementation
 struct DeferredRouteOutputTag : public Tag
 {
-  // / Positive if output device is fixed in RouteOutput
+  /// Positive if output device is fixed in RouteOutput
   int32_t oif;
 
   DeferredRouteOutputTag (int32_t o = -1)
@@ -840,7 +840,7 @@ RoutingProtocol::SendPeriodicUpdate ()
   m_routingTable.Purge (removedAddresses);
   MergeTriggerPeriodicUpdates ();
   m_routingTable.GetListOfAllRoutes (allRoutes);
-  if (allRoutes.size () < 0)
+  if (allRoutes.empty ())
     {
       return;
     }

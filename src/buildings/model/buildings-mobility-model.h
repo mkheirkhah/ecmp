@@ -44,31 +44,62 @@ namespace ns3 {
  * either indoor (e.g., houses, offices, etc.) and outdoor.
  * 
  */
-
-
 class BuildingsMobilityModel : public MobilityModel
 {
 public:
   static TypeId GetTypeId (void);
   BuildingsMobilityModel ();
 
+  /** 
+   * 
+   * \return true if the MobilityModel instance is indoor, false otherwise
+   */
   bool IsIndoor (void);
+
+  /** 
+   * 
+   * \return true if the MobilityModel instance is outdoor, false otherwise
+   */
   bool IsOutdoor (void);
 
-  void SetIndoor (Ptr<Building> building);
+  /** 
+   * Mark this MobilityModel instance as indoor 
+   * 
+   * \param building the building into which the MobilityModel instance is located
+   * \param nfloor the floor number 1...nFloors at which the  MobilityModel instance is located
+   * \param nroomx the X room number 1...nRoomsX at which the  MobilityModel instance is located
+   * \param nroomy the Y room number 1...nRoomsY at which the  MobilityModel instance is located
+   */
   void SetIndoor (Ptr<Building> building, uint8_t nfloor, uint8_t nroomx, uint8_t nroomy);
-  void SetOutdoor (void);
 
-  void SetSurroudingBuilding (Ptr<Building> building);
+  /** 
+   * Mark this MobilityModel instance as outdoor
+   * 
+   */
+  void SetOutdoor ();
 
-  void SetFloorNumber (uint8_t nfloor);
-  void SetRoomNumberX (uint8_t nroomx);
-  void SetRoomNumberY (uint8_t nroomy);
-
+  /** 
+   * 
+   * \return 
+   */
   uint8_t GetFloorNumber (void);
+
+  /** 
+   * 
+   * \return 
+   */
   uint8_t GetRoomNumberX (void);
+
+  /** 
+   * 
+   * \return 
+   */
   uint8_t GetRoomNumberY (void);
 
+  /** 
+   * 
+   * \return 
+   */
   Ptr<Building> GetBuilding ();
 
 
@@ -79,13 +110,9 @@ private:
   virtual void DoSetPosition (const Vector &position);
   virtual Vector DoGetVelocity (void) const;
   ConstantVelocityHelper m_helper;
-  Box m_bounds;     // bounds of the simulation field (if needed)
-  std::list < Ptr<Building> > m_surroudingBuildings;    // buildings blocks
+
   Ptr<Building> m_myBuilding;
   bool m_indoor;
-  /**
-  * floors numbering starts from 0 (basement)
-  */
   uint8_t m_nFloor;
   uint8_t m_roomX;
   uint8_t m_roomY;

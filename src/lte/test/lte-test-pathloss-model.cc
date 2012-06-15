@@ -25,11 +25,10 @@
 #include "ns3/spectrum-test.h"
 
 #include "ns3/lte-phy-tag.h"
-#include "ns3/lte-test-ue-phy.h"
 #include "ns3/lte-sinr-chunk-processor.h"
 
-#include "ns3/lte-test-pathloss-model.h"
-#include <ns3/buildings-propagation-loss-model.h>
+
+#include <ns3/hybrid-buildings-propagation-loss-model.h>
 #include <ns3/node-container.h>
 #include <ns3/mobility-helper.h>
 #include <ns3/lte-helper.h>
@@ -45,11 +44,14 @@
 #include <ns3/lte-helper.h>
 #include <ns3/lte-enb-phy.h>
 #include <ns3/lte-ue-phy.h>
-#include <ns3/lte-test-sinr-chunk-processor.h>
+
+#include "lte-test-sinr-chunk-processor.h"
+#include "lte-test-ue-phy.h"
+#include "lte-test-pathloss-model.h"
 
 NS_LOG_COMPONENT_DEFINE ("LtePathlossModelTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 /**
@@ -142,7 +144,10 @@ LtePathlossModelTestSuite::LtePathlossModelTestSuite ()
   double noisePowerDbm = ktDbm + 10 * log10 (25 * 180000); // corresponds to kT*bandwidth in linear units
   double receiverNoiseFigureDb = 9.0; // default UE noise figure
   double noiseLin = pow (10, (noisePowerDbm-30+receiverNoiseFigureDb)/10);
-  double loss[] = {81.057184, 134.081310, 144.259958};
+
+  // reference values obtained with the octave script src/lte/test/reference/lte_pathloss.m
+
+  double loss[] = {81.062444, 134.078605, 144.259958};
   double dist[] = {100.0, 500.0, 1500};
 
   int numOfTests = sizeof (loss) / sizeof (double);
@@ -200,14 +205,15 @@ LtePathlossModelSystemTestCase::DoRun (void)
 //   LogComponentEnable ("LteUePhy", LOG_LEVEL_ALL);
 //   LogComponentEnable ("SingleModelSpectrumChannel", LOG_LEVEL_ALL);
   LogComponentEnable ("BuildingsPropagationLossModel", LOG_LEVEL_ALL);
+  LogComponentEnable ("HybridBuildingsPropagationLossModel", LOG_LEVEL_ALL);
 //   LogComponentEnable ("LteHelper", LOG_LEVEL_ALL);
-//   LogComponentDisable ("BuildingsPropagationLossModel", LOG_LEVEL_ALL);
+
 //   
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   //   lteHelper->EnableLogComponents ();
   lteHelper->EnableMacTraces ();
   lteHelper->EnableRlcTraces ();
-  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::BuildingsPropagationLossModel"));
+  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::HybridBuildingsPropagationLossModel"));
 
   // set frequency. This is important because it changes the behavior of the pathloss model
   lteHelper->SetEnbDeviceAttribute ("DlEarfcn", UintegerValue (200));
@@ -274,7 +280,7 @@ LtePathlossModelSystemTestCase::DoRun (void)
   Simulator::Stop (Seconds (0.005));
   Simulator::Run ();
   
-  double calculatedSinrDb = 10.0 * log10 (testSinr->GetSinr ()[0]);
+  double calculatedSinrDb = 10.0 * log10 (testSinr->GetSinr ()->operator[] (0));
   NS_LOG_INFO ("Distance " << m_distance << " Calculated SINR " << calculatedSinrDb << " ref " << m_snrDb);
   Simulator::Destroy ();
   NS_TEST_ASSERT_MSG_EQ_TOL (calculatedSinrDb, m_snrDb, 0.001, "Wrong SINR !");
@@ -306,3 +312,6 @@ LtePathlossModelSystemTestCase::DlScheduling (uint32_t frameNo, uint32_t subfram
   }
 }
                                          
+
+} // namespace ns3
+

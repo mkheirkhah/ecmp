@@ -44,10 +44,11 @@ main (int argc, char *argv[])
 {
 
   uint16_t numberOfNodes = 2;
-  uint32_t simTime = 5;
+  double simTime = 5.0;
   double distance = 60.0;
   // Inter packet interval in ms
-  double interPacketInterval = 1;
+//   double interPacketInterval = 1;
+  double interPacketInterval = 100;
 
   // Command line arguments
   CommandLine cmd;
@@ -58,7 +59,7 @@ main (int argc, char *argv[])
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<EpcHelper>  epcHelper = CreateObject<EpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
-  lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
+  lteHelper->SetSchedulerType("ns3::PfFfMacScheduler");
 
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults();
@@ -135,8 +136,8 @@ main (int argc, char *argv[])
 
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1234;
-  uint16_t ulPort = 1235;
-  uint16_t otherPort = 1236;
+  uint16_t ulPort = 2000;
+  uint16_t otherPort = 3000;
   PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
   PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
   PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), otherPort));
@@ -144,29 +145,34 @@ main (int argc, char *argv[])
   ApplicationContainer serverApps;
   for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
     {
-      serverApps = dlPacketSinkHelper.Install (ueNodes.Get(u));
-      serverApps = ulPacketSinkHelper.Install (remoteHost);
-      serverApps = packetSinkHelper.Install (ueNodes.Get(u));
+      ++ulPort;
+      ++otherPort;
+      serverApps.Add (dlPacketSinkHelper.Install (ueNodes.Get(u)));
+      serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+      serverApps.Add (packetSinkHelper.Install (ueNodes.Get(u)));
+
       UdpClientHelper dlClient (ueIpIface.GetAddress (u), dlPort);
       dlClient.SetAttribute ("Interval", TimeValue (MilliSeconds(interPacketInterval)));
       dlClient.SetAttribute ("MaxPackets", UintegerValue(1000000));
+
       UdpClientHelper ulClient (remoteHostAddr, ulPort);
       ulClient.SetAttribute ("Interval", TimeValue (MilliSeconds(interPacketInterval)));
       ulClient.SetAttribute ("MaxPackets", UintegerValue(1000000));
+
       UdpClientHelper client (ueIpIface.GetAddress (u), otherPort);
       client.SetAttribute ("Interval", TimeValue (MilliSeconds(interPacketInterval)));
       client.SetAttribute ("MaxPackets", UintegerValue(1000000));
-      clientApps = dlClient.Install (remoteHost);
-      clientApps = ulClient.Install (ueNodes.Get(u));
+
+      clientApps.Add (dlClient.Install (remoteHost));
+      clientApps.Add (ulClient.Install (ueNodes.Get(u)));
       if (u+1 < ueNodes.GetN ())
         {
-          clientApps = client.Install (ueNodes.Get(u+1));
+          clientApps.Add (client.Install (ueNodes.Get(u+1)));
         }
       else
         {
-          clientApps = client.Install (ueNodes.Get(0));
+          clientApps.Add (client.Install (ueNodes.Get(0)));
         }
-
     }
   serverApps.Start (Seconds (0.01));
   clientApps.Start (Seconds (0.01));

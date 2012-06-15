@@ -22,6 +22,7 @@
 #include "ns3/log.h"
 #include "ns3/string.h"
 #include "ns3/double.h"
+#include <ns3/enum.h>
 
 #include "ns3/mobility-helper.h"
 #include "ns3/lte-helper.h"
@@ -29,13 +30,13 @@
 #include "ns3/lte-ue-phy.h"
 #include "ns3/lte-ue-net-device.h"
 
-#include "ns3/lte-test-link-adaptation.h"
+#include "lte-test-link-adaptation.h"
 
 #include "lte-test-sinr-chunk-processor.h"
 
 NS_LOG_COMPONENT_DEFINE ("LteLinkAdaptationTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 /**
@@ -154,6 +155,9 @@ LteLinkAdaptationTestCase::~LteLinkAdaptationTestCase ()
 void
 LteLinkAdaptationTestCase::DoRun (void)
 {
+  
+  Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
+  Config::SetDefault ("ns3::LteAmc::Ber", DoubleValue (0.00005));
   /**
     * Simulation Topology
     */
@@ -202,10 +206,10 @@ LteLinkAdaptationTestCase::DoRun (void)
   Config::Connect ("/NodeList/0/DeviceList/0/LteEnbMac/DlScheduling",
                    MakeBoundCallback (&LteTestDlSchedulingCallback, this));
 
-  Simulator::Stop (Seconds (0.005));
+  Simulator::Stop (Seconds (0.007));
   Simulator::Run ();
 
-  double calculatedSinrDb = 10.0 * log10 (testSinr->GetSinr ()[0]);
+  double calculatedSinrDb = 10.0 * log10 (testSinr->GetSinr ()->operator[] (0));
   NS_TEST_ASSERT_MSG_EQ_TOL (calculatedSinrDb, m_snrDb, 0.0000001, "Wrong SINR !");
   Simulator::Destroy ();
 }
@@ -228,10 +232,13 @@ LteLinkAdaptationTestCase::DlScheduling (uint32_t frameNo, uint32_t subframeNo, 
    *    For first 4 subframeNo in the first frameNo, the MCS cannot be properly evaluated,
    *    because CQI feedback is still not available at the eNB.
    */
-  if ( (frameNo > 1) || (subframeNo > 4) )
+  if ( (frameNo > 1) || (subframeNo > 8) )
     {
       NS_LOG_INFO (m_snrDb << "\t" << m_mcsIndex << "\t" << (uint16_t)mcsTb1);
 
       NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcsTb1, m_mcsIndex, "Wrong MCS index");
     }
 }
+
+} // namespace ns3
+

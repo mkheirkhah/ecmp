@@ -28,6 +28,7 @@
 #include <vector>
 #include <map>
 #include <ns3/nstime.h>
+#include <ns3/lte-amc.h>
 
 
 // value for SINR outside the range defined by FF-API, used to indicate that there
@@ -84,6 +85,8 @@ public:
 
   friend class PfSchedulerMemberCschedSapProvider;
   friend class PfSchedulerMemberSchedSapProvider;
+  
+  void TransmissionModeConfigurationUpdate (uint16_t rnti, uint8_t txMode);
 
 private:
   //
@@ -140,6 +143,7 @@ private:
   
   void UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t size);
   void UpdateUlRlcBufferInfo (uint16_t rnti, uint16_t size);
+  Ptr<LteAmc> m_amc;
 
   /*
    * Vectors of UE's LC info
@@ -208,12 +212,12 @@ private:
 
 
   double m_timeWindow;
-  uint8_t m_schedTtiDelay; // delay between scheduling and reception (based on m_macChTtiDelay)
 
   uint16_t m_nextRntiUl; // RNTI of the next user to be served next scheduling in UL
   
   uint32_t m_cqiTimersThreshold; // # of TTIs for which a CQI canbe considered valid
 
+  std::map <uint16_t,uint8_t> m_uesTxMode; // txMode of the UEs
 };
 
 } // namespace ns3

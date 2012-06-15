@@ -110,23 +110,23 @@ BSSchedulerRtps::AddDownlinkBurst (Ptr<const WimaxConnection> connection,
   m_downlinkBursts->push_back (std::make_pair (dlMapIe, burst));
 }
 
+/**
+ * \brief A DownLink Scheduler for rtPS Flows
+ *
+ * The DL Scheduler assigns the available bandwidth in the following order:
+ * - IR Connections
+ * - Broadcast Connections
+ * - Basic and Primary Connections
+ * - UGS Connections
+ * - rtPS Connections
+ * - nrtPS Connections
+ * - BE Connections
+ * All rtPS flows that have packets in the queue can transmit at least one
+ * packet, according to the available bandwidth.
+ */
 void
 BSSchedulerRtps::Schedule (void)
 {
-  /**
-   * \brief  A DownLink Scheduler for rtPS Flows
-   *
-   * The DL Scheduler assigns the available bandwidth in the following order:
-   *         - IR Connections
-   *         - Broadcast Connections
-   *         - Basic and Primary Connections
-   *         - UGS Connections
-   * - rtPS Connections
-   *         - nrtPS Connections
-   *         - BE Connections
-   * All rtPS flows that have packets in the queue can transmit at least one
-   * packet, according to the available bandwidth.
-   */
 
   uint32_t availableSymbols = GetBs ()->GetNrDlSymbols ();
 
@@ -494,7 +494,6 @@ BSSchedulerRtps::BSSchedulerRTPSConnection (uint32_t &availableSymbols)
   ServiceFlowRecord *serviceFlowRecord;
   std::vector<ServiceFlow*> serviceFlows;
 
-  std::deque<WimaxMacQueue::QueueElement>::const_iterator iter3;
   uint32_t symbolsRequired[100];
   WimaxPhy::ModulationType modulationType_[100];
   uint8_t diuc_[100];

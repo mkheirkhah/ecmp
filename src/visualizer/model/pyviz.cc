@@ -153,12 +153,19 @@ PyViz::PyViz ()
   Config::Connect ("/NodeList/*/DeviceList/*/$ns3::PointToPointNetDevice/MacRx",
                    MakeCallback (&PyViz::TraceNetDevRxPointToPoint, this));
 
+  // WiMax
   Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WimaxNetDevice/Tx",
                    MakeCallback (&PyViz::TraceNetDevTxWimax, this));
 
   Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WimaxNetDevice/Rx",
                    MakeCallback (&PyViz::TraceNetDevRxWimax, this));
 
+  // LTE
+  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::LteNetDevice/Tx",
+                   MakeCallback (&PyViz::TraceNetDevTxLte, this));
+
+  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::LteNetDevice/Rx",
+                   MakeCallback (&PyViz::TraceNetDevRxLte, this));
 }
 
 void
@@ -258,8 +265,11 @@ void
 PyViz::CallbackStopSimulation ()
 {
   NS_LOG_FUNCTION_NOARGS ();
-  Simulator::Stop (Seconds (0)); // Stop right now
-  m_stop = true;
+  if (m_runUntil <= Simulator::Now ())
+    {
+      Simulator::Stop (Seconds (0)); // Stop right now
+      m_stop = true;
+    }
 }
 
 void
@@ -309,9 +319,9 @@ PyViz::SimulatorRunUntil (Time time)
   // sure we stop at the right time.  Otherwise, simulations with few
   // events just appear to "jump" big chunks of time.
   NS_LOG_LOGIC ("Schedule dummy callback to be called in " << (time - Simulator::Now ()));
+  m_runUntil = time;
   m_stop = false;
-  Simulator::Cancel (m_stopCallbackEvent);
-  m_stopCallbackEvent = Simulator::Schedule (time - Simulator::Now (), &PyViz::CallbackStopSimulation, this);
+  Simulator::ScheduleWithContext (0xffffffff, time - Simulator::Now (), &PyViz::CallbackStopSimulation, this);
 
   Ptr<SimulatorImpl> impl = Simulator::GetImplementation ();
   Ptr<VisualSimulatorImpl> visualImpl = DynamicCast<VisualSimulatorImpl> (impl);
@@ -820,6 +830,19 @@ PyViz::TraceNetDevRxWimax (std::string context, Ptr<const Packet> packet, Mac48A
   TraceNetDevRxCommon (context, packet, source);
 }
 
+void
+PyViz::TraceNetDevTxLte (std::string context, Ptr<const Packet> packet, Mac48Address const &destination)
+{
+  NS_LOG_FUNCTION (context);
+  TraceNetDevTxCommon (context, packet, destination);
+}
+
+void
+PyViz::TraceNetDevRxLte (std::string context, Ptr<const Packet> packet, Mac48Address const &source)
+{
+  NS_LOG_FUNCTION (context);
+  TraceNetDevRxCommon (context, packet, source);
+}
 
 // ---------------------
 

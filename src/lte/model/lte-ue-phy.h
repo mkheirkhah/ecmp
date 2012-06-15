@@ -30,6 +30,7 @@
 #include <ns3/lte-amc.h>
 #include <ns3/lte-ue-phy-sap.h>
 #include <ns3/ptr.h>
+#include <ns3/lte-amc.h>
 
 
 namespace ns3 {
@@ -101,6 +102,11 @@ public:
   double GetNoiseFigure () const;
 
   /**
+   * \returns the TTI delay between MAC and channel
+   */
+  uint8_t GetMacChDelay (void) const;
+
+  /**
    * \brief Queue the MAC PDU to be sent
    * \param p the MAC PDU to sent
    */
@@ -150,10 +156,14 @@ public:
 
 
   // inherited from LtePhy
-  virtual void GenerateCqiFeedback (const SpectrumValue& sinr);
+  virtual void GenerateCqiReport (const SpectrumValue& sinr);
 
   virtual void DoSendIdealControlMessage (Ptr<IdealControlMessage> msg);
   virtual void ReceiveIdealControlMessage (Ptr<IdealControlMessage> msg);
+  
+  virtual void DoSetTransmissionMode (uint8_t txMode);
+  
+  
 
 
 
@@ -184,11 +194,29 @@ public:
    * \param cellId the cell identifier of the eNB
    */
   void SetEnbCellId (uint16_t cellId);
+  
 
 
 private:
+  
+  void SetTxMode1Gain (double gain);
+  void SetTxMode2Gain (double gain);
+  void SetTxMode3Gain (double gain);
+  void SetTxMode4Gain (double gain);
+  void SetTxMode5Gain (double gain);
+  void SetTxMode6Gain (double gain);
+  void SetTxMode7Gain (double gain);
+  void SetTxModeGain (uint8_t txMode, double gain);
+  
+  void QueueSubChannelsForTransmission (std::vector <int> rbMap);
+  
   std::vector <int> m_subChannelsForTransmission;
   std::vector <int> m_subChannelsForReception;
+  
+  std::vector< std::vector <int> > m_subChannelsForTransmissionQueue;
+  
+  
+  Ptr<LteAmc> m_amc;
 
   Time m_p10CqiPeriocity; /**< Wideband Periodic CQI: 2, 5, 10, 16, 20, 32, 40, 64, 80 or 160 ms */
   Time m_p10CqiLast;
@@ -204,6 +232,9 @@ private:
   uint16_t  m_rnti;
 
   uint16_t m_enbCellId;
+  
+  uint8_t m_transmissionMode;
+  std::vector <double> m_txModeGain;
 
 };
 

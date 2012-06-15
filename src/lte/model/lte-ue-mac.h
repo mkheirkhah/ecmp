@@ -81,6 +81,7 @@ private:
   void DoConfigureUe (uint16_t rnti);
   void DoAddLc (uint8_t lcId, LteMacSapUser* msu);
   void DoRemoveLc (uint8_t lcId);
+  void DoRrcUpdateConfigurationReq (LteUeConfig_t params);
 
   // forwarded from PHY SAP
   void DoReceivePhyPdu (Ptr<Packet> p);
@@ -99,10 +100,12 @@ private:
   LteUePhySapProvider* m_uePhySapProvider;
   LteUePhySapUser* m_uePhySapUser;
   
-  std::map <uint8_t, long uint> m_ulBsrReceived; // BSR received from RLC (BSR up to now)
+  std::map <uint8_t, uint64_t> m_ulBsrReceived; // BSR received from RLC (BSR up to now)
   
   Time m_bsrPeriodicity;
   Time m_bsrLast;
+  
+  bool m_freshUlBsr; // true when a BSR has been received in the last TTI
 
 
   uint16_t m_rnti;
