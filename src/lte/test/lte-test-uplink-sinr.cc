@@ -37,7 +37,7 @@
 
 NS_LOG_COMPONENT_DEFINE ("LteUplinkSinrTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 /**
@@ -479,3 +479,5 @@ LteUplinkSrsSinrTestCase::DoRun (void)
   Simulator::Destroy ();
   
 }
+
+} //namespace

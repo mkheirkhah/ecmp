@@ -18,6 +18,10 @@
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
  */
 
+#ifdef __FreeBSD__
+#define log2(x) (log(x) / M_LN2)
+#endif /* __FreeBSD__ */
+
 #include <ns3/log.h>
 #include <ns3/pointer.h>
 
@@ -503,7 +507,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
                           // no info on this subband -> worst MCS
                           mcs = 0;
                         }
-                      achievableRate += ((m_amc->GetTbSizeFromMcs (mcs, 1) / 8) / 0.001); // = TB size / TTI
+                        achievableRate += ((m_amc->GetTbSizeFromMcs (mcs, rbgSize) / 8) / 0.001); // = TB size / TTI
                     }
                   
                   double rcqi = achievableRate / (*it).second.lastAveragedThroughput;
@@ -1021,6 +1025,8 @@ PfFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider::S
     if ( params.m_macCeList.at (i).m_macCeType == MacCeListElement_s::BSR )
     {
       // buffer status report
+      // note that we only consider LCG 0, the other three LCGs are neglected
+      // this is consistent with the assumption in LteUeMac that the first LCG gathers all LCs
       uint16_t rnti = params.m_macCeList.at (i).m_rnti;
       it = m_ceBsrRxed.find (rnti);
       if (it == m_ceBsrRxed.end ())
@@ -1028,11 +1034,11 @@ PfFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider::S
         // create the new entry
         uint8_t bsrId = params.m_macCeList.at (i).m_macCeValue.m_bufferStatus.at (0);
         int buffer = BufferSizeLevelBsr::BsrId2BufferSize (bsrId);
-        m_ceBsrRxed.insert ( std::pair<uint16_t, uint32_t > (rnti, buffer)); // only 1 buffer status is working now
+        m_ceBsrRxed.insert ( std::pair<uint16_t, uint32_t > (rnti, buffer)); 
       }
       else
       {
-        // update the CQI value
+        // update the buffer size value
         (*it).second = BufferSizeLevelBsr::BsrId2BufferSize (params.m_macCeList.at (i).m_macCeValue.m_bufferStatus.at (0));
       }
     }
@@ -1277,6 +1283,7 @@ PfFfMacScheduler::RefreshUlCqiMaps(void)
 void
 PfFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t size)
 {
+  size = size - 2; // remove the minimum RLC overhead
   std::map<LteFlowId_t, FfMacSchedSapProvider::SchedDlRlcBufferReqParameters>::iterator it;
   LteFlowId_t flow (rnti, lcid);
   it = m_rlcBufferReq.find (flow);
@@ -1328,7 +1335,7 @@ void
 PfFfMacScheduler::UpdateUlRlcBufferInfo (uint16_t rnti, uint16_t size)
 {
   
-  
+  size = size - 2; // remove the minimum RLC overhead
   std::map <uint16_t,uint32_t>::iterator it = m_ceBsrRxed.find (rnti);
   if (it!=m_ceBsrRxed.end ())
     {

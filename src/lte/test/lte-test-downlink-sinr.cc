@@ -37,7 +37,7 @@
 
 NS_LOG_COMPONENT_DEFINE ("LteDownlinkSinrTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 /**
@@ -443,3 +443,4 @@ LteDownlinkCtrlSinrTestCase::DoRun (void)
 }
 
 
+} // namespace

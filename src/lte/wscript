@@ -181,7 +181,6 @@ def build(bld):
         'model/epc-tft.h',
         'model/epc-tft-classifier.h',
         'model/lte-mi-error-model.h',
-        'test/lte-test-mimo.h'
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

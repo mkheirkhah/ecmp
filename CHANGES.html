@@ -44,7 +44,46 @@ to this file based on your experience, please contribute a patch or drop
 us a note on ns-developers mailing list.</p>
 
 <hr>
-<h1>Changes from ns-3.13 to ns-3-dev</h1>
+<h1>Changes from ns-3.14 to ns-3.15</h1>
+
+<h2>New API:</h2>
+<ul>
+<li>A RandomVariableStreamHelper has been introduced to assist with 
+using the Config subsystem path names to assign fixed stream numbers
+to RandomVariableStream objects.</li>
+</ul>
+
+<h2>Changes to existing API:</h2>
+<ul>
+<li>Derived classes of RandomVariable (i.e. the random variable 
+implementations) have been ported to a new RandomVariableStream base class.
+<li>For a given distribution DistributionVariable (such as UniformVariable),
+the new class name is DistributionRandomVariable (such as 
+UniformRandomVariable). </li>
+<li>The new implementations are also derived from class ns3::Object and 
+are handled using the ns-3 smart pointer (Ptr) class.  </li>
+<li>The new variable classes also have a new attributed called "Stream"
+which allows them to be assigned to a fix stream index when assigned
+to the underlying pseudo-random stream of numbers.</li>
+</li>
+</ul>
+
+<h2>Changes to build system:</h2>
+<ul>
+<li></li>
+</ul>
+
+<h2>Changed behavior:</h2>
+<ul>
+<li>Programs using random variables or models that include random variables 
+may exhibit changed output for a given run number or seed, due to a possible 
+change in the order in which random variables are assigned to underlying 
+pseudo-random sequences.  Consult the manual for more information regarding 
+this.</li>
+</ul>
+
+<hr>
+<h1>Changes from ns-3.13 to ns-3.14</h1>
 
 <h2>New API:</h2>
 <ul>
@@ -112,6 +151,13 @@ QueueMode enum from DropTailQueue and RedQueue classes has been unified and move
 The API of the LTE module has undergone a significant redesign with
 the merge of the code from the LENA project. The new API is not
 backwards compatible with the previous version of the LTE module.
+</li>
+<li> The Ipv6AddressHelper API has been aligned with the Ipv4AddressHelper API. 
+The helper can be set with a call to Ipv6AddressHelper::SetBase 
+(Ipv6Address network, Ipv6Prefix prefix) instead of NewNetwork
+(Ipv6Address network, Ipv6Prefix prefix).  A new NewAddress (void) method
+has been added.  Typical usage will involve calls to SetBase (), NewNetwork (),
+and NewAddress (), as in class Ipv4AddressHelper. 
 </li>
 </ul>
 

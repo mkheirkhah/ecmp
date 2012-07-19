@@ -28,7 +28,7 @@
 #include "ns3/test.h"
 
 
-using namespace ns3;
+namespace ns3 {
 
 
 /**
@@ -70,5 +70,6 @@ class LteDownlinkCtrlSinrTestCase : public TestCase
     Ptr<SpectrumValue> m_sinr;
 };
 
+} // namespace ns3
 
 #endif /* LTE_TEST_DOWNLINK_SINR_H */

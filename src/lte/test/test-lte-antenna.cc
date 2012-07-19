@@ -39,7 +39,7 @@
 
 NS_LOG_COMPONENT_DEFINE ("LteAntennaTest");
 
-using namespace ns3;
+namespace ns3 {
 
 
 
@@ -226,3 +226,7 @@ LteAntennaTestSuite::LteAntennaTestSuite ()
 }
 
 static LteAntennaTestSuite lteAntennaTestSuite;
+
+
+} // namespace ns3
+
