@@ -30,11 +30,14 @@
 #include <ns3/lte-ue-cmac-sap.h>
 #include <ns3/lte-ue-phy-sap.h>
 #include <ns3/nstime.h>
+#include <ns3/event-id.h>
 #include <vector>
 #include <ns3/packet.h>
 
+
 namespace ns3 {
 
+class UniformRandomVariable;
 
 class LteUeMac :   public Object
 {
@@ -73,26 +76,51 @@ public:
   */
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
 
+ /**
+  * Assign a fixed random variable stream number to the random variables
+  * used by this model.  Return the number of streams (possibly zero) that
+  * have been assigned.
+  *
+  * \param stream first stream index to use
+  * \return the number of stream indices assigned by this model
+  */
+  int64_t AssignStreams (int64_t stream);
+
 private:
   // forwarded from MAC SAP
   void DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params);
   void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
 
   // forwarded from UE CMAC SAP
-  void DoConfigureUe (uint16_t rnti);
-  void DoAddLc (uint8_t lcId, LteMacSapUser* msu);
+  void DoConfigureRach (LteUeCmacSapProvider::RachConfig rc);
+  void DoStartContentionBasedRandomAccessProcedure ();
+  void DoStartNonContentionBasedRandomAccessProcedure (uint16_t rnti, uint8_t rapId, uint8_t prachMask);
+  void DoAddLc (uint8_t lcId, LteUeCmacSapProvider::LogicalChannelConfig lcConfig, LteMacSapUser* msu);
   void DoRemoveLc (uint8_t lcId);
-  void DoRrcUpdateConfigurationReq (LteUeConfig_t params);
+  void DoReset ();
 
   // forwarded from PHY SAP
   void DoReceivePhyPdu (Ptr<Packet> p);
   void DoReceiveLteControlMessage (Ptr<LteControlMessage> msg);
   
+  // internal methods
+  void RandomlySelectAndSendRaPreamble ();
+  void SendRaPreamble (bool contention);
+  void StartWaitingForRaResponse ();
+  void RecvRaResponse (BuildRarListElement_s raResponse);
+  void RaResponseTimeout (bool contention);
   void SendReportBufferStatus (void);
 
 private:
-  // end of temporary hack
-  std::map <uint8_t, LteMacSapUser*> m_macSapUserMap;
+
+  struct LcInfo
+  {
+    LteUeCmacSapProvider::LogicalChannelConfig lcConfig;
+    LteMacSapUser* macSapUser;
+  };
+
+  std::map <uint8_t, LcInfo> m_lcInfoMap;
+
   LteMacSapProvider* m_macSapProvider;
 
   LteUeCmacSapUser* m_cmacSapUser;
@@ -111,9 +139,20 @@ private:
   uint8_t m_harqProcessId;
   std::vector < Ptr<Packet> > m_miUlHarqProcessesPacket; // Packets under trasmission of the UL HARQ processes
 
-
   uint16_t m_rnti;
 
+  bool m_rachConfigured;
+  LteUeCmacSapProvider::RachConfig m_rachConfig;
+  uint8_t m_raPreambleId;
+  uint8_t m_preambleTransmissionCounter;
+  uint16_t m_backoffParameter;
+  EventId m_noRaResponseReceivedEvent;
+  Ptr<UniformRandomVariable> m_raPreambleUniformVariable;
+
+  uint32_t m_frameNo;
+  uint32_t m_subframeNo;
+  uint8_t m_raRnti;
+  bool m_waitingForRaResponse;
 };
 
 } // namespace ns3

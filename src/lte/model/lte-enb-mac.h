@@ -120,6 +120,8 @@ public:
   void SetLteEnbPhySapProvider (LteEnbPhySapProvider* s);
 
 
+private:
+
   /**
   * \brief Receive a DL CQI ideal control message
   * \param msg the DL CQI message
@@ -134,11 +136,11 @@ public:
   */
   void ReceiveBsrMessage  (MacCeListElement_s bsr);
 
+ 
   void DoUlCqiReport (FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi);
 
 
 
-private:
   // forwarded from LteEnbCmacSapProvider
   void DoConfigureMac (uint8_t ulBandwidth, uint8_t dlBandwidth);
   void DoAddUe (uint16_t rnti);
@@ -146,6 +148,9 @@ private:
   void DoAddLc (LteEnbCmacSapProvider::LcInfo lcinfo, LteMacSapUser* msu);
   void DoReconfigureLc (LteEnbCmacSapProvider::LcInfo lcinfo);
   void DoReleaseLc (uint16_t  rnti, uint8_t lcid);
+  void DoUeUpdateConfigurationReq (LteEnbCmacSapProvider::UeConfig params);
+  LteEnbCmacSapProvider::RachConfig DoGetRachConfig ();
+  LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue DoAllocateNcRaPreamble ();
 
   // forwarded from LteMacSapProvider
   void DoTransmitPdu (LteMacSapProvider::TransmitPduParameters);
@@ -164,22 +169,11 @@ private:
   // forwarded from FfMacSchedSapUser
   void DoSchedDlConfigInd (FfMacSchedSapUser::SchedDlConfigIndParameters ind);
   void DoSchedUlConfigInd (FfMacSchedSapUser::SchedUlConfigIndParameters params);
-  
-  void DoUeUpdateConfigurationReq (LteEnbCmacSapProvider::UeConfig params);
 
-  /**
-  * \brief Forwarded from LteEnbPhySapUser: trigger the start from a new frame
-  *
-  * \param frameNo frame number
-  * \param subframeNo subframe number
-  */
+  // forwarded from LteEnbPhySapUser
   void DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo);
+  void DoReceiveRachPreamble (uint8_t prachId);
 
-  /**
-  * \brief Forwarded from LtePhySapUser: receive a PHY-PDU
-  *
-  * \param p PHY-PDU received
-  */
 public:
   // legacy public for use the Phy callback
   void DoReceivePhyPdu (Ptr<Packet> p);
@@ -239,7 +233,19 @@ private:
 
   std::map <uint16_t, DlHarqProcessesBuffer_t> m_miDlHarqProcessesPackets; // Packet under trasmission of the DL HARQ process
   
+  uint8_t m_numberOfRaPreambles;
+  uint8_t m_preambleTransMax;
+  uint8_t m_raResponseWindowSize;
 
+  /**
+   * map storing as key the random acccess preamble IDs allocated for
+   * non-contention based access, and as value the expiration time of
+   * this allocation (so that stale preambles can be reused).
+   * 
+   */
+  std::map<uint8_t, Time> m_allocatedNcRaPreambleMap;
+ 
+  std::map<uint8_t, uint32_t> m_receivedRachPreambleCount;
 };
 
 } // end namespace ns3

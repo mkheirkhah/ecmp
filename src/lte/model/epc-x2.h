@@ -112,6 +112,7 @@ protected:
   // Interface provided by LteRlcSapProvider
   virtual void DoSendHandoverRequest (EpcX2SapProvider::HandoverRequestParams params);
   virtual void DoSendHandoverRequestAck (EpcX2SapProvider::HandoverRequestAckParams params);
+  virtual void DoSendUeContextRelease (EpcX2SapProvider::UeContextReleaseParams params);
 
   EpcX2SapUser* m_x2SapUser;
   EpcX2SapProvider* m_x2SapProvider;

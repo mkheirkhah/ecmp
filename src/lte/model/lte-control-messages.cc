@@ -32,16 +32,12 @@ NS_LOG_COMPONENT_DEFINE ("LteControlMessage");
 namespace ns3 {
 
 LteControlMessage::LteControlMessage (void)
-  : m_source (0),
-    m_destination (0)
 {
 }
 
 
 LteControlMessage::~LteControlMessage (void)
 {
-  m_source = 0;
-  m_destination = 0;
 }
 
 
@@ -174,6 +170,93 @@ BsrLteControlMessage::GetBsr (void)
 {
   return m_bsr;
 }
+
+
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+RachPreambleLteControlMessage::RachPreambleLteControlMessage (void)
+{
+  SetMessageType (LteControlMessage::RACH_PREAMBLE);
+}
+
+void
+RachPreambleLteControlMessage::SetRapId (uint32_t rapId)
+{
+  m_rapId = rapId;
+}
+
+uint32_t 
+RachPreambleLteControlMessage::GetRapId () const
+{
+  return m_rapId;
+}
+
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+RarLteControlMessage::RarLteControlMessage (void)
+{
+  SetMessageType (LteControlMessage::RAR);
+}
+
+
+void
+RarLteControlMessage::SetRaRnti (uint16_t raRnti)
+{
+  m_raRnti = raRnti;
+}
+
+uint16_t 
+RarLteControlMessage::GetRaRnti () const
+{
+  return m_raRnti;
+}
+
+
+void
+RarLteControlMessage::AddRar (Rar rar)
+{
+  m_rarList.push_back (rar);
+}
+
+std::list<RarLteControlMessage::Rar>::const_iterator 
+RarLteControlMessage::RarListBegin () const
+{
+  return m_rarList.begin ();
+}
+
+std::list<RarLteControlMessage::Rar>::const_iterator 
+RarLteControlMessage::RarListEnd () const
+{
+  return m_rarList.end ();
+}
+
+
+// ----------------------------------------------------------------------------------------------------------
+
+
+
+MibLteControlMessage::MibLteControlMessage (void)
+{
+  SetMessageType (LteControlMessage::MIB);
+}
+
+
+void
+MibLteControlMessage::SetMib (LteRrcSap::MasterInformationBlock  mib)
+{
+  m_mib = mib;
+}
+
+LteRrcSap::MasterInformationBlock 
+MibLteControlMessage::GetMib () const
+{
+  return m_mib;
+}
+
 
 
 

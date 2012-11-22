@@ -21,9 +21,14 @@
 #ifndef EPC_X2_HEADER_H
 #define EPC_X2_HEADER_H
 
+#include "ns3/epc-x2-sap.h"
 #include "ns3/header.h"
 
+#include <vector>
+
+
 namespace ns3 {
+
 
 class EpcX2Header : public Header
 {
@@ -45,20 +50,29 @@ public:
   uint8_t GetProcedureCode () const;
   void SetProcedureCode (uint8_t procedureCode);
 
+  void SetLengthOfIes (uint32_t lengthOfIes);
+  void SetNumberOfIes (uint32_t numberOfIes);
+
 
   enum ProcedureCode_t {
-    HANDOVER_PREPARATION_TYPE   = 0
+    HandoverPreparation     = 0,
+    UeContextRelease        = 5
   };
 
   enum TypeOfMessage_t {
-    INITIATING_MESSAGE      = 0,
-    SUCCESSFUL_OUTCOME      = 1,
-    UNSUCCESSFUL_OUTCOME    = 2
+    InitiatingMessage       = 0,
+    SuccessfulOutcome       = 1,
+    UnsuccessfulOutcome     = 2
   };
 
 private:
+  uint32_t m_headerLength;
+
   uint8_t m_messageType;
   uint8_t m_procedureCode;
+
+  uint32_t m_lengthOfIes;
+  uint32_t m_numberOfIes;
 };
 
 
@@ -74,7 +88,10 @@ public:
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual void Print (std::ostream &os) const;
-  
+
+
+  uint16_t GetOldEnbUeX2apId () const;
+  void SetOldEnbUeX2apId (uint16_t x2apId);
   
   uint16_t GetCause () const;
   void SetCause (uint16_t cause);
@@ -82,11 +99,28 @@ public:
   uint16_t GetTargetCellId () const;
   void SetTargetCellId (uint16_t targetCellId);
 
+  std::vector <EpcX2Sap::ErabToBeSetupItem> GetBearers () const;
+  void SetBearers (std::vector <EpcX2Sap::ErabToBeSetupItem> bearers);
+
+  uint64_t GetUeAggregateMaxBitRateDownlink () const;
+  void SetUeAggregateMaxBitRateDownlink (uint64_t bitRate);
+
+  uint64_t GetUeAggregateMaxBitRateUplink () const;
+  void SetUeAggregateMaxBitRateUplink (uint64_t bitRate);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
 private:
-  uint16_t          m_oldEnbUeX2apId; // TODO MRE When and why this is used? 
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_oldEnbUeX2apId;
   uint16_t          m_cause;
   uint16_t          m_targetCellId;
-  std::list<uint16_t>   m_erabsList;
+  uint64_t          m_ueAggregateMaxBitRateDownlink;
+  uint64_t          m_ueAggregateMaxBitRateUplink;
+  std::vector <EpcX2Sap::ErabToBeSetupItem> m_erabsToBeSetupList;
 };
 
 
@@ -104,19 +138,62 @@ public:
   virtual void Print (std::ostream &os) const;
   
   
-  uint16_t GetCause () const;
-  void SetCause (uint16_t cause);
+  uint16_t GetOldEnbUeX2apId () const;
+  void SetOldEnbUeX2apId (uint16_t x2apId);
 
-  uint16_t GetTargetCellId () const;
-  void SetTargetCellId (uint16_t targetCellId);
+  uint16_t GetNewEnbUeX2apId () const;
+  void SetNewEnbUeX2apId (uint16_t x2apId);
+
+  std::vector <EpcX2Sap::ErabAdmittedItem> GetAdmittedBearers () const;
+  void SetAdmittedBearers (std::vector <EpcX2Sap::ErabAdmittedItem> bearers);
+
+  std::vector <EpcX2Sap::ErabNotAdmittedItem> GetNotAdmittedBearers () const;
+  void SetNotAdmittedBearers (std::vector <EpcX2Sap::ErabNotAdmittedItem> bearers);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
 
 private:
-  uint16_t          m_oldEnbUeX2apId; // TODO MRE When and why this is used? 
-  uint16_t          m_cause;
-  uint16_t          m_targetCellId;
-  std::list<uint16_t>   m_erabsList;
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_oldEnbUeX2apId;
+  uint16_t          m_newEnbUeX2apId;
+  std::vector <EpcX2Sap::ErabAdmittedItem>     m_erabsAdmittedList;
+  std::vector <EpcX2Sap::ErabNotAdmittedItem>  m_erabsNotAdmittedList;
 };
 
+
+class EpcX2UeContextReleaseHeader : public Header
+{
+public:
+  EpcX2UeContextReleaseHeader ();
+  virtual ~EpcX2UeContextReleaseHeader ();
+  
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+  
+  
+  uint16_t GetOldEnbUeX2apId () const;
+  void SetOldEnbUeX2apId (uint16_t x2apId);
+
+  uint16_t GetNewEnbUeX2apId () const;
+  void SetNewEnbUeX2apId (uint16_t x2apId);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_oldEnbUeX2apId;
+  uint16_t          m_newEnbUeX2apId;
+};
 
 } // namespace ns3
 

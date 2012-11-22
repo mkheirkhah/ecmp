@@ -27,6 +27,7 @@
 #include <ns3/packet.h>
 #include <ns3/ptr.h>
 #include <iostream>
+#include <cmath>
 #include <ns3/radio-bearer-stats-calculator.h>
 #include <ns3/buildings-mobility-model.h>
 #include <ns3/hybrid-buildings-propagation-loss-model.h>
@@ -62,13 +63,13 @@ LenaTestHarqSuite::LenaTestHarqSuite ()
 
 
   // Tests on DL/UL Data channels (PDSCH, PUSCH)
-  // MCS 0 TB size of 41 bytes SINR -17 expected throughput 19248 bytes
+  // MCS 0 TB size of 41 bytes SINR -17 expected throughput 19248 bytes/s
   // TBLER 1st tx 1.0
   // TBLER 2nd tx 0.23
   AddTestCase (new LenaHarqTestCase (2, 4000, 41, 0.17, 19248));
 
   // Tests on DL/UL Data channels (PDSCH, PUSCH)
-  // MCS 10 TB size of 469 bytes SINR 4 expected throughput 236096 bytes
+  // MCS 10 TB size of 469 bytes SINR 4 expected throughput 236096 bytes/s
   // TBLER 1st tx 1.0
   // TBLER 2nd tx 0.0138
   AddTestCase (new LenaHarqTestCase (1, 640, 469, 0.02, 236096));
@@ -152,7 +153,7 @@ LenaHarqTestCase::DoRun (void)
 //
 //   LogComponentDisableAll (LOG_LEVEL_ALL);
 
-  LogComponentEnable ("LenaTestHarq", LOG_LEVEL_ALL);
+//  LogComponentEnable ("LenaTestHarq", LOG_LEVEL_ALL);
 
 
   /**
@@ -217,14 +218,18 @@ LenaHarqTestCase::DoRun (void)
       uePhy->SetAttribute ("NoiseFigure", DoubleValue (9.0));
     }
 
-  lena->EnableRlcTraces ();
-  double simulationTime = 1.000;
 
-  Simulator::Stop (Seconds (simulationTime));
+  double statsStartTime = 0.050; // need to allow for RRC connection establishment + SRS 
+  double statsDuration = 4.0;
+  Simulator::Stop (Seconds (statsStartTime + statsDuration - 0.0001));
 
+  Simulator::Schedule (Seconds (statsStartTime), &LteHelper::EnableRlcTraces, lena);
   Ptr<RadioBearerStatsCalculator> rlcStats = lena->GetRlcStats ();
-  rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (simulationTime)));
+  rlcStats->SetAttribute ("StartTime", TimeValue (Seconds (statsStartTime)));
+  rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (statsDuration)));
 
+  // for debugging purposes
+  lena->EnableMacTraces ();
 
   Simulator::Run ();
 
@@ -233,21 +238,18 @@ LenaHarqTestCase::DoRun (void)
    */
   NS_LOG_INFO ("\tTest on downlink data shared channels (PDSCH)");
   NS_LOG_INFO ("Test with " << m_nUser << " user(s) at distance " << m_dist << " expected Thr " << m_throughputRef);
-  std::vector <uint64_t> dlDataRxed;
   for (int i = 0; i < m_nUser; i++)
     {
       // get the imsi
       uint64_t imsi = ueDevs.Get (i)->GetObject<LteUeNetDevice> ()->GetImsi ();
-      // get the lcId
-      uint8_t lcId = ueDevs.Get (i)->GetObject<LteUeNetDevice> ()->GetRrc ()->GetLcIdVector ().at (0);
-      dlDataRxed.push_back (rlcStats->GetDlRxData (imsi, lcId));
+      uint8_t lcId = 3;
       double txed = rlcStats->GetDlTxData (imsi, lcId);
+      double rxed = rlcStats->GetDlRxData (imsi, lcId);
       double tolerance = 0.1;
-      NS_LOG_INFO ("\tUser " << i << " imsi " << imsi << " bytes rxed " << (double)dlDataRxed.at (i) << " txed " << txed << " thr Ref " << m_throughputRef << " Err " << (abs (txed - m_throughputRef)) / m_throughputRef);
-      // the quantiles are evaluated offline according to a Bernoulli
-      // ditribution with n equal to the number of packet sent and p equal
-      // to the BER (see /reference/bernuolliDistribution.m for details)
-      NS_TEST_ASSERT_MSG_EQ_TOL (txed, m_throughputRef, m_throughputRef * tolerance, " Unexpected Throughput!");
+
+      NS_LOG_INFO (" User " << i << " imsi " << imsi << " bytes rxed/t " << rxed/statsDuration << " txed/t " << txed/statsDuration << " thr Ref " << m_throughputRef << " Err " << (abs (txed/statsDuration - m_throughputRef)) / m_throughputRef);
+
+      NS_TEST_ASSERT_MSG_EQ_TOL (txed/statsDuration, m_throughputRef, m_throughputRef * tolerance, " Unexpected Throughput!");
     }
 
 
