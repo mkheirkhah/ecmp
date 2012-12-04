@@ -284,6 +284,7 @@ LteRrcTestSuite::LteRrcTestSuite ()
       // AddTestCase (new LteRrcConnectionEstablishmentTestCase (200,        0,        10,              1,             1, useIdealRrc));
     }
 
+    }
 }
 
 static LteRrcTestSuite g_lteRrcTestSuiteInstance;
