@@ -74,23 +74,6 @@ RrcAsn1Header::SerializeDrbToAddModList (std::list<LteRrcSap::DrbToAddMod> drbTo
 
       switch (it->rlcConfig.choice)
         {
-        case LteRrcSap::RlcConfig::AM:
-          // Serialize rlc-Config choice
-          SerializeChoice (4,0);
-
-          // Serialize UL-AM-RLC
-          SerializeSequence<0> (std::bitset<0> (),false);
-          SerializeEnum (64,0);  // t-PollRetransmit
-          SerializeEnum (8,0);   // pollPDU
-          SerializeEnum (16,0);  // pollByte
-          SerializeEnum (8,0);   // maxRetxThreshold
-
-          // Serialize DL-AM-RLC
-          SerializeSequence<0> (std::bitset<0> (),false);
-          SerializeEnum (32,0);  // t-Reordering
-          SerializeEnum (64,0);  // t-StatusProhibit
-          break;
-
         case LteRrcSap::RlcConfig::UM_BI_DIRECTIONAL:
           // Serialize rlc-Config choice
           SerializeChoice (4,1);
@@ -122,6 +105,24 @@ RrcAsn1Header::SerializeDrbToAddModList (std::list<LteRrcSap::DrbToAddMod> drbTo
           SerializeSequence<0> (std::bitset<0> (),false);
           SerializeEnum (2,0);  // sn-FieldLength
           SerializeEnum (32,0);  // t-Reordering
+          break;
+
+        case LteRrcSap::RlcConfig::AM:
+        default:
+          // Serialize rlc-Config choice
+          SerializeChoice (4,0);
+
+          // Serialize UL-AM-RLC
+          SerializeSequence<0> (std::bitset<0> (),false);
+          SerializeEnum (64,0);  // t-PollRetransmit
+          SerializeEnum (8,0);   // pollPDU
+          SerializeEnum (16,0);  // pollByte
+          SerializeEnum (8,0);   // maxRetxThreshold
+
+          // Serialize DL-AM-RLC
+          SerializeSequence<0> (std::bitset<0> (),false);
+          SerializeEnum (32,0);  // t-Reordering
+          SerializeEnum (64,0);  // t-StatusProhibit
           break;
         }
 
@@ -263,7 +264,9 @@ RrcAsn1Header::SerializePhysicalConfigDedicated (LteRrcSap::PhysicalConfigDedica
           SerializeChoice (2,0);
           SerializeNull ();
           break;
+
         case LteRrcSap::SoundingRsUlConfigDedicated::SETUP:
+        default:
           // 2 options, selected: 1 (setup)
           SerializeChoice (2,1);
 
@@ -3278,6 +3281,111 @@ RrcConnectionReleaseHeader::GetMessage () const
 {
   return m_rrcConnectionRelease;
 }
+
+//////////////////// RrcConnectionRejectHeader class ////////////////////////
+
+RrcConnectionRejectHeader::RrcConnectionRejectHeader ()
+{
+}
+
+void
+RrcConnectionRejectHeader::PreSerialize () const
+{
+  m_serializationResult = Buffer ();
+
+  // Serialize CCCH message
+  SerializeDlCcchMessage (2);
+
+  // Serialize RrcConnectionReject sequence:
+  // no default or optional fields. Extension marker not present.
+  SerializeSequence (std::bitset<0> (),false);
+
+  // Serialize criticalExtensions choice
+  SerializeChoice (2,0);
+
+  // Serialize c1 choice
+  SerializeChoice (4,0);
+  
+  // Serialize rrcConnectionReject-r8 sequence
+  // 1 optional field (not present), no extension marker.
+  SerializeSequence (std::bitset<1> (0),false);
+
+  // Serialize waitTime
+  SerializeInteger (m_rrcConnectionReject.waitTime, 1, 16);
+
+  // Finish serialization
+  FinalizeSerialization ();
+}
+
+uint32_t
+RrcConnectionRejectHeader::Deserialize (Buffer::Iterator bIterator)
+{
+  std::bitset<0> bitset0;
+  int n;
+
+  bIterator = DeserializeDlCcchMessage (bIterator);
+
+  // Deserialize RrcConnectionReject sequence
+  // 0 optional fields, no extension marker
+  bIterator = DeserializeSequence (&bitset0,false,bIterator);
+
+  // Deserialize criticalExtensions choice
+  int criticalExtensionsChoice;
+  bIterator = DeserializeChoice (2,&criticalExtensionsChoice,bIterator);
+  if (criticalExtensionsChoice == 1)
+    {
+      // Deserialize criticalExtensionsFuture
+      bIterator = DeserializeSequence (&bitset0,false,bIterator);
+    }
+  else if (criticalExtensionsChoice == 0)
+    {
+      // Deserialize c1 choice
+      int c1Choice;
+      bIterator = DeserializeChoice (4,&c1Choice,bIterator);
+
+      if (c1Choice > 0)
+      {
+        bIterator = DeserializeNull(bIterator);
+      }
+      else if (c1Choice == 0)
+      {
+        // Deserialize rrcConnectionReject-r8
+        std::bitset<1> opts;
+        bIterator = DeserializeSequence (&opts,false,bIterator);
+        
+        bIterator = DeserializeInteger (&n,1,16,bIterator);
+        m_rrcConnectionReject.waitTime = n;
+
+        if (opts[0])
+        {
+          // Deserialize RRCConnectionReject-v8a0-IEs
+          // ...
+        }
+      }
+    }
+
+  return GetSerializedSize ();
+}
+
+void
+RrcConnectionRejectHeader::Print (std::ostream &os) const
+{
+  os << "wait time: " << (int)m_rrcConnectionReject.waitTime << std::endl;
+}
+
+void
+RrcConnectionRejectHeader::SetMessage (RrcConnectionReject msg)
+{
+  m_rrcConnectionReject = msg;
+  m_isDataSerialized = false;
+}
+
+LteRrcSap::RrcConnectionReject
+RrcConnectionRejectHeader::GetMessage () const
+{
+  return m_rrcConnectionReject;
+}
+
 
 ///////////////////  RrcUlDcchMessage //////////////////////////////////
 uint32_t
