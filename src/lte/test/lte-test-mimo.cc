@@ -74,8 +74,10 @@ LenaTestMimoSuite::LenaTestMimoSuite ()
   estThrDl.push_back (119100); // TTI 1 estimated throughput for TxMode 1
   estThrDl.push_back (183600); // TTI 2 estimated throughput for TxMode 2
   estThrDl.push_back (193400); // TTI 3 estimated throughput for TxMode 3
-  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler"));
-  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler"));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler", true));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler", true));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler", false));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler", false));
  
 
 }
@@ -83,18 +85,27 @@ LenaTestMimoSuite::LenaTestMimoSuite ()
 static LenaTestMimoSuite lenaTestMimoSuite;
 
 std::string 
-LenaMimoTestCase::BuildNameString (uint16_t dist)
+LenaMimoTestCase::BuildNameString (uint16_t dist, std::string schedulerType, bool useIdealRrc)
 {
   std::ostringstream oss;
-  oss << " UE distance " << dist << " m";
+  oss << " UE distance " << dist << " m" << " Scheduler " << schedulerType;
+  if (useIdealRrc)
+    {
+      oss << ", ideal RRC";
+    }
+  else
+    {
+      oss << ", real RRC";
+    }  
   return oss.str ();
 }
 
-LenaMimoTestCase::LenaMimoTestCase (uint16_t dist, std::vector<uint32_t> estThrDl, std::string schedulerType)
-  : TestCase (BuildNameString (dist)),              
+LenaMimoTestCase::LenaMimoTestCase (uint16_t dist, std::vector<uint32_t> estThrDl, std::string schedulerType, bool useIdealRrc)
+  : TestCase (BuildNameString (dist, schedulerType, useIdealRrc)),              
     m_dist (dist),
     m_estThrDl (estThrDl),
-    m_schedulerType (schedulerType)
+    m_schedulerType (schedulerType),
+    m_useIdealRrc (useIdealRrc)
 {
 }
 
@@ -105,9 +116,10 @@ LenaMimoTestCase::~LenaMimoTestCase ()
 void
 LenaMimoTestCase::DoRun (void)
 {
-//   Config::SetDefault ("ns3::LteSpectrumPhy::PemEnabled", BooleanValue (false));
+  NS_LOG_FUNCTION (this << GetName ());
+  Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
-
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (m_useIdealRrc));
 
   /**
    * Initialize Simulation Scenario: 1 eNB and m_nUser UEs
@@ -115,6 +127,10 @@ LenaMimoTestCase::DoRun (void)
 
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+  Config::SetDefault ("ns3::RrFfMacScheduler::HarqEnabled", BooleanValue (false));
+  Config::SetDefault ("ns3::PfFfMacScheduler::HarqEnabled", BooleanValue (false));
+  
+//   lteHelper->SetSchedulerAttribute ("HarqEnabled", BooleanValue (false));
   
   
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::HybridBuildingsPropagationLossModel"));
@@ -169,7 +185,7 @@ LenaMimoTestCase::DoRun (void)
   uePhy->SetAttribute ("NoiseFigure", DoubleValue (9.0));
   
   // need to allow for RRC connection establishment + SRS before enabling traces
-  Simulator::Schedule (Seconds (0.050), &LteHelper::EnableRlcTraces, lteHelper);
+  lteHelper->EnableRlcTraces ();
   lteHelper->EnableMacTraces ();
   double simulationTime = 0.401;
   double tolerance = 0.1;
@@ -188,7 +204,6 @@ LenaMimoTestCase::DoRun (void)
         {
           NS_FATAL_ERROR ("No RR Scheduler available");
         }
-      
       Simulator::Schedule (Seconds (0.2), &RrFfMacScheduler::TransmissionModeConfigurationUpdate, rrsched, rnti, 1);
       Simulator::Schedule (Seconds (0.3), &RrFfMacScheduler::TransmissionModeConfigurationUpdate, rrsched, rnti, 2);
     }

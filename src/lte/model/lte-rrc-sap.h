@@ -52,6 +52,8 @@ class LteRrcSap
 {
 public:
 
+  virtual ~LteRrcSap ();
+
   // Information Elements
   
   struct PlmnIdentityInfo
@@ -136,12 +138,31 @@ public:
     LogicalChannelConfig logicalChannelConfig;
   };
 
+  struct PreambleInfo
+  {
+    uint8_t numberOfRaPreambles;
+  };
+  
+  struct RaSupervisionInfo
+  {
+    uint8_t preambleTransMax;
+    uint8_t raResponseWindowSize;
+  };
+
+  struct RachConfigCommon
+  {
+    PreambleInfo preambleInfo;
+    RaSupervisionInfo raSupervisionInfo;
+  };
+
   struct RadioResourceConfigCommon
   {    
+    RachConfigCommon rachConfigCommon;
   };
 
   struct RadioResourceConfigCommonSib
   {    
+    RachConfigCommon rachConfigCommon;
   };
 
   struct RadioResourceConfigDedicated
@@ -294,6 +315,12 @@ public:
 
   struct RrcConnectionRelease
   {
+    uint8_t rrcTransactionIdentifier;
+  };
+
+  struct RrcConnectionReject
+  {
+    uint8_t waitTime;
   };
 
   struct HandoverPreparationInfo
@@ -342,6 +369,13 @@ class LteUeRrcSapProvider : public LteRrcSap
 {
 public:
 
+  struct CompleteSetupParameters 
+  {
+    LteRlcSapUser* srb0SapUser;
+    LtePdcpSapUser* srb1SapUser;       
+  };
+
+  virtual void CompleteSetup (CompleteSetupParameters params) = 0;
   virtual void RecvMasterInformationBlock (MasterInformationBlock msg) = 0;
   virtual void RecvSystemInformationBlockType1 (SystemInformationBlockType1 msg) = 0;
   virtual void RecvSystemInformation (SystemInformation msg) = 0;
@@ -350,6 +384,7 @@ public:
   virtual void RecvRrcConnectionReestablishment (RrcConnectionReestablishment msg) = 0;
   virtual void RecvRrcConnectionReestablishmentReject (RrcConnectionReestablishmentReject msg) = 0;
   virtual void RecvRrcConnectionRelease (RrcConnectionRelease msg) = 0;
+  virtual void RecvRrcConnectionReject (RrcConnectionReject msg) = 0;
 
 };
 
@@ -379,6 +414,7 @@ public:
   virtual void SendRrcConnectionReestablishment (uint16_t rnti, RrcConnectionReestablishment msg) = 0;
   virtual void SendRrcConnectionReestablishmentReject (uint16_t rnti, RrcConnectionReestablishmentReject msg) = 0;
   virtual void SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg) = 0;
+  virtual void SendRrcConnectionReject (uint16_t rnti, RrcConnectionReject msg) = 0;
   virtual Ptr<Packet> EncodeHandoverPreparationInformation (HandoverPreparationInfo msg) = 0;
   virtual HandoverPreparationInfo DecodeHandoverPreparationInformation (Ptr<Packet> p) = 0;
   virtual Ptr<Packet> EncodeHandoverCommand (RrcConnectionReconfiguration msg) = 0;
@@ -520,6 +556,7 @@ public:
   MemberLteUeRrcSapProvider (C* owner);
 
   // methods inherited from LteUeRrcSapProvider go here  
+  virtual void CompleteSetup (CompleteSetupParameters params);
   virtual void RecvMasterInformationBlock (MasterInformationBlock msg);
   virtual void RecvSystemInformationBlockType1 (SystemInformationBlockType1 msg);
   virtual void RecvSystemInformation (SystemInformation msg);
@@ -528,6 +565,7 @@ public:
   virtual void RecvRrcConnectionReestablishment (RrcConnectionReestablishment msg);
   virtual void RecvRrcConnectionReestablishmentReject (RrcConnectionReestablishmentReject msg);
   virtual void RecvRrcConnectionRelease (RrcConnectionRelease msg);
+  virtual void RecvRrcConnectionReject (RrcConnectionReject msg);
 
 private:
   MemberLteUeRrcSapProvider ();
@@ -543,6 +581,13 @@ MemberLteUeRrcSapProvider<C>::MemberLteUeRrcSapProvider (C* owner)
 template <class C>
 MemberLteUeRrcSapProvider<C>::MemberLteUeRrcSapProvider ()
 {
+}
+
+template <class C>
+void 
+MemberLteUeRrcSapProvider<C>::CompleteSetup (CompleteSetupParameters params)
+{
+  m_owner->DoCompleteSetup (params);
 }
 
 template <class C>
@@ -601,6 +646,12 @@ MemberLteUeRrcSapProvider<C>::RecvRrcConnectionRelease (RrcConnectionRelease msg
   m_owner->DoRecvRrcConnectionRelease (msg);
 }
 
+template <class C>
+void 
+MemberLteUeRrcSapProvider<C>::RecvRrcConnectionReject (RrcConnectionReject msg)
+{
+  m_owner->DoRecvRrcConnectionReject (msg);
+}
 
 
 /**
@@ -626,6 +677,7 @@ public:
   virtual void SendRrcConnectionReestablishment (uint16_t rnti, RrcConnectionReestablishment msg);
   virtual void SendRrcConnectionReestablishmentReject (uint16_t rnti, RrcConnectionReestablishmentReject msg);
   virtual void SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg);
+  virtual void SendRrcConnectionReject (uint16_t rnti, RrcConnectionReject msg);
   virtual Ptr<Packet> EncodeHandoverPreparationInformation (HandoverPreparationInfo msg);
   virtual HandoverPreparationInfo DecodeHandoverPreparationInformation (Ptr<Packet> p);
   virtual Ptr<Packet> EncodeHandoverCommand (RrcConnectionReconfiguration msg);
@@ -715,6 +767,13 @@ void
 MemberLteEnbRrcSapUser<C>::SendRrcConnectionRelease (uint16_t rnti, RrcConnectionRelease msg)
 {
   m_owner->DoSendRrcConnectionRelease (rnti, msg);
+}
+
+template <class C>
+void 
+MemberLteEnbRrcSapUser<C>::SendRrcConnectionReject (uint16_t rnti, RrcConnectionReject msg)
+{
+  m_owner->DoSendRrcConnectionReject (rnti, msg);
 }
 
 template <class C>

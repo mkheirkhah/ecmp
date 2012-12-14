@@ -42,6 +42,7 @@
 #include <ns3/node-list.h>
 #include <ns3/node.h>
 #include <ns3/lte-ue-net-device.h>
+#include <ns3/pointer.h>
 
 NS_LOG_COMPONENT_DEFINE ("LteEnbPhy");
 
@@ -137,10 +138,14 @@ LteEnbPhy::LteEnbPhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
     m_nrSubFrames (0),
     m_srsPeriodicity (0),
     m_srsStartTime (Seconds (0)),
-    m_currentSrsOffset (0)
+    m_currentSrsOffset (0),
+    m_interferenceSampleCounter (0)
 {
   m_enbPhySapProvider = new EnbMemberLteEnbPhySapProvider (this);
   m_enbCphySapProvider = new MemberLteEnbCphySapProvider<LteEnbPhy> (this);
+  m_harqPhyModule = Create <LteHarqPhy> ();
+  m_downlinkSpectrumPhy->SetHarqPhyModule (m_harqPhyModule);
+  m_uplinkSpectrumPhy->SetHarqPhyModule (m_harqPhyModule);
   Simulator::ScheduleNow (&LteEnbPhy::StartFrame, this);
 }
 
@@ -174,6 +179,37 @@ LteEnbPhy::GetTypeId (void)
                    MakeUintegerAccessor (&LteEnbPhy::SetMacChDelay, 
                                          &LteEnbPhy::GetMacChDelay),
                    MakeUintegerChecker<uint8_t> ())
+    .AddTraceSource ("ReportUeSinr",
+                     "Report UEs' averaged linear SINR",
+                     MakeTraceSourceAccessor (&LteEnbPhy::m_reportUeSinr))
+    .AddAttribute ("UeSinrSamplePeriod",
+                   "The sampling period for reporting UEs' SINR stats (default value 1)",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&LteEnbPhy::m_srsSamplePeriod),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddTraceSource ("ReportInterference",
+                     "Report linear interference power per PHY RB",
+                     MakeTraceSourceAccessor (&LteEnbPhy::m_reportInterferenceTrace))
+    .AddAttribute ("InterferenceSamplePeriod",
+                   "The sampling period for reporting interference stats (default value 1)",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&LteEnbPhy::m_interferenceSamplePeriod),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddTraceSource ("DlPhyTransmission",
+                     "DL transmission PHY layer statistics.",
+                     MakeTraceSourceAccessor (&LteEnbPhy::m_dlPhyTransmission))
+    .AddAttribute ("DlSpectrumPhy",
+                   "The downlink LteSpectrumPhy associated to this LtePhy",
+                   TypeId::ATTR_GET,
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbPhy::m_downlinkSpectrumPhy),
+                   MakePointerChecker <LteSpectrumPhy> ())
+    .AddAttribute ("UlSpectrumPhy",
+                   "The uplink LteSpectrumPhy associated to this LtePhy",
+                   TypeId::ATTR_GET,
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbPhy::m_uplinkSpectrumPhy),
+                   MakePointerChecker <LteSpectrumPhy> ())
   ;
   return tid;
 }
@@ -410,7 +446,7 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
         case LteControlMessage::RACH_PREAMBLE:
           {
             Ptr<RachPreambleLteControlMessage> rachPreamble = DynamicCast<RachPreambleLteControlMessage> (*it);
-            m_enbPhySapUser->ReceiveRachPreamble (rachPreamble->GetPrachId ());
+            m_enbPhySapUser->ReceiveRachPreamble (rachPreamble->GetRapId ());
           }
           break;
           
@@ -456,12 +492,11 @@ LteEnbPhy::StartSubFrame (void)
       m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
     }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
-  
+  m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
   
   // update info on TB to be received
   std::list<UlDciLteControlMessage> uldcilist = DequeueUlDci ();
   std::list<UlDciLteControlMessage>::iterator dciIt = uldcilist.begin ();
-  m_ulRntiRxed.clear ();
   NS_LOG_DEBUG (this << " eNB Expected TBs " << uldcilist.size ());
   for (dciIt = uldcilist.begin (); dciIt!=uldcilist.end (); dciIt++)
     {
@@ -481,16 +516,20 @@ LteEnbPhy::StartSubFrame (void)
             {
               rbMap.push_back (i);
             }
-          m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/);
-          m_ulRntiRxed.push_back ((*dciIt).GetDci ().m_rnti);
+          m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/, 0 /* no HARQ proc id in UL*/, 0 /*evaluated by LteSpectrumPhy*/, false /* UL*/);
+          if ((*dciIt).GetDci ().m_ndi==1)
+            {
+              NS_LOG_DEBUG (this << " RNTI " << (*dciIt).GetDci ().m_rnti << " NEW TB");
+            }
+          else
+            {
+              NS_LOG_DEBUG (this << " RNTI " << (*dciIt).GetDci ().m_rnti << " HARQ RETX");
+            }
         }
     }
 
   // process the current burst of control messages
   std::list<Ptr<LteControlMessage> > ctrlMsg = GetControlMessages ();
-  std::list<DlDciListElement_s> dlDci;
-  std::list<UlDciListElement_s> ulDci;
-//   std::vector <int> dlRb;
   m_dlDataRbMap.clear ();
   if (ctrlMsg.size () > 0)
     {
@@ -502,28 +541,69 @@ LteEnbPhy::StartSubFrame (void)
           if (msg->GetMessageType () == LteControlMessage::DL_DCI)
             {
               Ptr<DlDciLteControlMessage> dci = DynamicCast<DlDciLteControlMessage> (msg);
-              dlDci.push_back (dci->GetDci ());
-                  // get the tx power spectral density according to DL-DCI(s)
-                  // translate the DCI to Spectrum framework
-                  uint32_t mask = 0x1;
-                  for (int i = 0; i < 32; i++)
+              // get the tx power spectral density according to DL-DCI(s)
+              // translate the DCI to Spectrum framework
+              uint32_t mask = 0x1;
+              for (int i = 0; i < 32; i++)
+                {
+                  if (((dci->GetDci ().m_rbBitmap & mask) >> i) == 1)
                     {
-                      if (((dci->GetDci ().m_rbBitmap & mask) >> i) == 1)
+                      for (int k = 0; k < GetRbgSize (); k++)
                         {
-                          for (int k = 0; k < GetRbgSize (); k++)
-                            {
-                              m_dlDataRbMap.push_back ((i * GetRbgSize ()) + k);
-                              //NS_LOG_DEBUG(this << " [enb]DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
-                            }
+                          m_dlDataRbMap.push_back ((i * GetRbgSize ()) + k);
+                          //NS_LOG_DEBUG(this << " [enb]DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
                         }
-                      mask = (mask << 1);
                     }
+                  mask = (mask << 1);
+                }
+              // fire trace of DL Tx PHY stats
+              for (uint8_t i = 0; i < dci->GetDci ().m_mcs.size (); i++)
+                {
+                  PhyTransmissionStatParameters params;
+                  params.m_cellId = m_cellId;
+                  params.m_imsi = 0; // it will be set by DlPhyTransmissionCallback in LteHelper
+                  params.m_timestamp = Simulator::Now ().GetMilliSeconds ();
+                  params.m_rnti = dci->GetDci ().m_rnti;
+                  params.m_txMode = 0; // TBD
+                  params.m_layer = i;
+                  params.m_mcs = dci->GetDci ().m_mcs.at (i);
+                  params.m_size = dci->GetDci ().m_tbsSize.at (i);
+                  params.m_rv = dci->GetDci ().m_rv.at (i);
+                  params.m_ndi = dci->GetDci ().m_ndi.at (i);
+                  m_dlPhyTransmission (params);
+                }
+              
             }
           else if (msg->GetMessageType () == LteControlMessage::UL_DCI)
             {
               Ptr<UlDciLteControlMessage> dci = DynamicCast<UlDciLteControlMessage> (msg);
               QueueUlDci (*dci);
-              ulDci.push_back (dci->GetDci ());
+            }
+          else if (msg->GetMessageType () == LteControlMessage::RAR)
+            {
+              Ptr<RarLteControlMessage> rarMsg = DynamicCast<RarLteControlMessage> (msg);
+              for (std::list<RarLteControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+                {
+                  if (it->rarPayload.m_grant.m_ulDelay == true)
+                    {
+                      NS_FATAL_ERROR (" RAR delay is not yet implemented");
+                    }
+                  UlGrant_s ulGrant = it->rarPayload.m_grant;
+                  // translate the UL grant in a standard UL-DCI and queue it
+                  UlDciListElement_s dci;
+                  dci.m_rnti = ulGrant.m_rnti;
+                  dci.m_rbStart = ulGrant.m_rbStart;
+                  dci.m_rbLen = ulGrant.m_rbLen;
+                  dci.m_tbSize = ulGrant.m_tbSize;
+                  dci.m_mcs = ulGrant.m_mcs;
+                  dci.m_hopping = ulGrant.m_hopping;
+                  dci.m_tpc = ulGrant.m_tpc;
+                  dci.m_cqiRequest = ulGrant.m_cqiRequest;
+                  dci.m_ndi = 1;
+                  UlDciLteControlMessage msg;
+                  msg.SetDci (dci);
+                  QueueUlDci (msg);
+                }
             }
           it++;
 
@@ -622,6 +702,20 @@ LteEnbPhy::GenerateDataCqiReport (const SpectrumValue& sinr)
   m_enbPhySapUser->UlCqiReport (ulcqi);
 }
 
+void
+LteEnbPhy::ReportInterference (const SpectrumValue& interf)
+{
+  NS_LOG_FUNCTION (this << interf);
+  Ptr<SpectrumValue> interfCopy = Create<SpectrumValue> (interf);
+  m_interferenceSampleCounter++;
+  if (m_interferenceSampleCounter==m_interferenceSamplePeriod)
+    {
+      m_reportInterferenceTrace (m_cellId, interfCopy);
+      m_interferenceSampleCounter = 0;
+    }
+}
+
+
 
 
 FfMacSchedSapProvider::SchedUlCqiInfoReqParameters
@@ -705,12 +799,14 @@ LteEnbPhy::CreateSrsCqiReport (const SpectrumValue& sinr)
   FfMacSchedSapProvider::SchedUlCqiInfoReqParameters ulcqi;
   ulcqi.m_ulCqi.m_type = UlCqi_s::SRS;
   int i = 0;
+  double srsSum = 0.0;
   for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
   {
     double sinrdb = 10 * log10 ((*it));
     //       NS_LOG_DEBUG ("ULCQI RB " << i << " value " << sinrdb);
     // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
     int16_t sinrFp = LteFfConverter::double2fpS11dot3 (sinrdb);
+    srsSum += (*it);
     ulcqi.m_ulCqi.m_sinr.push_back (sinrFp);
     i++;
   }
@@ -722,8 +818,30 @@ LteEnbPhy::CreateSrsCqiReport (const SpectrumValue& sinr)
   Ptr<SrsCqiRntiVsp> rnti  = Create <SrsCqiRntiVsp> (m_srsUeOffset.at (m_currentSrsOffset));
   vsp.m_value = rnti;
   ulcqi.m_vendorSpecificList.push_back (vsp);
+  // call SRS tracing method
+  CreateSrsReport (m_srsUeOffset.at (m_currentSrsOffset), srsSum / i);
   return (ulcqi);
   
+}
+
+
+void
+LteEnbPhy::CreateSrsReport(uint16_t rnti, double srs)
+{
+  NS_LOG_FUNCTION (this << rnti << srs);
+  std::map <uint16_t,uint16_t>::iterator it = m_srsSampleCounterMap.find (rnti);
+  if (it==m_srsSampleCounterMap.end ())
+    {
+      // create new entry
+      m_srsSampleCounterMap.insert (std::pair <uint16_t,uint16_t> (rnti, 0));
+      it = m_srsSampleCounterMap.find (rnti);
+    }
+  (*it).second++;
+  if ((*it).second == m_srsSamplePeriod)
+    {
+      m_reportUeSinr (rnti, m_cellId, srs);
+      (*it).second = 0;
+    }
 }
 
 void
@@ -773,8 +891,10 @@ LteEnbPhy::DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi)
       m_srsUeOffset.clear ();
       m_srsUeOffset.resize (p, 0);
       m_srsPeriodicity = p;
-      // inhibit SRS until RRC Connection Reconfiguration propagates to UEs
-      m_srsStartTime = Simulator::Now () + MilliSeconds (2);
+      // inhibit SRS until RRC Connection Reconfiguration propagates
+      // to UEs, otherwise we might be wrong in determining the UE who
+      // actually sent the SRS (if the UE was using a stale SRS config)
+      m_srsStartTime = Simulator::Now () + MilliSeconds (m_macChTtiDelay) + MilliSeconds (20);
     }
 
   NS_LOG_DEBUG (this << " ENB SRS P " << m_srsPeriodicity << " RNTI " << rnti << " offset " << GetSrsSubframeOffset (srcCi) << " CI " << srcCi);
@@ -799,5 +919,20 @@ LteEnbPhy::DoSetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib)
   m_mib = mib;
 }
 
+
+void
+LteEnbPhy::SetHarqPhyModule (Ptr<LteHarqPhy> harq)
+{
+  m_harqPhyModule = harq;
+}
+
+
+void
+LteEnbPhy::ReceiveLteUlHarqFeedback (UlInfoListElement_s mes)
+{
+  NS_LOG_FUNCTION (this);
+  // forward to scheduler
+  m_enbPhySapUser->UlInfoListElementHarqFeeback (mes);
+}
 
 };

@@ -71,7 +71,9 @@ public:
       CONNECTED_NORMALLY,
       CONNECTION_RECONFIGURATION,
       CONNECTION_REESTABLISHMENT,
+      HANDOVER_PREPARATION,
       HANDOVER_JOINING,
+      HANDOVER_PATH_SWITCH,
       HANDOVER_LEAVING,
       NUM_STATES
     };
@@ -93,6 +95,7 @@ public:
 
   // inherited from Object
 protected:
+  virtual void DoStart ();
   virtual void DoDispose ();
 public: 
   static TypeId GetTypeId (void);
@@ -107,17 +110,38 @@ public:
   void SetSource (uint16_t sourceCellId, uint16_t sourceX2apId);
 
   /** 
+   * Set the IMSI
+   * 
+   * \param imsi the IMSI
+   */
+  void SetImsi (uint64_t imsi);
+
+  /** 
    * Setup a new data radio bearer, including both the configuration
    * within the eNB and the necessary RRC signaling with the UE
    * 
-   * \param bearer 
+   * \param bearer the QoS characteristics of the bearer
+   * \param bearerId the EPS bearer identifier
    * \param gtpTeid S1-bearer GTP tunnel endpoint identifier, see 36.423 9.2.1
    * \param transportLayerAddress  IP Address of the SGW, see 36.423 9.2.1
    * 
-   * \return the EPS Bearer Id
    */
-  uint8_t SetupDataRadioBearer (EpsBearer bearer, uint32_t gtpTeid, Ipv4Address transportLayerAddress);
+  void SetupDataRadioBearer (EpsBearer bearer, uint8_t bearerId, uint32_t gtpTeid, Ipv4Address transportLayerAddress);
+
+  /** 
+   * Start all configured data radio bearers. It is safe to call this
+   * method if any bearer had been already started previously.
+   * 
+   */
+  void RecordDataRadioBearersToBeStarted ();
   
+  /** 
+   * Start the data radio bearers that have been previously recorded
+   * to be started using RecordDataRadioBearersToBeStarted() 
+   * 
+   */
+  void StartDataRadioBearers ();
+
   /**
    *
    * Release a given radio bearer
@@ -133,15 +157,18 @@ public:
   void ScheduleRrcConnectionReconfiguration ();
 
   /** 
-   * In the X2-based handover procedure, at the source eNB, trigger
-   * handover by sending to the UE a RRC Connection 
-   * Reconfiguration message including Mobility Control Info
+   * Start the handover preparation and send the handover request
    * 
-   * \param rcr the RrcConnectionReconfiguration message including the
-   * Mobility Control Info. The content of this struct shall be
-   * provided by the target eNB.
+   * \param cellId id of the target cell
    */
-  void SendHandoverCommand (LteRrcSap::RrcConnectionReconfiguration rcr);
+  void PrepareHandover (uint16_t cellId);
+
+  /** 
+   * take the necessary actions in response to the reception of an X2 HANDOVER REQUEST ACK message
+   * 
+   * \param params 
+   */
+  void RecvHandoverRequestAck (EpcX2SapUser::HandoverRequestAckParams params);
   
   /** 
    * 
@@ -155,8 +182,11 @@ public:
    * \return retrieve the data that the target eNB needs to send to the source
    * eNB as the Handover Command in the X2-based handover
    * procedure.
+   *
+   * \note mobility control info is not expected to be filled in
+   * (shall be filled in by the caller). 
    */
-  LteRrcSap::RrcConnectionReconfiguration GetHandoverCommand ();
+  LteRrcSap::RrcConnectionReconfiguration GetRrcConnectionReconfigurationForHandover ();
 
   /** 
    * Send a data packet over the appropriate Data Radio Bearer
@@ -171,6 +201,28 @@ public:
    * \return a list of ERAB-to-be-setup items to be put in a X2 HO REQ message
    */
   std::vector<EpcX2Sap::ErabToBeSetupItem> GetErabList ();
+
+
+  /** 
+   * send the UE CONTEXT RELEASE X2 message to the source eNB, thus
+   * successfully terminating an X2 handover procedure 
+   * 
+   */
+  void SendUeContextRelease ();
+
+  /** 
+   * Take the necessary actions in response to the reception of an X2 HO preparation failure message
+   * 
+   * \param cellId id of the target cell
+   */
+  void RecvHandoverPreparationFailure (uint16_t cellId);
+
+  /** 
+   * Take the necessary actions in response to the reception of an X2 SN STATUS TRANSFER message
+   * 
+   * \param params the SN STATUS
+   */
+  void RecvSnStatusTransfer (EpcX2SapUser::SnStatusTransferParams params);
   
 
   // methods forwarded from RRC SAP
@@ -328,11 +380,15 @@ private:
   LteRrcSap::PhysicalConfigDedicated m_physicalConfigDedicated;
   Ptr<LteEnbRrc> m_rrc;
   State m_state;
-  LtePdcpSapUser* m_pdcpSapUser;
+  LtePdcpSapUser* m_drbPdcpSapUser;
   bool m_pendingRrcConnectionReconfiguration;
-  TracedCallback<State, State> m_stateTransitionCallback;
+  //             imsi      cellid    rnti      old    new
+  TracedCallback<uint64_t, uint16_t, uint16_t, State, State> m_stateTransitionTrace;
   uint16_t m_sourceX2apId;
   uint16_t m_sourceCellId;
+  uint16_t m_targetCellId;
+  std::list<uint8_t> m_drbsToBeStarted;
+  bool m_needTransmissionModeConfiguration;
 };
 
 
@@ -519,6 +575,7 @@ public:
                                    RLC_UM_ALWAYS = 2,
                                    RLC_AM_ALWAYS = 3,
                                    PER_BASED = 4};
+
 private:
 
 
@@ -534,8 +591,7 @@ private:
 
   // S1 SAP methods
   void DoDataRadioBearerSetupRequest (EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params);
-
-
+  void DoPathSwitchRequestAcknowledge (EpcEnbS1SapUser::PathSwitchRequestAcknowledgeParameters params);       
   // X2 SAP methods
   void DoRecvHandoverRequest (EpcX2SapUser::HandoverRequestParams params);
   void DoRecvHandoverRequestAck (EpcX2SapUser::HandoverRequestAckParams params);
@@ -553,7 +609,7 @@ private:
   void DoRrcConfigurationUpdateInd (LteEnbCmacSapUser::UeConfig params);
   
 
-
+  // Internal methods
 
   /**
    * Allocate a new RNTI for a new UE. This is done in the following cases:
@@ -670,6 +726,18 @@ private:
   std::set<uint16_t> m_ueSrsConfigurationIndexSet;
   uint16_t m_lastAllocatedConfigurationIndex;
   bool m_reconfigureUes;
+
+  bool m_admitHandoverRequest;
+  bool m_admitRrcConnectionRequest;
+
+  //             imsi      cellid    rnti   
+  TracedCallback<uint64_t, uint16_t, uint16_t> m_connectionEstablishedTrace;
+  //             imsi      cellid    rnti   
+  TracedCallback<uint64_t, uint16_t, uint16_t> m_connectionReconfigurationTrace;
+  //             imsi      cellid    rnti     targetCellId
+  TracedCallback<uint64_t, uint16_t, uint16_t, uint16_t> m_handoverStartTrace;
+  //             imsi      cellid    rnti    
+  TracedCallback<uint64_t, uint16_t, uint16_t> m_handoverEndOkTrace;
 
 };
 
