@@ -74,8 +74,10 @@ LenaTestMimoSuite::LenaTestMimoSuite ()
   estThrDl.push_back (119100); // TTI 1 estimated throughput for TxMode 1
   estThrDl.push_back (183600); // TTI 2 estimated throughput for TxMode 2
   estThrDl.push_back (193400); // TTI 3 estimated throughput for TxMode 3
-  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler"));
-  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler"));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler", true));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler", true));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::RrFfMacScheduler", false));
+  AddTestCase (new LenaMimoTestCase(300, estThrDl, "ns3::PfFfMacScheduler", false));
  
 
 }
@@ -83,18 +85,27 @@ LenaTestMimoSuite::LenaTestMimoSuite ()
 static LenaTestMimoSuite lenaTestMimoSuite;
 
 std::string 
-LenaMimoTestCase::BuildNameString (uint16_t dist, std::string schedulerType)
+LenaMimoTestCase::BuildNameString (uint16_t dist, std::string schedulerType, bool useIdealRrc)
 {
   std::ostringstream oss;
   oss << " UE distance " << dist << " m" << " Scheduler " << schedulerType;
+  if (useIdealRrc)
+    {
+      oss << ", ideal RRC";
+    }
+  else
+    {
+      oss << ", real RRC";
+    }  
   return oss.str ();
 }
 
-LenaMimoTestCase::LenaMimoTestCase (uint16_t dist, std::vector<uint32_t> estThrDl, std::string schedulerType)
-  : TestCase (BuildNameString (dist, schedulerType)),              
+LenaMimoTestCase::LenaMimoTestCase (uint16_t dist, std::vector<uint32_t> estThrDl, std::string schedulerType, bool useIdealRrc)
+  : TestCase (BuildNameString (dist, schedulerType, useIdealRrc)),              
     m_dist (dist),
     m_estThrDl (estThrDl),
-    m_schedulerType (schedulerType)
+    m_schedulerType (schedulerType),
+    m_useIdealRrc (useIdealRrc)
 {
 }
 
@@ -105,9 +116,10 @@ LenaMimoTestCase::~LenaMimoTestCase ()
 void
 LenaMimoTestCase::DoRun (void)
 {
+  NS_LOG_FUNCTION (this << GetName ());
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
-
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (m_useIdealRrc));
 
   /**
    * Initialize Simulation Scenario: 1 eNB and m_nUser UEs
@@ -126,7 +138,7 @@ LenaMimoTestCase::DoRun (void)
   lteHelper->SetPathlossModelAttribute ("ShadowSigmaIndoor", DoubleValue (0.0));
   lteHelper->SetPathlossModelAttribute ("ShadowSigmaExtWalls", DoubleValue (0.0));
   
-  lteHelper->EnableLogComponents ();
+//   lteHelper->EnableLogComponents ();
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
@@ -172,13 +184,13 @@ LenaMimoTestCase::DoRun (void)
   uePhy->SetAttribute ("TxPower", DoubleValue (23.0));
   uePhy->SetAttribute ("NoiseFigure", DoubleValue (9.0));
   
-
+  // need to allow for RRC connection establishment + SRS before enabling traces
   lteHelper->EnableRlcTraces ();
   lteHelper->EnableMacTraces ();
   double simulationTime = 0.401;
   double tolerance = 0.1;
   
-  uint8_t rnti = ueDevs.Get (0)->GetObject<LteUeNetDevice> ()->GetRrc ()->GetRnti ();
+  uint8_t rnti = 1;
   Ptr<LteEnbNetDevice> enbNetDev = enbDevs.Get (0)->GetObject<LteEnbNetDevice> ();
   
   PointerValue ptrval;
@@ -215,7 +227,6 @@ LenaMimoTestCase::DoRun (void)
   Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (0.1)));
 
-
   /**
    * Check that the assignation is done in a RR fashion
    */
@@ -226,8 +237,7 @@ LenaMimoTestCase::DoRun (void)
       NS_LOG_INFO ("\t test with user at distance " << m_dist << " time " << sampleTime);
       // get the imsi
       uint64_t imsi = ueDevs.Get (0)->GetObject<LteUeNetDevice> ()->GetImsi ();
-      // get the lcId
-      uint8_t lcId = ueDevs.Get (0)->GetObject<LteUeNetDevice> ()->GetRrc ()->GetLcIdVector ().at (0);
+      uint8_t lcId = 3;
       Time t = Seconds (sampleTime);
       Simulator::Schedule(t, &LenaMimoTestCase::GetRlcBufferSample, this, rlcStats, imsi, lcId);
       sampleTime += 0.1;

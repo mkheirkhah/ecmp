@@ -30,8 +30,11 @@
 #include <ns3/node-container.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/phy-stats-calculator.h>
+#include <ns3/phy-tx-stats-calculator.h>
+#include <ns3/phy-rx-stats-calculator.h>
 #include <ns3/mac-stats-calculator.h>
 #include <ns3/radio-bearer-stats-calculator.h>
+#include <ns3/radio-bearer-stats-connector.h>
 #include <ns3/epc-tft.h>
 #include <ns3/mobility-model.h>
 
@@ -254,17 +257,6 @@ public:
 
 
   /** 
-   * Activate a Data Radio Bearer for a simplified LTE-only simulation
-   * without EPC.
-   * 
-   * \param ueDevice the device of the UE for which the radio bearer
-   * is to be activated
-   * \param bearer the characteristics of the bearer to be activated
-   */
-  void ActivateDataRadioBearer (Ptr<NetDevice> ueDevice,  EpsBearer bearer);
-
-
-  /** 
    * Call ActivateDataRadioBearer (ueDevice, bearer) for each UE
    * device in a given set
    * 
@@ -272,6 +264,17 @@ public:
    * \param bearer
    */
   void ActivateDataRadioBearer (NetDeviceContainer ueDevices,  EpsBearer bearer);
+
+  /** 
+   * Activate a Data Radio Bearer for a simplified LTE-only simulation
+   * without EPC. This method will schedule the actual activation of
+   * the bearer so that it happens after the UE got connected.
+   * 
+   * \param ueDevice the device of the UE for which the radio bearer
+   * is to be activated
+   * \param bearer the characteristics of the bearer to be activated
+   */
+  void ActivateDataRadioBearer (Ptr<NetDevice> ueDevice,  EpsBearer bearer);
 
   /** 
    * 
@@ -303,6 +306,8 @@ public:
    */
   void EnablePhyTraces (void);
 
+
+
   /**
    * Enable trace sinks for DL PHY layer
    */
@@ -312,6 +317,26 @@ public:
    * Enable trace sinks for UL PHY layer
    */
   void EnableUlPhyTraces (void);
+  
+  /**
+   * Enable trace sinks for DL transmission PHY layer
+   */
+  void EnableDlTxPhyTraces (void);
+
+  /**
+   * Enable trace sinks for UL transmission PHY layer
+   */
+  void EnableUlTxPhyTraces (void);
+
+  /**
+   * Enable trace sinks for DL reception PHY layer
+   */
+  void EnableDlRxPhyTraces (void);
+
+  /**
+   * Enable trace sinks for UL reception PHY layer
+   */
+  void EnableUlRxPhyTraces (void);
 
   /**
    * Enable trace sinks for MAC layer
@@ -333,16 +358,6 @@ public:
    */
   void EnableRlcTraces (void);
 
-  /**
-   * Enable trace sinks for DL RLC layer
-   */
-  void EnableDlRlcTraces (void);
-
-  /**
-   * Enable trace sinks for UL MAC layer
-   */
-  void EnableUlRlcTraces (void);
-
   /** 
    * 
    * \return the RLC stats calculator object
@@ -353,16 +368,6 @@ public:
    * Enable trace sinks for PDCP layer
    */
   void EnablePdcpTraces (void);
-
-  /**
-   * Enable trace sinks for DL PDCP layer
-   */
-  void EnableDlPdcpTraces (void);
-
-  /**
-   * Enable trace sinks for UL MAC layer
-   */
-  void EnableUlPdcpTraces (void);
 
   /** 
    * 
@@ -419,12 +424,19 @@ private:
   ObjectFactory m_fadingModelFactory;
 
   Ptr<PhyStatsCalculator> m_phyStats;
+  Ptr<PhyTxStatsCalculator> m_phyTxStats;
+  Ptr<PhyRxStatsCalculator> m_phyRxStats;
   Ptr<MacStatsCalculator> m_macStats;
   Ptr<RadioBearerStatsCalculator> m_rlcStats;
   Ptr<RadioBearerStatsCalculator> m_pdcpStats;
+  RadioBearerStatsConnector m_radioBearerStatsConnector;
 
   Ptr<EpcHelper> m_epcHelper;
 
+  uint64_t m_imsiCounter;
+  uint16_t m_cellIdCounter;
+
+  bool m_useIdealRrc;
 };
 
 

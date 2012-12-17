@@ -37,7 +37,6 @@
 namespace ns3 {
 
 class PacketBurst;
-class LteNetDevice;
 class LteEnbPhy;
 class LteHarqPhy;
 
@@ -121,11 +120,6 @@ public:
    */
   uint8_t GetMacChDelay (void) const;
 
-  /**
-   * \brief Queue the MAC PDU to be sent
-   * \param p the MAC PDU to sent
-   */
-  virtual void DoSendMacPdu (Ptr<Packet> p);
 
   /**
    * \brief Create the PSD for the TX
@@ -171,10 +165,7 @@ public:
   virtual void ReportInterference (const SpectrumValue& interf);
   virtual void ReportRsReceivedPower (const SpectrumValue& power);
 
-  virtual void DoSendLteControlMessage (Ptr<LteControlMessage> msg);
   virtual void ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> >);
-  
-  virtual void DoSetSrsConfigurationIndex (uint16_t srcCi);
   
 
 
@@ -223,16 +214,21 @@ private:
   void SetTxMode7Gain (double gain);
   void SetTxModeGain (uint8_t txMode, double gain);
 
-  void UpdateNoisePsd ();
-  
   void QueueSubChannelsForTransmission (std::vector <int> rbMap);
 
-  // CPHY SAP methods
-  void DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth);
-  void DoSetEarfcn (uint16_t dlEarfcn, uint16_t ulEarfcn);
-  void DoSetTransmissionMode (uint8_t txMode);
+  // UE CPHY SAP methods
+  void DoReset ();  
+  void DoSyncronizeWithEnb (uint16_t cellId, uint16_t dlEarfcn);  
+  void DoSetDlBandwidth (uint8_t ulBandwidth);
+  void DoConfigureUplink (uint16_t ulEarfcn, uint8_t ulBandwidth);
   void DoSetRnti (uint16_t rnti);
-  void DoSyncronizeWithEnb (Ptr<LteEnbNetDevice> enbDevice, uint16_t cellId);
+  void DoSetTransmissionMode (uint8_t txMode);
+  void DoSetSrsConfigurationIndex (uint16_t srcCi);
+
+  // UE PHY SAP methods 
+  virtual void DoSendMacPdu (Ptr<Packet> p);  
+  virtual void DoSendLteControlMessage (Ptr<LteControlMessage> msg);
+  virtual void DoSendRachPreamble (uint32_t prachId, uint32_t raRnti);
   
   std::vector <int> m_subChannelsForTransmission;
   std::vector <int> m_subChannelsForReception;
@@ -257,20 +253,25 @@ private:
   LteUeCphySapUser* m_ueCphySapUser;
 
   uint16_t  m_rnti;
-
-  uint16_t m_enbCellId;
-  Ptr<LteEnbNetDevice> m_enbDevice; // wild hack, might go away in later versions
-  
+ 
   uint8_t m_transmissionMode;
   std::vector <double> m_txModeGain;
   
   uint16_t m_srsPeriodicity;
-  uint16_t m_srsCounter;
+  uint16_t m_srsSubframeOffset;
+  uint16_t m_srsConfigured;
+  Time     m_srsStartTime;
+
+  bool m_dlConfigured;
+  bool m_ulConfigured;
 
   bool m_rsReceivedPowerUpdated;
   SpectrumValue m_rsReceivedPower;
 
   Ptr<LteHarqPhy> m_harqPhyModule;
+
+  uint32_t m_raPreambleId;
+  uint32_t m_raRnti;
 
   /**
    * Trace information regarding RSRP and average SINR (see TS 36.214)
@@ -279,6 +280,14 @@ private:
   TracedCallback<uint16_t, uint16_t, double, double> m_reportCurrentCellRsrpSinrTrace;
   uint16_t m_rsrpSinrSamplePeriod;
   uint16_t m_rsrpSinrSampleCounter;
+
+  EventId m_sendSrsEvent;
+
+  /**
+   * Trace information regarding PHY stats from DL Tx perspective
+   * PhyTrasmissionStatParameters  see lte-common.h
+   */
+  TracedCallback<PhyTransmissionStatParameters> m_ulPhyTransmission;
 
 };
 

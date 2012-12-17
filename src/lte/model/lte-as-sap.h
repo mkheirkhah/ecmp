@@ -32,10 +32,10 @@ class LteEnbNetDevice;
 
 /**
  * This class implements the Access Stratum (AS) Service Access Point
- * (SAP), i.e., the interface between the EpcUeNas and the LteEnbRrc
- * and the EpcEnbApplication. In particular, this class implements the 
+ * (SAP), i.e., the interface between the EpcUeNas and the LteUeRrc.
+ * In particular, this class implements the  
  * Provider part of the SAP, i.e., the methods exported by the
- * LteEnbRrc and called by the EpcUeNas.
+ * LteUeRrc and called by the EpcUeNas.
  * 
  */
 class LteAsSapProvider
@@ -50,12 +50,11 @@ public:
    * future versions)
    * \param cellId the Cell ID identifying the eNB
    */
-  virtual void ForceCampedOnEnb (Ptr<LteEnbNetDevice> enbDevice, uint16_t cellId) = 0;
+  virtual void ForceCampedOnEnb (uint16_t cellId, uint16_t earfcn) = 0;
   
   /** 
    * Tell the RRC to go into Connected Mode
    * 
-   * \param params the parameters
    */
   virtual void Connect (void) = 0;
 
@@ -63,20 +62,26 @@ public:
    * Send a data packet
    * 
    * \param packet the packet
-   * \param drbId the EPS bearer ID
-   * \return true if successful, false otherwise
+   * \param bid the EPS bearer ID
    */
   virtual void SendData (Ptr<Packet> packet, uint8_t bid) = 0;
+
+
+  /** 
+   * Tell the RRC to release the connection
+   * 
+   */
+  virtual void Disconnect () = 0;
 
 };
   
 
 /**
  * This class implements the Access Stratum (AS) Service Access Point
- * (SAP), i.e., the interface between the EpcUeNas and the LteEnbRrc
- * and the EpcEnbApplication. In particular, this class implements the 
+ * (SAP), i.e., the interface between the EpcUeNas and the LteUeRrc
+ * In particular, this class implements the 
  * User part of the SAP, i.e., the methods exported by the
- * EpcUeNas and called by the LteEnbRrc.
+ * EpcUeNas and called by the LteUeRrc.
  * 
  */
 class LteAsSapUser
@@ -96,6 +101,12 @@ public:
    */
   virtual void NotifyConnectionFailed () = 0;
 
+
+  /** 
+   * Notify the NAS that RRC Connection was released
+   * 
+   */
+  virtual void NotifyConnectionReleased () = 0;
 
   /** 
    * receive a data packet
@@ -122,8 +133,9 @@ public:
 
   // inherited from LteAsSapProvider
   virtual void Connect (void);
-  virtual void ForceCampedOnEnb (Ptr<LteEnbNetDevice> enbDevice, uint16_t cellId);
+  virtual void ForceCampedOnEnb (uint16_t cellId, uint16_t earfcn);
   virtual void SendData (Ptr<Packet> packet, uint8_t bid);
+  virtual void Disconnect ();
 
 private:
   MemberLteAsSapProvider ();
@@ -143,9 +155,9 @@ MemberLteAsSapProvider<C>::MemberLteAsSapProvider ()
 
 template <class C>
 void 
-MemberLteAsSapProvider<C>::ForceCampedOnEnb (Ptr<LteEnbNetDevice> enbDevice, uint16_t cellId)
+MemberLteAsSapProvider<C>::ForceCampedOnEnb (uint16_t cellId, uint16_t earfcn)
 {
-  m_owner->DoForceCampedOnEnb (enbDevice, cellId);
+  m_owner->DoForceCampedOnEnb (cellId, earfcn);
 }
 
 
@@ -161,6 +173,13 @@ void
 MemberLteAsSapProvider<C>::SendData (Ptr<Packet> packet, uint8_t bid)
 {
   m_owner->DoSendData (packet, bid);
+}
+
+template <class C>
+void 
+MemberLteAsSapProvider<C>::Disconnect ()
+{
+  m_owner->DoDisconnect ();
 }
 
 
@@ -179,6 +198,7 @@ public:
   virtual void NotifyConnectionSuccessful ();
   virtual void NotifyConnectionFailed ();
   virtual void RecvData (Ptr<Packet> packet);
+  virtual void NotifyConnectionReleased ();
 
 private:
   MemberLteAsSapUser ();
@@ -215,6 +235,13 @@ void
 MemberLteAsSapUser<C>::RecvData (Ptr<Packet> packet)
 {
   m_owner->DoRecvData (packet);
+}
+
+template <class C>
+void 
+MemberLteAsSapUser<C>::NotifyConnectionReleased ()
+{
+  m_owner->DoNotifyConnectionReleased ();
 }
 
 

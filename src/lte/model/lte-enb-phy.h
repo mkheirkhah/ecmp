@@ -249,12 +249,13 @@ private:
   void DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth);
   void DoSetEarfcn (uint16_t dlEarfcn, uint16_t ulEarfcn);
   void DoAddUe (uint16_t rnti);  
+  void DoRemoveUe (uint16_t rnti);  
   void DoSetTransmissionMode (uint16_t  rnti, uint8_t txMode);
-
+  void DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi);  
+  void DoSetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
 
   // LteEnbPhySapProvider forwarded methods
   void DoSendMacPdu (Ptr<Packet> p);  
-  void DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi);  
   void DoSendLteControlMessage (Ptr<LteControlMessage> msg);  
   uint8_t DoGetMacChTtiDelay ();  
 
@@ -279,15 +280,16 @@ private:
   LteEnbCphySapProvider* m_enbCphySapProvider;
   LteEnbCphySapUser* m_enbCphySapUser;
   
-  std::vector <uint16_t> m_ulRntiRxed;
-
   uint32_t m_nrFrames;
   uint32_t m_nrSubFrames;
   
   uint16_t m_srsPeriodicity;
+  Time m_srsStartTime;
   std::map <uint16_t,uint16_t> m_srsCounter;
   std::vector <uint16_t> m_srsUeOffset;
   uint16_t m_currentSrsOffset;
+
+  LteRrcSap::MasterInformationBlock m_mib;
 
   Ptr<LteHarqPhy> m_harqPhyModule;
 
@@ -307,6 +309,12 @@ private:
   TracedCallback<uint16_t, Ptr<SpectrumValue> > m_reportInterferenceTrace;
   uint16_t m_interferenceSamplePeriod;
   uint16_t m_interferenceSampleCounter;
+
+  /**
+   * Trace information regarding PHY stats from UL Tx perspective
+   * PhyTrasmissionStatParameters see lte-common.h
+   */
+  TracedCallback<PhyTransmissionStatParameters> m_dlPhyTransmission;
   
 };
 

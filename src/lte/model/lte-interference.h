@@ -117,7 +117,7 @@ public:
 private:
   void ConditionallyEvaluateChunk ();
   void DoAddSignal  (Ptr<const SpectrumValue> spd);
-  void DoSubtractSignal  (Ptr<const SpectrumValue> spd);
+  void DoSubtractSignal  (Ptr<const SpectrumValue> spd, uint32_t signalId);
 
 
 
@@ -138,6 +138,9 @@ private:
   Time m_lastChangeTime;     /**< the time of the last change in
                                 m_TotalPower */
 
+  uint32_t m_lastSignalId;
+  uint32_t m_lastSignalIdBeforeReset;
+
   /** all the processor instances that need to be notified whenever
   a new interference chunk is calculated */
   std::list<Ptr<LteSinrChunkProcessor> > m_rsPowerChunkProcessorList;
@@ -149,7 +152,6 @@ private:
   /** all the processor instances that need to be notified whenever
       a new interference chunk is calculated */
   std::list<Ptr<LteSinrChunkProcessor> > m_interfChunkProcessorList; 
-
 
 
 };

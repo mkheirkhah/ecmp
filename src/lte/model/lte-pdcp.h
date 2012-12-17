@@ -87,10 +87,34 @@ public:
    */
   LteRlcSapUser* GetLteRlcSapUser ();
 
+  static const uint16_t MAX_PDCP_SN = 4096;
+
+  /**
+   * Status variables of the PDCP
+   * 
+   */
+  struct Status
+  {
+    uint16_t txSn; ///< TX sequence number
+    uint16_t rxSn; ///< RX sequence number
+  };
+
+  /** 
+   * 
+   * \return the current status of the PDCP
+   */
+  Status GetStatus ();
+
+  /**
+   * Set the status of the PDCP
+   * 
+   * \param s 
+   */
+  void SetStatus (Status s);
 
 protected:
   // Interface provided to upper RRC entity
-  virtual void DoTransmitRrcPdu (Ptr<Packet> p);
+  virtual void DoTransmitPdcpSdu (Ptr<Packet> p);
 
   LtePdcpSapUser* m_pdcpSapUser;
   LtePdcpSapProvider* m_pdcpSapProvider;

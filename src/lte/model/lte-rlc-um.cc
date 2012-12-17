@@ -44,8 +44,6 @@ LteRlcUm::LteRlcUm ()
 {
   NS_LOG_FUNCTION (this);
   m_reassemblingState = WAITING_S0_FULL;
-
-  Simulator::ScheduleNow (&LteRlcUm::Start, this);
 }
 
 LteRlcUm::~LteRlcUm ()
@@ -67,6 +65,13 @@ LteRlcUm::GetTypeId (void)
   return tid;
 }
 
+void
+LteRlcUm::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  m_reorderingTimer.Cancel ();
+  m_rbsTimer.Cancel ();
+}
 
 /**
  * RLC SAP
@@ -549,15 +554,6 @@ LteRlcUm::DoReceivePdu (Ptr<Packet> p)
         }
     }
 
-}
-
-
-void
-LteRlcUm::Start ()
-{
-  NS_LOG_FUNCTION (this);
-
-  DoReportBufferStatus ();
 }
 
 

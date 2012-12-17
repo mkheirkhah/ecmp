@@ -45,7 +45,6 @@ int main (int argc, char *argv[])
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
   // Enable LTE log components
   //lteHelper->EnableLogComponents ();
-  lteHelper->EnableRlcTraces();
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;

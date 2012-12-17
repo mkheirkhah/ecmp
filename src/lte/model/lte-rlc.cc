@@ -165,9 +165,7 @@ NS_OBJECT_ENSURE_REGISTERED (LteRlcSm);
 
 LteRlcSm::LteRlcSm ()
 {
-
   NS_LOG_FUNCTION (this);
-  Simulator::ScheduleNow (&LteRlcSm::Start, this);
 }
 
 LteRlcSm::~LteRlcSm ()
@@ -183,6 +181,19 @@ LteRlcSm::GetTypeId (void)
     .AddConstructor<LteRlcSm> ()
     ;
   return tid;
+}
+
+void
+LteRlcSm::DoStart ()
+{
+  NS_LOG_FUNCTION (this);
+  ReportBufferStatus ();
+}
+
+void
+LteRlcSm::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
 }
 
 void
@@ -236,13 +247,6 @@ void
 LteRlcSm::DoNotifyHarqDeliveryFailure ()
 {
   NS_LOG_FUNCTION (this);
-}
-
-void
-LteRlcSm::Start ()
-{
-  NS_LOG_FUNCTION (this);
-  ReportBufferStatus ();
 }
 
 void

@@ -84,7 +84,7 @@ class LteTestRrc : public Object
 
   private:
     // Interface forwarded by LtePdcpSapUser
-    virtual void DoReceiveRrcPdu (LtePdcpSapUser::ReceiveRrcPduParameters params);
+    virtual void DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params);
 
     LtePdcpSapUser* m_pdcpSapUser;
     LtePdcpSapProvider* m_pdcpSapProvider;
@@ -290,7 +290,8 @@ private:
 
   // S1 SAP methods
   void DoDataRadioBearerSetupRequest (EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params);
-
+  void DoPathSwitchRequestAcknowledge (EpcEnbS1SapUser::PathSwitchRequestAcknowledgeParameters params);  
+  
   EpcEnbS1SapProvider* m_s1SapProvider;
   EpcEnbS1SapUser* m_s1SapUser;
   

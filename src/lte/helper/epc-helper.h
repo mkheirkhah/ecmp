@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2011-2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,7 @@
  *
  * Author: Jaume Nin <jnin@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ *         Manuel Requena <manuel.requena@cttc.es>
  */
 
 #ifndef EPC_HELPER_H
@@ -35,6 +36,7 @@ class NetDevice;
 class VirtualNetDevice;
 class EpcSgwPgwApplication;
 class EpcX2;
+class EpcMme;
 
 /**
  * \brief Helper class to handle the creation of the EPC entities and protocols.
@@ -69,18 +71,17 @@ public:
    * \param enbNode the previosuly created eNB node which is to be
    * added to the EPC
    * \param lteEnbNetDevice the LteEnbNetDevice of the eNB node
+   * \param cellId ID of the eNB
    */
-  void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice);
+  void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId);
 
   /** 
-   * Simplified UE Attachment somewhat equivalent to NAS EMM Attach
-   * Request + ECM PDN Connectivity Request 
+   * Notify the EPC of the existance of a new UE which might attach at a later time
    * 
    * \param ueLteDevice the UE device to be attached
    * \param imsi the unique identifier of the UE
-   * \param enbDevice the eNB to which the UE is currently connected
    */
-  void AttachUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi, Ptr<NetDevice> enbDevice);
+  void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi);
 
   /** 
    * Add an X2 interface between two eNB
@@ -146,7 +147,7 @@ private:
   Ptr<Node> m_sgwPgw; 
   Ptr<EpcSgwPgwApplication> m_sgwPgwApp;
   Ptr<VirtualNetDevice> m_tunDevice;
-  
+  Ptr<EpcMme> m_mme;
 
   /**
    * S1-U interfaces
@@ -180,11 +181,6 @@ private:
   DataRate m_x2LinkDataRate;
   Time     m_x2LinkDelay;
   uint16_t m_x2LinkMtu;
-
-  /**
-   * UDP port where the GTP-U Socket is bound, fixed by the standard as 2152 TODO Check value in the spec
-   */
-  uint16_t m_x2cUdpPort;
 
 };
 

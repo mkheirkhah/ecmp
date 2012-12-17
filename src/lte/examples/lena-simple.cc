@@ -47,7 +47,6 @@ int main (int argc, char *argv[])
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
 
-
   // Uncomment to enable logging
 //  lteHelper->EnableLogComponents ();
 
@@ -80,9 +79,9 @@ int main (int argc, char *argv[])
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs, bearer);
-  // Uncomment next line to enable traces
-  //lteHelper->EnableTraces ();
-  Simulator::Stop (Seconds (1.010));
+  lteHelper->EnableTraces ();
+
+  Simulator::Stop (Seconds (1.05));
 
   Simulator::Run ();
 

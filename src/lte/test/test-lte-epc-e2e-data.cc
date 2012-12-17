@@ -100,6 +100,7 @@ LteEpcE2eDataTestCase::LteEpcE2eDataTestCase (std::string name, std::vector<EnbT
   : TestCase (name),
     m_enbTestData (v)
 {
+  NS_LOG_FUNCTION (this << name);
 }
 
 LteEpcE2eDataTestCase::~LteEpcE2eDataTestCase ()
@@ -109,6 +110,7 @@ LteEpcE2eDataTestCase::~LteEpcE2eDataTestCase ()
 void 
 LteEpcE2eDataTestCase::DoRun ()
 {
+  NS_LOG_FUNCTION (this << GetName ());
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<EpcHelper> epcHelper = CreateObject<EpcHelper> ();
@@ -214,7 +216,7 @@ LteEpcE2eDataTestCase::DoRun ()
                 ++dlPort;
                 PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
                 ApplicationContainer apps = packetSinkHelper.Install (ue);
-                apps.Start (Seconds (0.01));
+                apps.Start (Seconds (0.04));
                 bearerTestData.dlServerApp = apps.Get (0)->GetObject<PacketSink> ();
           
                 UdpEchoClientHelper client (ueIpIface.GetAddress (0), dlPort);
@@ -222,7 +224,7 @@ LteEpcE2eDataTestCase::DoRun ()
                 client.SetAttribute ("Interval", TimeValue (bearerTestData.interPacketInterval));
                 client.SetAttribute ("PacketSize", UintegerValue (bearerTestData.pktSize));
                 apps = client.Install (remoteHost);
-                apps.Start (Seconds (0.01));
+                apps.Start (Seconds (0.04));
                 bearerTestData.dlClientApp = apps.Get (0);
               }
 
@@ -230,7 +232,7 @@ LteEpcE2eDataTestCase::DoRun ()
                 ++ulPort;
                 PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
                 ApplicationContainer apps = packetSinkHelper.Install (remoteHost);
-                apps.Start (Seconds (0.5));
+                apps.Start (Seconds (0.8));
                 bearerTestData.ulServerApp = apps.Get (0)->GetObject<PacketSink> ();
           
                 UdpEchoClientHelper client (remoteHostAddr, ulPort);
@@ -238,7 +240,7 @@ LteEpcE2eDataTestCase::DoRun ()
                 client.SetAttribute ("Interval", TimeValue (bearerTestData.interPacketInterval));
                 client.SetAttribute ("PacketSize", UintegerValue (bearerTestData.pktSize));
                 apps = client.Install (ue);
-                apps.Start (Seconds (0.5));
+                apps.Start (Seconds (0.8));
                 bearerTestData.ulClientApp = apps.Get (0);
               }
 
@@ -266,16 +268,20 @@ LteEpcE2eDataTestCase::DoRun ()
   Config::Set ("/NodeList/*/DeviceList/*/LteUeRrc/RadioBearerMap/*/LteRlc/MaxTxBufferSize",
                UintegerValue (2 * 1024 * 1024));
 
-  lteHelper->EnableRlcTraces ();
-  lteHelper->EnablePdcpTraces ();
+
   Time simulationTime = Seconds (2.0);
+
+  double statsStartTime = 0.040; // need to allow for RRC connection establishment + SRS 
+  lteHelper->EnablePdcpTraces ();
+
+  lteHelper->GetPdcpStats ()->SetAttribute ("StartTime", TimeValue (Seconds (statsStartTime)));
   lteHelper->GetPdcpStats ()->SetAttribute ("EpochDuration", TimeValue (simulationTime));
   
   
   Simulator::Stop (simulationTime);  
   Simulator::Run ();
 
-  static uint64_t imsiCounter = 0;
+  uint64_t imsiCounter = 0;
 
   for (std::vector<EnbTestData>::iterator enbit = m_enbTestData.begin ();
        enbit < m_enbTestData.end ();
@@ -288,27 +294,38 @@ LteEpcE2eDataTestCase::DoRun ()
           uint64_t imsi = ++imsiCounter;
           for (uint32_t b = 0; b < ueit->bearers.size (); ++b)
             {
-              // LCID 0 is unused 
-              // LCID 1 is (at the moment) the Default EPS bearer, and is unused in this test program
-              uint8_t lcid = b+2;
-              NS_TEST_ASSERT_MSG_EQ (lteHelper->GetPdcpStats ()->GetDlTxPackets (imsi, lcid), 
-                                     ueit->bearers.at (b).numPkts, 
+              // LCID 0, 1, 2 are for SRBs
+              // LCID 3 is (at the moment) the Default EPS bearer, and is unused in this test program
+              uint8_t lcid = b+4;
+              uint32_t expectedPkts = ueit->bearers.at (b).numPkts;
+              uint32_t expectedBytes = (ueit->bearers.at (b).numPkts) * (ueit->bearers.at (b).pktSize);
+              uint32_t txPktsPdcpDl = lteHelper->GetPdcpStats ()->GetDlTxPackets (imsi, lcid);
+              uint32_t rxPktsPdcpDl = lteHelper->GetPdcpStats ()->GetDlRxPackets (imsi, lcid);
+              uint32_t txPktsPdcpUl = lteHelper->GetPdcpStats ()->GetUlTxPackets (imsi, lcid);
+              uint32_t rxPktsPdcpUl = lteHelper->GetPdcpStats ()->GetUlRxPackets (imsi, lcid);
+              uint32_t rxBytesDl = ueit->bearers.at (b).dlServerApp->GetTotalRx ();
+              uint32_t rxBytesUl = ueit->bearers.at (b).ulServerApp->GetTotalRx ();
+              
+              
+              NS_TEST_ASSERT_MSG_EQ (txPktsPdcpDl, 
+                                     expectedPkts, 
                                      "wrong TX PDCP packets in downlink for IMSI=" << imsi << " LCID=" << (uint16_t) lcid);
-              NS_TEST_ASSERT_MSG_EQ (lteHelper->GetPdcpStats ()->GetDlRxPackets (imsi, lcid), 
-                                     ueit->bearers.at (b).numPkts, 
+              
+              NS_TEST_ASSERT_MSG_EQ (rxPktsPdcpDl, 
+                                     expectedPkts, 
                                      "wrong RX PDCP packets in downlink for IMSI=" << imsi << " LCID=" << (uint16_t) lcid);
-              NS_TEST_ASSERT_MSG_EQ (lteHelper->GetPdcpStats ()->GetUlTxPackets (imsi, lcid), 
-                                     ueit->bearers.at (b).numPkts, 
+              NS_TEST_ASSERT_MSG_EQ (txPktsPdcpUl, 
+                                     expectedPkts, 
                                      "wrong TX PDCP packets in uplink for IMSI=" << imsi << " LCID=" << (uint16_t) lcid);
-              NS_TEST_ASSERT_MSG_EQ (lteHelper->GetPdcpStats ()->GetUlRxPackets (imsi, lcid), 
-                                     ueit->bearers.at (b).numPkts, 
+              NS_TEST_ASSERT_MSG_EQ (rxPktsPdcpUl, 
+                                     expectedPkts, 
                                      "wrong RX PDCP packets in uplink for IMSI=" << imsi << " LCID=" << (uint16_t) lcid);        
 
-              NS_TEST_ASSERT_MSG_EQ (ueit->bearers.at (b).dlServerApp->GetTotalRx (), 
-                                     (ueit->bearers.at (b).numPkts) * (ueit->bearers.at (b).pktSize), 
+              NS_TEST_ASSERT_MSG_EQ (rxBytesDl, 
+                                     expectedBytes, 
                                      "wrong total received bytes in downlink");
-              NS_TEST_ASSERT_MSG_EQ (ueit->bearers.at (b).ulServerApp->GetTotalRx (), 
-                                     (ueit->bearers.at (b).numPkts) * (ueit->bearers.at (b).pktSize), 
+              NS_TEST_ASSERT_MSG_EQ (rxBytesUl, 
+                                     expectedBytes, 
                                      "wrong total received bytes in uplink");
             }
         }      

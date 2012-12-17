@@ -38,6 +38,7 @@ public:
   LteRlcUm ();
   virtual ~LteRlcUm ();
   static TypeId GetTypeId (void);
+  virtual void DoDispose ();
 
   /**
    * RLC SAP
@@ -50,8 +51,6 @@ public:
   virtual void DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId);
   virtual void DoNotifyHarqDeliveryFailure ();
   virtual void DoReceivePdu (Ptr<Packet> p);
-
-  void Start ();
 
 private:
   void ExpireReorderingTimer (void);
