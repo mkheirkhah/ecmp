@@ -108,12 +108,31 @@ public:
    */
   virtual ~LteUeCphySapUser ();
 
+  struct UeMeasurementsElement
+    {
+      uint16_t m_cellId;
+      double m_rsrp;
+      double m_rsrq;
+    };
+  struct UeMeasurementsParameters
+    {
+      std::vector <struct UeMeasurementsElement> m_ueMeasurementsList;
+    };
+
 
   /** 
    * 
    * \param mib the Master Information Block received on the BCH
    */
   virtual void RecvMasterInformationBlock (LteRrcSap::MasterInformationBlock mib) = 0;
+
+  /**
+   *
+   * \param cellId the cellId of the eNB reported
+   * \param rsrp the RSRP measured (see sect. 5.1.1 of 36.214) [W]
+   * \param rsrq the RSRQ measured (see sect. 5.1.3 of 36.214) [linear ratio]
+   */
+  virtual void ReportUeMeasurements (UeMeasurementsParameters params) = 0;
 };
 
 
@@ -220,6 +239,8 @@ public:
   // methods inherited from LteUeCphySapUser go here
   virtual void RecvMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
 
+  virtual void ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
+
 private:
   MemberLteUeCphySapUser ();
   C* m_owner;
@@ -243,7 +264,12 @@ MemberLteUeCphySapUser<C>::RecvMasterInformationBlock (LteRrcSap::MasterInformat
   m_owner->DoRecvMasterInformationBlock (mib);
 }
 
-
+template <class C>
+void
+MemberLteUeCphySapUser<C>::ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params)
+{
+  m_owner->DoReportUeMeasurements (params);
+}
 
 
 } // namespace ns3

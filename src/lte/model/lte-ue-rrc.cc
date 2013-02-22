@@ -543,6 +543,18 @@ LteUeRrc::DoRecvMasterInformationBlock (LteRrcSap::MasterInformationBlock msg)
     }
 }
 
+void
+LteUeRrc::DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params)
+{
+  NS_LOG_FUNCTION (this);
+  for (uint16_t i = 0; i < params.m_ueMeasurementsList.size (); i++)
+    {
+      
+      NS_LOG_DEBUG (this << " CellId " << params.m_ueMeasurementsList.at (i).m_cellId << " RSRP " << params.m_ueMeasurementsList.at (i).m_rsrp << " RSRQ " << params.m_ueMeasurementsList.at (i).m_rsrq);
+      
+    }
+}
+
 
 
 // RRC SAP methods

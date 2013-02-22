@@ -40,6 +40,7 @@ class PacketBurst;
 class LteEnbPhy;
 class LteHarqPhy;
 
+
 /**
  * \ingroup lte
  *
@@ -175,7 +176,10 @@ public:
   virtual void ReportInterference (const SpectrumValue& interf);
   virtual void ReportRsReceivedPower (const SpectrumValue& power);
 
+  // callbacks for LteSpectrumPhy
   virtual void ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> >);
+  virtual void ReceivePss (uint16_t cellId, SpectrumValue p);
+  
   
 
 
@@ -226,6 +230,8 @@ private:
 
   void QueueSubChannelsForTransmission (std::vector <int> rbMap);
 
+  void ReportUeMeasurements ();
+
   // UE CPHY SAP methods
   void DoReset ();  
   void DoSyncronizeWithEnb (uint16_t cellId, uint16_t dlEarfcn);  
@@ -275,8 +281,30 @@ private:
   bool m_dlConfigured;
   bool m_ulConfigured;
 
+  uint8_t m_subframeNo;
+
   bool m_rsReceivedPowerUpdated;
   SpectrumValue m_rsReceivedPower;
+
+  bool m_rsInterferencePowerUpdated;
+  SpectrumValue m_rsIntereferencePower;
+
+  bool m_pssReceived;
+  std::map <uint16_t, SpectrumValue> m_pssMap;
+
+  double m_pssReceptionThreshold; // on RSRQ [W]
+
+  struct UeMeasurementsElement
+    {
+      double rsrpSum;
+      uint8_t rsrpNum;
+      double rsrqSum;
+      uint8_t rsrqNum;
+    };
+
+  std::map <uint16_t, UeMeasurementsElement> m_UeMeasurementsMap;
+  Time m_ueMeasurementsFilterPeriod;
+  Time m_ueMeasurementsFilterLast;
 
   Ptr<LteHarqPhy> m_harqPhyModule;
 
