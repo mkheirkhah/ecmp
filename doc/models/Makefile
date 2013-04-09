@@ -24,6 +24,7 @@ SOURCES = \
 	$(SRC)/aodv/doc/aodv.rst \
 	$(SRC)/applications/doc/applications.rst \
 	$(SRC)/bridge/doc/bridge.rst \
+	$(SRC)/brite/doc/brite.rst \
 	$(SRC)/buildings/doc/source/buildings.rst \
 	$(SRC)/buildings/doc/source/buildings-design.rst \
 	$(SRC)/buildings/doc/source/buildings-user.rst \
@@ -47,6 +48,7 @@ SOURCES = \
 	$(SRC)/propagation/doc/propagation.rst \
 	$(SRC)/network/doc/network-overview.rst \
 	$(SRC)/network/doc/packets.rst \
+	$(SRC)/network/doc/error-model.rst \
 	$(SRC)/network/doc/sockets-api.rst \
 	$(SRC)/network/doc/simple.rst \
 	$(SRC)/network/doc/queue.rst \
@@ -151,8 +153,6 @@ SOURCEFIGS = \
 	$(SRC)/lte/doc/source/figures/helpers.pdf \
 	$(SRC)/lte/doc/source/figures/miesm_scheme.pdf \
 	$(SRC)/lte/doc/source/figures/miesm_scheme.png \
-	$(SRC)/lte/doc/source/figures/lte-phy-interference.seqdiag \
-	$(SRC)/lte/doc/source/figures/helpers.seqdiag \
 	$(SRC)/lte/doc/source/figures/lte-phy-interference.seqdiag \
 	$(SRC)/lte/doc/source/figures/helpers.seqdiag \
 	$(SRC)/uan/doc/auvmobility-classes.dia \
@@ -280,6 +280,8 @@ PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCETEMP) 
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest
+
+.NOTPARALLEL:
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
