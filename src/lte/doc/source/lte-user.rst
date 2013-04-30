@@ -866,9 +866,12 @@ be done explicitly within the simulation program like this::
 where ``enbNodes`` is a ``NodeContainer`` that contains the two eNBs
 between which the X2 interface is to be configured.
 
-Handover event needs to be scheduled explicitly within the simulation
-program, as the current RRC model does not support the automatic
-trigger of handover based on UE measurement. The ``LteHelper``
+
+Manual handover trigger
+***********************
+
+Handover event can be triggered "manually" within the simulation
+program by scheduling an  explicit handover event. The ``LteHelper``
 provides a convenient method for the scheduling of a handover
 event. As an example, let us assume that ``ueLteDevs``` is a
 ``NetDeviceContainer`` that contains the UE that is to be handed over,
@@ -884,6 +887,44 @@ scheduled like this::
 
 Note that the UE needs to be already connected to the source eNB,
 otherwise the simulation will terminate with an error message.
+
+
+Automatic handover trigger
+**************************
+
+Handover procedure can be triggered "automatically" by the serving eNB of 
+the UE. It is also known as the source eNB in the handover procedure. In
+order to control when the handover procedure is initiated, you can configure
+the parameters of the handover algorithm in your simulation program 
+through the ns-3 attributes of the eNB RRC entity::
+
+
+  Config::SetDefault ("ns3::LteEnbRrc::ServingCellHandoverThreshold",
+                      UintegerValue (30));
+
+  Config::SetDefault ("ns3::LteEnbRrc::NeighbourCellHandoverOffset",
+                      UintegerValue (1));
+
+
+The UE measurements are used in the automatic handover algorithm. You can
+configure the parameters of the UE measurements in your simulation program
+through the ns-3 attributes of the eNB RRC entity. You can set the thresholds
+of events A2 and A4::
+
+
+  Config::SetDefault ("ns3::LteEnbRrc::EventA2Threshold",
+                      UintegerValue (32));
+
+  Config::SetDefault ("ns3::LteEnbRrc::EventA4Threshold",
+                      UintegerValue (2));
+
+
+You can find more info about events A2 and A4 in Subsections 5.5.4.3 and 5.5.4.5
+of [TS36331]_.
+
+
+Handover traces
+***************
 
 The RRC model, in particular the ``LteEnbRrc`` and ``LteUeRrc``
 objects, provide some useful traces which can be hooked up to some

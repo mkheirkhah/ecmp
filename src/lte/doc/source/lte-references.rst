@@ -12,11 +12,15 @@ References
 
 .. [TS36104] 3GPP TS 36.104 "E-UTRA Base Station (BS) radio transmission and reception"
 
+.. [TS36133] 3GPP TS 36.133 "E-UTRA Requirements for support of radio resource management"
+
 .. [TS36211] 3GPP TS 36.211 "E-UTRA Physical Channels and Modulation"
 
 .. [TS36212] 3GPP TS 36.212 "E-UTRA Multiplexing and channel coding"
 
 .. [TS36213] 3GPP TS 36.213 "E-UTRA Physical layer procedures"
+
+.. [TS36214] 3GPP TS 36.213 "E-UTRA Physical layer – Measurements"
 
 .. [TS36300] 3GPP TS 36.300 "E-UTRA and E-UTRAN; Overall description; Stage 2"
 

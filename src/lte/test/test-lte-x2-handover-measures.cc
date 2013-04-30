@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2013 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,9 +15,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Nicola Baldo <nbaldo@cttc.es>
+ * Authors: Nicola Baldo <nbaldo@cttc.es>
+ *          Manuel Requena <manuel.requena@cttc.es>
  */
-
 
 #include <ns3/core-module.h>
 #include <ns3/network-module.h>
@@ -27,53 +27,69 @@
 #include <ns3/applications-module.h>
 #include <ns3/point-to-point-module.h>
 
-NS_LOG_COMPONENT_DEFINE ("LteX2HandoverTest");
+NS_LOG_COMPONENT_DEFINE ("LteX2HandoverMeasuresTest");
 
 namespace ns3 {
 
-struct HandoverEvent
+
+struct CheckPointEvent
 {
-  Time startTime;
+  Time checkStartTime;
+  Time checkStopTime;
+  Time checkInterval;
   uint32_t ueDeviceIndex;
-  uint32_t sourceEnbDeviceIndex;
-  uint32_t targetEnbDeviceIndex;
+  uint32_t enbDeviceIndex;
+
+  CheckPointEvent (Time start, Time stop, Time interval, uint32_t ueIndex, uint32_t enbIndex)
+    : checkStartTime (start),
+      checkStopTime (stop),
+      checkInterval (interval),
+      ueDeviceIndex (ueIndex),
+      enbDeviceIndex (enbIndex)
+    {
+    }
 };
 
 
-class LteX2HandoverTestCase : public TestCase
+class LteX2HandoverMeasuresTestCase : public TestCase
 {
 public:
-
-  /** 
-   * 
-   * 
+  /**
+   *
+   *
+   * \param nEnbs number of eNBs in the test
    * \param nUes number of UEs in the test
    * \param nDedicatedBearers number of bearers to be activated per UE
-   * \param handoverEventList 
-   * \param handoverEventListName 
+   * \param checkPointEventList
+   * \param checkPointEventListName
    * \param useUdp true if UDP is to be used, false if TCP is to be used
-   * 
-   * \return 
+   *
+   * \return
    */
-  LteX2HandoverTestCase (uint32_t nUes, uint32_t nDedicatedBearers, std::list<HandoverEvent> handoverEventList, std::string handoverEventListName, bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc);
-  
+  LteX2HandoverMeasuresTestCase (uint32_t nEnbs, uint32_t nUes, uint32_t nDedicatedBearers,
+                                 std::list<CheckPointEvent> checkPointEventList, std::string checkPointEventListName,
+                                 bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc);
+
 private:
-  static std::string BuildNameString (uint32_t nUes, uint32_t nDedicatedBearers, std::string handoverEventListName, bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc);
+  static std::string BuildNameString (uint32_t nEnbs, uint32_t nUes, uint32_t nDedicatedBearers,
+                                      std::string checkPointEventListName,
+                                      bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc);
   virtual void DoRun (void);
   void CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
 
+  uint32_t m_nEnbs; // number of eNBs in the test
   uint32_t m_nUes; // number of UEs in the test
   uint32_t m_nDedicatedBearers; // number of UEs in the test
-  std::list<HandoverEvent> m_handoverEventList;
-  std::string m_handoverEventListName;
+  std::list<CheckPointEvent> m_checkPointEventList;
+  std::string m_checkPointEventListName;
   bool m_epc;
   bool m_useUdp;
   std::string m_schedulerType;
   bool m_admitHo;
-  bool     m_useIdealRrc;
+  bool m_useIdealRrc;
   Ptr<LteHelper> m_lteHelper;
   Ptr<EpcHelper> m_epcHelper;
-  
+
   struct BearerData
   {
     uint32_t bid;
@@ -89,28 +105,31 @@ private:
     std::list<BearerData> bearerDataList;
   };
 
-  void SaveStatsAfterHandover (uint32_t ueIndex);
-  void CheckStatsAWhileAfterHandover (uint32_t ueIndex);
+  void SaveStats (uint32_t ueIndex);
+  void CheckStats (uint32_t ueIndex);
 
   std::vector<UeData> m_ueDataVector;
 
-  const Time m_maxHoDuration; 
+  const Time m_maxHoDuration;
   const Time m_statsDuration;
   const Time m_udpClientInterval;
   const uint32_t m_udpClientPktSize;
-
 };
 
 
-std::string LteX2HandoverTestCase::BuildNameString (uint32_t nUes, uint32_t nDedicatedBearers, std::string handoverEventListName, bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc)
+std::string
+LteX2HandoverMeasuresTestCase::BuildNameString (uint32_t nEnbs, uint32_t nUes, uint32_t nDedicatedBearers,
+                                                std::string checkPointEventListName,
+                                                bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc)
 {
   std::ostringstream oss;
-  oss << " nUes=" << nUes 
-      << " nDedicatedBearers=" << nDedicatedBearers 
+  oss << "nEnbs=" << nEnbs
+      << " nUes=" << nUes
+      << " nDedicatedBearers=" << nDedicatedBearers
       << " udp=" << useUdp
       << " " << schedulerType
       << " admitHo=" << admitHo
-      << " hoList: " << handoverEventListName;
+      << " hoList: " << checkPointEventListName;
   if (useIdealRrc)
     {
       oss << ", ideal RRC";
@@ -118,70 +137,91 @@ std::string LteX2HandoverTestCase::BuildNameString (uint32_t nUes, uint32_t nDed
   else
     {
       oss << ", real RRC";
-    }  
+    }
   return oss.str ();
 }
 
-LteX2HandoverTestCase::LteX2HandoverTestCase (uint32_t nUes, uint32_t nDedicatedBearers, std::list<HandoverEvent> handoverEventList, std::string handoverEventListName, bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc)
-  : TestCase (BuildNameString (nUes, nDedicatedBearers, handoverEventListName, useUdp, schedulerType, admitHo, useIdealRrc)),
+LteX2HandoverMeasuresTestCase::LteX2HandoverMeasuresTestCase (uint32_t nEnbs, uint32_t nUes, uint32_t nDedicatedBearers,
+                                                              std::list<CheckPointEvent> checkPointEventList, std::string checkPointEventListName,
+                                                              bool useUdp, std::string schedulerType, bool admitHo, bool useIdealRrc)
+  : TestCase (BuildNameString (nEnbs, nUes, nDedicatedBearers, checkPointEventListName, useUdp, schedulerType, admitHo, useIdealRrc)),
+    m_nEnbs (nEnbs),
     m_nUes (nUes),
     m_nDedicatedBearers (nDedicatedBearers),
-    m_handoverEventList (handoverEventList),
-    m_handoverEventListName (handoverEventListName),
+    m_checkPointEventList (checkPointEventList),
+    m_checkPointEventListName (checkPointEventListName),
     m_epc (true),
     m_useUdp (useUdp),
     m_schedulerType (schedulerType),
     m_admitHo (admitHo),
     m_useIdealRrc (useIdealRrc),
     m_maxHoDuration (Seconds (0.1)),
-    m_statsDuration (Seconds (0.1)),
+    m_statsDuration (Seconds (0.5)),
     m_udpClientInterval (Seconds (0.01)),
     m_udpClientPktSize (100)
-    
 {
 }
 
 void
-LteX2HandoverTestCase::DoRun ()
+LteX2HandoverMeasuresTestCase::DoRun ()
 {
-  NS_LOG_FUNCTION (this << BuildNameString (m_nUes, m_nDedicatedBearers, m_handoverEventListName, m_useUdp, m_schedulerType, m_admitHo, m_useIdealRrc));
+  NS_LOG_FUNCTION (this << BuildNameString (m_nEnbs, m_nUes, m_nDedicatedBearers,
+                                            m_checkPointEventListName,
+                                            m_useUdp, m_schedulerType, m_admitHo, m_useIdealRrc));
 
   Config::Reset ();
-  Config::SetDefault ("ns3::UdpClient::Interval",  TimeValue (m_udpClientInterval));
-  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));  
-  Config::SetDefault ("ns3::UdpClient::PacketSize", UintegerValue (m_udpClientPktSize));  
+  Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (m_udpClientInterval));
+  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
+  Config::SetDefault ("ns3::UdpClient::PacketSize", UintegerValue (m_udpClientPktSize));
+  Config::SetDefault ("ns3::LteEnbRrc::ServingCellHandoverThreshold", UintegerValue (30));
+  Config::SetDefault ("ns3::LteEnbRrc::NeighbourCellHandoverOffset", UintegerValue (1));
+  Config::SetDefault ("ns3::LteEnbRrc::HandoverJoiningTimeoutDuration", TimeValue (MilliSeconds (200)));
+  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (20));
+
 
   int64_t stream = 1;
-  
+
   m_lteHelper = CreateObject<LteHelper> ();
   m_lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
   m_lteHelper->SetSchedulerType (m_schedulerType);
   m_lteHelper->SetAttribute ("UseIdealRrc", BooleanValue (m_useIdealRrc));
-  
+
+
+  double distance = 1000.0; // m
+  double speed = 100;       // m/s
 
   NodeContainer enbNodes;
-  enbNodes.Create (2);
+  enbNodes.Create (m_nEnbs);
   NodeContainer ueNodes;
   ueNodes.Create (m_nUes);
 
   if (m_epc)
     {
       m_epcHelper = CreateObject<EpcHelper> ();
-      m_lteHelper->SetEpcHelper (m_epcHelper);      
+      m_lteHelper->SetEpcHelper (m_epcHelper);
     }
 
-  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  positionAlloc->Add (Vector (-3000, 0, 0)); // enb0
-  positionAlloc->Add (Vector ( 3000, 0, 0)); // enb1
-  for (uint16_t i = 0; i < m_nUes; i++)
+  // Install Mobility Model in eNBs
+  // eNBs are located along a line in the X axis
+  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < m_nEnbs; i++)
     {
-      positionAlloc->Add (Vector (0, 0, 0));
+      Vector enbPosition (distance * (i + 1), 0, 0);
+      enbPositionAlloc->Add (enbPosition);
     }
-  MobilityHelper mobility;
-  mobility.SetPositionAllocator (positionAlloc);
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (enbNodes);  
-  mobility.Install (ueNodes);
+  MobilityHelper enbMobility;
+  enbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  enbMobility.SetPositionAllocator(enbPositionAlloc);
+  enbMobility.Install(enbNodes);
+
+  // Install Mobility Model in UE
+  // UE moves with a constant speed along the X axis
+  MobilityHelper ueMobility;
+  ueMobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
+  ueMobility.Install(ueNodes);
+  ueNodes.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 0, 0));
+  ueNodes.Get (0)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed, 0, 0));
+
 
   NetDeviceContainer enbDevices;
   enbDevices = m_lteHelper->InstallEnbDevice (enbNodes);
@@ -228,7 +268,7 @@ LteX2HandoverTestCase::DoRun ()
       Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
       remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
-      // Install the IP stack on the UEs      
+      // Install the IP stack on the UEs
       internet.Install (ueNodes);
       ueIpIfaces = m_epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueDevices));
     }
@@ -236,25 +276,25 @@ LteX2HandoverTestCase::DoRun ()
   // attachment (needs to be done after IP stack configuration)
   // all UEs attached to eNB 0 at the beginning
   m_lteHelper->Attach (ueDevices, enbDevices.Get (0));
-   
+
   if (m_epc)
     {
       bool epcDl = true;
-      bool epcUl = true;
+      bool epcUl = false;
       // the rest of this block is copied from lena-dual-stripe
 
-    
+
       // Install and start applications on UEs and remote host
       uint16_t dlPort = 10000;
       uint16_t ulPort = 20000;
 
       // randomize a bit start times to avoid simulation artifacts
       // (e.g., buffer overflows due to packet transmissions happening
-      // exactly at the same time) 
+      // exactly at the same time)
       Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
       startTimeSeconds->SetAttribute ("Min", DoubleValue (0));
       startTimeSeconds->SetAttribute ("Max", DoubleValue (0.010));
-      startTimeSeconds->SetStream (stream++);      
+      startTimeSeconds->SetStream (stream++);
 
       for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
         {
@@ -264,7 +304,7 @@ LteX2HandoverTestCase::DoRun ()
           ueStaticRouting->SetDefaultRoute (m_epcHelper->GetUeDefaultGatewayAddress (), 1);
 
           UeData ueData;
-     
+
           for (uint32_t b = 0; b < m_nDedicatedBearers; ++b)
             {
               ++dlPort;
@@ -275,29 +315,29 @@ LteX2HandoverTestCase::DoRun ()
               BearerData bearerData;
 
               if (m_useUdp)
-                {              
+                {
                   if (epcDl)
                     {
                       UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
                       clientApps.Add (dlClientHelper.Install (remoteHost));
-                      PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", 
+                      PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
                                                            InetSocketAddress (Ipv4Address::GetAny (), dlPort));
                       ApplicationContainer sinkContainer = dlPacketSinkHelper.Install (ue);
                       bearerData.dlSink = sinkContainer.Get (0)->GetObject<PacketSink> ();
                       serverApps.Add (sinkContainer);
-                      
+
                     }
                   if (epcUl)
-                    {      
+                    {
                       UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
                       clientApps.Add (ulClientHelper.Install (ue));
-                      PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", 
+                      PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
                                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
                       ApplicationContainer sinkContainer = ulPacketSinkHelper.Install (remoteHost);
                       bearerData.ulSink = sinkContainer.Get (0)->GetObject<PacketSink> ();
-                      serverApps.Add (sinkContainer);  
-                    }            
-                }                    
+                      serverApps.Add (sinkContainer);
+                    }
+                }
               else // use TCP
                 {
                   if (epcDl)
@@ -306,23 +346,23 @@ LteX2HandoverTestCase::DoRun ()
                                                      InetSocketAddress (ueIpIfaces.GetAddress (u), dlPort));
                       dlClientHelper.SetAttribute ("MaxBytes", UintegerValue (0));
                       clientApps.Add (dlClientHelper.Install (remoteHost));
-                      PacketSinkHelper dlPacketSinkHelper ("ns3::TcpSocketFactory", 
+                      PacketSinkHelper dlPacketSinkHelper ("ns3::TcpSocketFactory",
                                                            InetSocketAddress (Ipv4Address::GetAny (), dlPort));
                       ApplicationContainer sinkContainer = dlPacketSinkHelper.Install (ue);
                       bearerData.dlSink = sinkContainer.Get (0)->GetObject<PacketSink> ();
                       serverApps.Add (sinkContainer);
                     }
                   if (epcUl)
-                    {     
+                    {
                       BulkSendHelper ulClientHelper ("ns3::TcpSocketFactory",
                                                      InetSocketAddress (remoteHostAddr, ulPort));
-                      ulClientHelper.SetAttribute ("MaxBytes", UintegerValue (0));                  
+                      ulClientHelper.SetAttribute ("MaxBytes", UintegerValue (0));
                       clientApps.Add (ulClientHelper.Install (ue));
-                      PacketSinkHelper ulPacketSinkHelper ("ns3::TcpSocketFactory", 
+                      PacketSinkHelper ulPacketSinkHelper ("ns3::TcpSocketFactory",
                                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
                       ApplicationContainer sinkContainer = ulPacketSinkHelper.Install (remoteHost);
                       bearerData.ulSink = sinkContainer.Get (0)->GetObject<PacketSink> ();
-                      serverApps.Add (sinkContainer);  
+                      serverApps.Add (sinkContainer);
                     }
                 } // end if (useUdp)
 
@@ -332,7 +372,7 @@ LteX2HandoverTestCase::DoRun ()
                   EpcTft::PacketFilter dlpf;
                   dlpf.localPortStart = dlPort;
                   dlpf.localPortEnd = dlPort;
-                  tft->Add (dlpf); 
+                  tft->Add (dlpf);
                 }
               if (epcUl)
                 {
@@ -358,7 +398,7 @@ LteX2HandoverTestCase::DoRun ()
           m_ueDataVector.push_back (ueData);
         }
 
-    } 
+    }
   else // (epc == false)
     {
       // for radio bearer activation purposes, consider together home UEs and macro UEs
@@ -381,60 +421,52 @@ LteX2HandoverTestCase::DoRun ()
   const Time maxRrcConnectionEstablishmentDuration = Seconds (0.080);
   for (NetDeviceContainer::Iterator it = ueDevices.Begin (); it != ueDevices.End (); ++it)
     {
-      Simulator::Schedule (maxRrcConnectionEstablishmentDuration, 
-                           &LteX2HandoverTestCase::CheckConnected, 
+      NS_LOG_FUNCTION (maxRrcConnectionEstablishmentDuration);
+      Simulator::Schedule (maxRrcConnectionEstablishmentDuration,
+                           &LteX2HandoverMeasuresTestCase::CheckConnected,
                            this, *it, enbDevices.Get (0));
     }
-  
-  // schedule handover events and corresponding checks
 
-  Time stopTime = Seconds (0);  
-  for (std::list<HandoverEvent>::iterator hoEventIt = m_handoverEventList.begin ();
-       hoEventIt != m_handoverEventList.end ();
-       ++hoEventIt)
+  // schedule the checkpoint events
+
+  Time stopTime = Seconds (0);
+  for (std::list<CheckPointEvent>::iterator checkPointEventIt = m_checkPointEventList.begin ();
+       checkPointEventIt != m_checkPointEventList.end ();
+       ++checkPointEventIt)
     {
-      Simulator::Schedule (hoEventIt->startTime, 
-                           &LteX2HandoverTestCase::CheckConnected, 
-                           this, 
-                           ueDevices.Get (hoEventIt->ueDeviceIndex), 
-                           enbDevices.Get (hoEventIt->sourceEnbDeviceIndex));
-      m_lteHelper->HandoverRequest (hoEventIt->startTime, 
-                                    ueDevices.Get (hoEventIt->ueDeviceIndex),
-                                    enbDevices.Get (hoEventIt->sourceEnbDeviceIndex),
-                                    enbDevices.Get (hoEventIt->targetEnbDeviceIndex));
-      Time hoEndTime = hoEventIt->startTime + m_maxHoDuration;
-      Simulator::Schedule (hoEndTime, 
-                           &LteX2HandoverTestCase::CheckConnected, 
-                           this, 
-                           ueDevices.Get (hoEventIt->ueDeviceIndex), 
-                           enbDevices.Get (m_admitHo ? hoEventIt->targetEnbDeviceIndex : hoEventIt->sourceEnbDeviceIndex));
-      Simulator::Schedule (hoEndTime, &LteX2HandoverTestCase::SaveStatsAfterHandover,
-                           this, hoEventIt->ueDeviceIndex);
-
-      Time checkStatsAfterHoTime = hoEndTime + m_statsDuration;
-      Simulator::Schedule (checkStatsAfterHoTime, &LteX2HandoverTestCase::CheckStatsAWhileAfterHandover, 
-                           this, hoEventIt->ueDeviceIndex);      
-      if (stopTime <= checkStatsAfterHoTime)
+      for (Time checkPointTime = checkPointEventIt->checkStartTime;
+           checkPointTime < checkPointEventIt->checkStopTime;
+           checkPointTime += checkPointEventIt->checkInterval)
         {
-          stopTime = checkStatsAfterHoTime + MilliSeconds (1);
+          Simulator::Schedule (checkPointTime, &LteX2HandoverMeasuresTestCase::CheckConnected,
+                               this, ueDevices.Get (checkPointEventIt->ueDeviceIndex),
+                               enbDevices.Get (checkPointEventIt->enbDeviceIndex));
+
+          Time saveStatsTime = checkPointTime;
+          Simulator::Schedule (saveStatsTime, &LteX2HandoverMeasuresTestCase::SaveStats,
+                               this, checkPointEventIt->ueDeviceIndex);
+
+          Time checkStats = saveStatsTime + m_statsDuration;
+          Simulator::Schedule (checkStats, &LteX2HandoverMeasuresTestCase::CheckStats,
+                               this, checkPointEventIt->ueDeviceIndex);
+
+          if (stopTime <= checkStats)
+            {
+              stopTime = checkStats + Seconds (1);
+            }
         }
     }
-  
-  // m_lteHelper->EnableRlcTraces ();
-  // m_lteHelper->EnablePdcpTraces();
 
- 
   Simulator::Stop (stopTime);
-
   Simulator::Run ();
-
   Simulator::Destroy ();
-
 }
 
-void 
-LteX2HandoverTestCase::CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
+void
+LteX2HandoverMeasuresTestCase::CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice)
 {
+  NS_LOG_FUNCTION (ueDevice << enbDevice);
+
   Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc ();
   NS_TEST_ASSERT_MSG_EQ (ueRrc->GetState (), LteUeRrc::CONNECTED_NORMALLY, "Wrong LteUeRrc state!");
@@ -443,7 +475,7 @@ LteX2HandoverTestCase::CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> e
   Ptr<LteEnbNetDevice> enbLteDevice = enbDevice->GetObject<LteEnbNetDevice> ();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc ();
   uint16_t rnti = ueRrc->GetRnti ();
-  Ptr<UeManager> ueManager = enbRrc->GetUeManager (rnti);  
+  Ptr<UeManager> ueManager = enbRrc->GetUeManager (rnti);
   NS_TEST_ASSERT_MSG_NE (ueManager, 0, "RNTI " << rnti << " not found in eNB");
 
   UeManager::State ueManagerState = ueManager->GetState ();
@@ -472,16 +504,16 @@ LteX2HandoverTestCase::CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> e
 
   ObjectMapValue enbDataRadioBearerMapValue;
   ueManager->GetAttribute ("DataRadioBearerMap", enbDataRadioBearerMapValue);
-  NS_TEST_ASSERT_MSG_EQ (enbDataRadioBearerMapValue.GetN (), m_nDedicatedBearers + 1, "wrong num bearers at eNB");  
+  NS_TEST_ASSERT_MSG_EQ (enbDataRadioBearerMapValue.GetN (), m_nDedicatedBearers + 1, "wrong num bearers at eNB");
 
   ObjectMapValue ueDataRadioBearerMapValue;
   ueRrc->GetAttribute ("DataRadioBearerMap", ueDataRadioBearerMapValue);
-  NS_TEST_ASSERT_MSG_EQ (ueDataRadioBearerMapValue.GetN (), m_nDedicatedBearers + 1, "wrong num bearers at UE"); 
+  NS_TEST_ASSERT_MSG_EQ (ueDataRadioBearerMapValue.GetN (), m_nDedicatedBearers + 1, "wrong num bearers at UE");
 
   ObjectMapValue::Iterator enbBearerIt = enbDataRadioBearerMapValue.Begin ();
   ObjectMapValue::Iterator ueBearerIt = ueDataRadioBearerMapValue.Begin ();
-  while (enbBearerIt != enbDataRadioBearerMapValue.End () &&
-         ueBearerIt != ueDataRadioBearerMapValue.End ())
+  while (enbBearerIt != enbDataRadioBearerMapValue.End ()
+         && ueBearerIt != ueDataRadioBearerMapValue.End ())
     {
       Ptr<LteDataRadioBearerInfo> enbDrbInfo = enbBearerIt->second->GetObject<LteDataRadioBearerInfo> ();
       Ptr<LteDataRadioBearerInfo> ueDrbInfo = ueBearerIt->second->GetObject<LteDataRadioBearerInfo> ();
@@ -491,183 +523,159 @@ LteX2HandoverTestCase::CheckConnected (Ptr<NetDevice> ueDevice, Ptr<NetDevice> e
       //NS_TEST_ASSERT_MSG_EQ (enbDrbInfo->m_rlcConfig, ueDrbInfo->m_rlcConfig, "rlcConfig differs");
       NS_TEST_ASSERT_MSG_EQ ((uint32_t) enbDrbInfo->m_logicalChannelIdentity, (uint32_t) ueDrbInfo->m_logicalChannelIdentity, "logicalChannelIdentity differs");
       //NS_TEST_ASSERT_MSG_EQ (enbDrbInfo->m_logicalChannelConfig, ueDrbInfo->m_logicalChannelConfig, "logicalChannelConfig differs");
- 
+
       ++enbBearerIt;
       ++ueBearerIt;
     }
   NS_ASSERT_MSG (enbBearerIt == enbDataRadioBearerMapValue.End (), "too many bearers at eNB");
-  NS_ASSERT_MSG (ueBearerIt == ueDataRadioBearerMapValue.End (), "too many bearers at UE");  
+  NS_ASSERT_MSG (ueBearerIt == ueDataRadioBearerMapValue.End (), "too many bearers at UE");
 }
 
-void 
-LteX2HandoverTestCase::SaveStatsAfterHandover (uint32_t ueIndex)
+void
+LteX2HandoverMeasuresTestCase::SaveStats (uint32_t ueIndex)
 {
+  NS_LOG_FUNCTION (ueIndex);
   for (std::list<BearerData>::iterator it = m_ueDataVector.at (ueIndex).bearerDataList.begin ();
        it != m_ueDataVector.at (ueIndex).bearerDataList.end ();
        ++it)
     {
-      it->dlOldTotalRx = it->dlSink->GetTotalRx ();
-      it->ulOldTotalRx = it->ulSink->GetTotalRx ();
+      if (it->dlSink)
+        {
+          it->dlOldTotalRx = it->dlSink->GetTotalRx ();
+        }
+      if (it->ulSink)
+        {
+          it->ulOldTotalRx = it->ulSink->GetTotalRx ();
+        }
     }
 }
 
-void 
-LteX2HandoverTestCase::CheckStatsAWhileAfterHandover (uint32_t ueIndex)
-{      
+void
+LteX2HandoverMeasuresTestCase::CheckStats (uint32_t ueIndex)
+{
+  NS_LOG_FUNCTION (ueIndex);
   uint32_t b = 1;
   for (std::list<BearerData>::iterator it = m_ueDataVector.at (ueIndex).bearerDataList.begin ();
        it != m_ueDataVector.at (ueIndex).bearerDataList.end ();
        ++it)
     {
-      uint32_t dlRx = it->dlSink->GetTotalRx () - it->dlOldTotalRx;
-      uint32_t ulRx = it->ulSink->GetTotalRx () - it->ulOldTotalRx;                       
-      uint32_t expectedBytes = m_udpClientPktSize * (m_statsDuration.GetSeconds () / m_udpClientInterval.GetSeconds ());
-      //                           tolerance
-      NS_TEST_ASSERT_MSG_GT (dlRx,   0.500 * expectedBytes, "too few RX bytes in DL, ue=" << ueIndex << ", b=" << b);
-      NS_TEST_ASSERT_MSG_GT (ulRx,   0.500 * expectedBytes, "too few RX bytes in UL, ue=" << ueIndex << ", b=" << b);
+      uint32_t dlRx = 0;
+      uint32_t ulRx = 0;
+
+      if (it->dlSink)
+        {
+          dlRx = it->dlSink->GetTotalRx () - it->dlOldTotalRx;
+        }
+
+      if (it->ulSink)
+        {
+          ulRx = it->ulSink->GetTotalRx () - it->ulOldTotalRx;
+        }
+      double expectedBytes = m_udpClientPktSize * (m_statsDuration.GetSeconds () / m_udpClientInterval.GetSeconds ());
+
+      NS_LOG_LOGIC ("expBytes " << expectedBytes << " dlRx " << dlRx << " ulRx " << ulRx);
+
+      //                                tolerance
+      if (it->dlSink)
+        {
+          NS_TEST_ASSERT_MSG_GT (dlRx,   0.500 * expectedBytes, "too few RX bytes in DL, ue=" << ueIndex << ", b=" << b);
+        }
+      if (it->ulSink)
+        {
+          NS_TEST_ASSERT_MSG_GT (ulRx,   0.500 * expectedBytes, "too few RX bytes in UL, ue=" << ueIndex << ", b=" << b);
+        }
       ++b;
     }
 }
 
 
-class LteX2HandoverTestSuite : public TestSuite
+class LteX2HandoverMeasuresTestSuite : public TestSuite
 {
 public:
-  LteX2HandoverTestSuite ();
+  LteX2HandoverMeasuresTestSuite ();
 };
 
 
-LteX2HandoverTestSuite::LteX2HandoverTestSuite ()
-  : TestSuite ("lte-x2-handover", SYSTEM)
+LteX2HandoverMeasuresTestSuite::LteX2HandoverMeasuresTestSuite ()
+  : TestSuite ("lte-x2-handover-measures", SYSTEM)
 {
-  // in the following:
-  // fwd means handover from enb 0 to enb 1
-  // bwd means handover from enb 1 to enb 0
+  std::string cel0name ("no ho");
+  std::list<CheckPointEvent> cel0;
+  cel0.push_back (CheckPointEvent (Seconds (1), Seconds (50), Seconds (1), 0, 0));
 
-  HandoverEvent ue1fwd;
-  ue1fwd.startTime = MilliSeconds (100); 
-  ue1fwd.ueDeviceIndex = 0;
-  ue1fwd.sourceEnbDeviceIndex = 0;
-  ue1fwd.targetEnbDeviceIndex = 1;
+  std::string cel1name ("ho: 0 -> 1");
+  std::list<CheckPointEvent> cel1;
+  cel1.push_back (CheckPointEvent (Seconds (1), Seconds (15.1), Seconds (1), 0, 0));
+  // HO is performed between seconds 15 and 16
+  cel1.push_back (CheckPointEvent (Seconds (16), Seconds (50), Seconds (1), 0, 1));
 
-  HandoverEvent ue1bwd;
-  ue1bwd.startTime = MilliSeconds (300); 
-  ue1bwd.ueDeviceIndex = 0;
-  ue1bwd.sourceEnbDeviceIndex = 1;
-  ue1bwd.targetEnbDeviceIndex = 0;
+  std::string cel2name ("ho: 0 -> 1 -> 2");
+  std::list<CheckPointEvent> cel2;
+  cel2.push_back (CheckPointEvent (Seconds (1), Seconds (16.1), Seconds (1), 0, 0));
+  // First HO is performed between seconds 16 and 17
+  cel2.push_back (CheckPointEvent (Seconds (17), Seconds (25.1), Seconds (1), 0, 1));
+  // Second HO is performed between seconds 25 and 26
+  cel2.push_back (CheckPointEvent (Seconds (26), Seconds (50), Seconds (1), 0, 2));
 
-  HandoverEvent ue1fwdagain;
-  ue1fwdagain.startTime = MilliSeconds (500); 
-  ue1fwdagain.ueDeviceIndex = 0;
-  ue1fwdagain.sourceEnbDeviceIndex = 0;
-  ue1fwdagain.targetEnbDeviceIndex = 1;
+  std::string cel3name ("ho: 0 -> 1 -> 2 -> 3 (var 1)");
+  std::list<CheckPointEvent> cel3;
+  cel3.push_back (CheckPointEvent (Seconds (1), Seconds (16.1), Seconds (1),  0, 0));
+  // First HO is performed between seconds 16 and 17
+  cel3.push_back (CheckPointEvent (Seconds (17), Seconds (25.1), Seconds (1), 0, 1));
+  // Second HO is performed between seconds 25 and 26
+  cel3.push_back (CheckPointEvent (Seconds (26), Seconds (35.1), Seconds (1), 0, 2));
+  // Third HO is performed between seconds 35 and 36
+  cel3.push_back (CheckPointEvent (Seconds (36), Seconds (50), Seconds (1), 0, 3));
 
-  HandoverEvent ue2fwd;
-  ue2fwd.startTime = MilliSeconds (110); 
-  ue2fwd.ueDeviceIndex = 1;
-  ue2fwd.sourceEnbDeviceIndex = 0;
-  ue2fwd.targetEnbDeviceIndex = 1;
+  std::string cel4name ("ho: 0 -> 1 -> 2 -> 3 (var 2)");
+  std::list<CheckPointEvent> cel4;
+  cel4.push_back (CheckPointEvent (Seconds (1), Seconds (16.1), Seconds (1),  0, 0));
+  // First HO is performed between seconds 16 and 17
+  cel4.push_back (CheckPointEvent (Seconds (17), Seconds (26.1), Seconds (1), 0, 1));
+  // Second HO is performed between seconds 26 and 27
+  cel4.push_back (CheckPointEvent (Seconds (27), Seconds (36.1), Seconds (1), 0, 2));
+  // Third HO is performed between seconds 36 and 37
+  cel4.push_back (CheckPointEvent (Seconds (37), Seconds (50), Seconds (1), 0, 3));
 
-  HandoverEvent ue2bwd;
-  ue2bwd.startTime = MilliSeconds (250); 
-  ue2bwd.ueDeviceIndex = 1;
-  ue2bwd.sourceEnbDeviceIndex = 1;
-  ue2bwd.targetEnbDeviceIndex = 0;
-
-  std::string hel0name ("none");
-  std::list<HandoverEvent> hel0;
-
-  std::string hel1name ("1 fwd");
-  std::list<HandoverEvent> hel1;
-  hel1.push_back (ue1fwd);  
-
-  std::string hel2name ("1 fwd & bwd");
-  std::list<HandoverEvent> hel2;
-  hel2.push_back (ue1fwd);     
-  hel2.push_back (ue1bwd);    
-
-  std::string hel3name ("1 fwd & bwd & fwd");
-  std::list<HandoverEvent> hel3;
-  hel3.push_back (ue1fwd);     
-  hel3.push_back (ue1bwd);     
-  hel3.push_back (ue1fwdagain);     
-
-  std::string hel4name ("1+2 fwd");
-  std::list<HandoverEvent> hel4;
-  hel4.push_back (ue1fwd);  
-  hel4.push_back (ue2fwd);
-
-  std::string hel5name ("1+2 fwd & bwd");
-  std::list<HandoverEvent> hel5;
-  hel5.push_back (ue1fwd);     
-  hel5.push_back (ue1bwd);    
-  hel5.push_back (ue2fwd);     
-  hel5.push_back (ue2bwd);    
-
-  std::string hel6name ("2 fwd");
-  std::list<HandoverEvent> hel6;
-  hel6.push_back (ue2fwd);     
-
-  std::string hel7name ("2 fwd & bwd");
-  std::list<HandoverEvent> hel7;
-  hel7.push_back (ue2fwd);     
-  hel7.push_back (ue2bwd);    
-
+  int32_t useIdealRrc;
   std::vector<std::string> schedulers;
   schedulers.push_back ("ns3::RrFfMacScheduler");
   schedulers.push_back ("ns3::PfFfMacScheduler");
   for (std::vector<std::string>::iterator schedIt = schedulers.begin (); schedIt != schedulers.end (); ++schedIt)
     {
-      for (int32_t useIdealRrc = 1; useIdealRrc >= 0; --useIdealRrc)
-        {          
-          //                                     nUes, nDBearers, helist, name, useUdp, sched, admitHo, idealRrc
-          AddTestCase (new LteX2HandoverTestCase (  1,    0,    hel0, hel0name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel0, hel0name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    5,    hel0, hel0name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    5,    hel0, hel0name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    0,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    1,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    2,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    0,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    1,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    2,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    1,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    2,    hel1, hel1name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    1,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    2,    hel1, hel1name, true, *schedIt, false, useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    0,    hel2, hel2name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    1,    hel2, hel2name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    2,    hel2, hel2name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    0,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    1,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  1,    2,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    1,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    2,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    1,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    2,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    0,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    1,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  2,    2,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    0,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    1,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    2,    hel3, hel3name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    0,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    1,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    2,    hel4, hel4name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    0,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    1,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-          AddTestCase (new LteX2HandoverTestCase (  3,    2,    hel5, hel5name, true, *schedIt, true,  useIdealRrc));
-
+      for (useIdealRrc = 1; useIdealRrc >= 0; --useIdealRrc)
+        {
+          //                                             nEnbs, nUes, nDBearers, celist, name, useUdp, sched, admitHo, idealRrc
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  2,   1,    0,      cel1, cel1name, true, *schedIt, true,  useIdealRrc));
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  2,   1,    1,      cel1, cel1name, true, *schedIt, true,  useIdealRrc));
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  2,   1,    2,      cel1, cel1name, true, *schedIt, true,  useIdealRrc));
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  3,   1,    0,      cel2, cel2name, true, *schedIt, true,  useIdealRrc));
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  3,   1,    1,      cel2, cel2name, true, *schedIt, true,  useIdealRrc));
+          AddTestCase (new LteX2HandoverMeasuresTestCase (  3,   1,    2,      cel2, cel2name, true, *schedIt, true,  useIdealRrc));
         }
+
+      useIdealRrc = 1;
+      AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    0,      cel3, cel3name, true, *schedIt, true,  useIdealRrc));
+      AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    1,      cel3, cel3name, true, *schedIt, true,  useIdealRrc));
+      AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    2,      cel3, cel3name, true, *schedIt, true,  useIdealRrc));
+
     }
+
+  useIdealRrc = 0;
+  std::string scheduler = "ns3::RrFfMacScheduler";
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    0,      cel3, cel3name, true, scheduler, true,  useIdealRrc));
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    1,      cel4, cel4name, true, scheduler, true,  useIdealRrc));
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    2,      cel3, cel3name, true, scheduler, true,  useIdealRrc));
+
+  useIdealRrc = 0;
+  scheduler = "ns3::PfFfMacScheduler";
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    0,      cel3, cel3name, true, scheduler, true,  useIdealRrc));
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    1,      cel3, cel3name, true, scheduler, true,  useIdealRrc));
+  AddTestCase (new LteX2HandoverMeasuresTestCase (  4,   1,    2,      cel3, cel3name, true, scheduler, true,  useIdealRrc));
+
 }
 
-static LteX2HandoverTestSuite g_lteX2HandoverTestSuiteInstance;
-
+static LteX2HandoverMeasuresTestSuite g_lteX2HandoverMeasuresTestSuiteInstance;
 
 
 } // namespace ns3
