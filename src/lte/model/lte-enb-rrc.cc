@@ -970,8 +970,13 @@ UeManager::RecvMeasurementReport (LteRrcSap::MeasurementReport msg)
             {
               if (it->second->m_rsrq > bestNeighbourRsrq)
                 {
-                  bestNeighbour = it->second;
-                  bestNeighbourRsrq = it->second->m_rsrq;
+                  Ptr<NeighbourRelation> neighbourRelation = m_rrc->m_neighbourRelationTable[it->second->m_cellId];
+                  if ((neighbourRelation->m_noHo == false) &&
+                      (neighbourRelation->m_noX2 == false))
+                    {
+                      bestNeighbour = it->second;
+                      bestNeighbourRsrq = it->second->m_rsrq;
+                    }
                 }
             }
 
@@ -980,8 +985,7 @@ UeManager::RecvMeasurementReport (LteRrcSap::MeasurementReport msg)
             {
               uint16_t targetCellId = bestNeighbour->m_cellId;
               NS_LOG_LOGIC ("Best neighbour cellId " << targetCellId);
-              if ( (bestNeighbour->m_rsrq - m_servingCellMeasures->m_rsrq >= m_rrc->m_neighbourCellHandoverOffset) &&
-                   (m_state == CONNECTED_NORMALLY) )
+              if (bestNeighbour->m_rsrq - m_servingCellMeasures->m_rsrq >= m_rrc->m_neighbourCellHandoverOffset)
                 {
                   NS_LOG_LOGIC ("Trigger Handover to cellId " << targetCellId);
                   NS_LOG_LOGIC ("target cell RSRQ " << (uint16_t) bestNeighbour->m_rsrq);
