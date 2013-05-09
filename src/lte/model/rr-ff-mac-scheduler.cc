@@ -18,12 +18,9 @@
  * Author: Marco Miozzo <marco.miozzo@cttc.es>
  */
 
-#ifdef __FreeBSD__
-#define log2(x) (log (x) / M_LN2)
-#endif /* __FreeBSD__ */
-
 #include <ns3/log.h>
 #include <ns3/pointer.h>
+#include <ns3/math.h>
 #include <set>
 
 #include <ns3/lte-amc.h>
@@ -460,7 +457,7 @@ void
 RrFfMacScheduler::DoSchedDlPagingBufferReq (const struct FfMacSchedSapProvider::SchedDlPagingBufferReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  // TODO: Implementation of the API
+  NS_FATAL_ERROR ("method not implemented");
   return;
 }
 
@@ -468,7 +465,7 @@ void
 RrFfMacScheduler::DoSchedDlMacBufferReq (const struct FfMacSchedSapProvider::SchedDlMacBufferReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  // TODO: Implementation of the API
+  NS_FATAL_ERROR ("method not implemented");
   return;
 }
 
@@ -1064,7 +1061,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
         }
       int tbSize = (m_amc->GetTbSizeFromMcs (newDci.m_mcs.at (0), rbgPerTb * rbgSize) / 8);
       uint16_t rlcPduSize = tbSize / lcNum;
-      while (lcNum > 0)
+      while ((*it).m_rnti == newEl.m_rnti)
         {
           if ( ((*it).m_rlcTransmissionQueueSize > 0)
                || ((*it).m_rlcRetransmissionQueueSize > 0)
@@ -1100,6 +1097,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
             {
               // restart from the first
               it = m_rlcBufferReq.begin ();
+              break;
             }
         }
       uint32_t rbgMask = 0;
@@ -1133,7 +1131,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
           std::map <uint16_t, DlHarqProcessesDciBuffer_t>::iterator itDci = m_dlHarqProcessesDciBuffer.find (newEl.m_rnti);
           if (itDci == m_dlHarqProcessesDciBuffer.end ())
             {
-              NS_FATAL_ERROR ("Unable to find RNTI entry in DCI HARQ buffer for RNTI " << (*it).m_rnti);
+              NS_FATAL_ERROR ("Unable to find RNTI entry in DCI HARQ buffer for RNTI " << newEl.m_rnti);
             }
           (*itDci).second.at (newDci.m_harqProcess) = newDci;
           // refresh timer
@@ -1149,7 +1147,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       ret.m_buildDataList.push_back (newEl);
       if (rbgAllocatedNum == rbgNum)
         {
-          m_nextRntiDl = (*it).m_rnti; // store last RNTI served
+          m_nextRntiDl = newEl.m_rnti; // store last RNTI served
           break;                       // no more RGB to be allocated
         }
     }
@@ -1475,8 +1473,8 @@ RrFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sched
             }
           // translate SINR -> cqi: WILD ACK: same as DL
           double s = log2 ( 1 + (
-                              pow (10, minSinr / 10 )  /
-                              ( (-log (5.0 * 0.00005 )) / 1.5) ));
+                                 std::pow (10, minSinr / 10 )  /
+                                 ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
 
 
           cqi = m_amc->GetCqiFromSpectralEfficiency (s);
@@ -1554,7 +1552,6 @@ void
 RrFfMacScheduler::DoSchedUlNoiseInterferenceReq (const struct FfMacSchedSapProvider::SchedUlNoiseInterferenceReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  // TODO: Implementation of the API
   return;
 }
 
@@ -1562,7 +1559,6 @@ void
 RrFfMacScheduler::DoSchedUlSrInfoReq (const struct FfMacSchedSapProvider::SchedUlSrInfoReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  // TODO: Implementation of the API
   return;
 }
 

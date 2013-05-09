@@ -344,7 +344,7 @@ LteUeRrc::SetUseRlcSm (bool val)
 
 
 void
-LteUeRrc::DoStart (void)
+LteUeRrc::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
 
@@ -772,7 +772,7 @@ LteUeRrc::DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters par
             }
 
           // reportOnLeave will only be set when eventId = eventA3
-          //if(reportConfigEutra.eventId == LteRrcSap::ReportConfigEutra::eventA3)
+          if(reportConfigEutra.eventId == LteRrcSap::ReportConfigEutra::EVENT_A3)
             {
               if (reportConfigEutra.reportOnLeave)
                 {
@@ -1137,7 +1137,7 @@ LteUeRrc::ApplyRadioResourceConfigDedicated (LteRrcSap::RadioResourceConfigDedic
           m_cmacSapProvider->AddLc (dtamIt->logicalChannelIdentity,
                                     lcConfig,
                                     rlc->GetLteMacSapUser ());
-          rlc->Start ();
+          rlc->Initialize ();
         }
       else
         {

@@ -146,7 +146,7 @@ UeManager::UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s)
 }
 
 void
-UeManager::DoStart ()
+UeManager::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
   m_drbPdcpSapUser = new LtePdcpSpecificLtePdcpSapUser<UeManager> (this);
@@ -438,10 +438,10 @@ UeManager::StartDataRadioBearers ()
     {
       std::map <uint8_t, Ptr<LteDataRadioBearerInfo> >::iterator drbIt = m_drbMap.find (*drbIdIt);
       NS_ASSERT (drbIt != m_drbMap.end ());
-      drbIt->second->m_rlc->Start ();
+      drbIt->second->m_rlc->Initialize ();
       if (drbIt->second->m_pdcp)
         {
-          drbIt->second->m_pdcp->Start ();
+          drbIt->second->m_pdcp->Initialize ();
         }
     }
   m_drbsToBeStarted.clear ();
@@ -970,8 +970,13 @@ UeManager::RecvMeasurementReport (LteRrcSap::MeasurementReport msg)
             {
               if (it->second->m_rsrq > bestNeighbourRsrq)
                 {
-                  bestNeighbour = it->second;
-                  bestNeighbourRsrq = it->second->m_rsrq;
+                  Ptr<NeighbourRelation> neighbourRelation = m_rrc->m_neighbourRelationTable[it->second->m_cellId];
+                  if ((neighbourRelation->m_noHo == false) &&
+                      (neighbourRelation->m_noX2 == false))
+                    {
+                      bestNeighbour = it->second;
+                      bestNeighbourRsrq = it->second->m_rsrq;
+                    }
                 }
             }
 
@@ -980,7 +985,8 @@ UeManager::RecvMeasurementReport (LteRrcSap::MeasurementReport msg)
             {
               uint16_t targetCellId = bestNeighbour->m_cellId;
               NS_LOG_LOGIC ("Best neighbour cellId " << targetCellId);
-              if (bestNeighbour->m_rsrq - m_servingCellMeasures->m_rsrq >= m_rrc->m_neighbourCellHandoverOffset)
+              if ( (bestNeighbour->m_rsrq - m_servingCellMeasures->m_rsrq >= m_rrc->m_neighbourCellHandoverOffset) &&
+                   (m_state == CONNECTED_NORMALLY) )
                 {
                   NS_LOG_LOGIC ("Trigger Handover to cellId " << targetCellId);
                   NS_LOG_LOGIC ("target cell RSRQ " << (uint16_t) bestNeighbour->m_rsrq);
@@ -2032,7 +2038,7 @@ LteEnbRrc::AddUe (UeManager::State state)
   m_lastAllocatedRnti = rnti;
   Ptr<UeManager> ueManager = CreateObject<UeManager> (this, rnti, state);
   m_ueMap.insert (std::pair<uint16_t, Ptr<UeManager> > (rnti, ueManager));
-  ueManager->Start ();
+  ueManager->Initialize ();
   NS_LOG_DEBUG (this << " New UE RNTI " << rnti << " cellId " << m_cellId << " srs CI " << ueManager->GetSrsConfigurationIndex ());      
   m_newUeContextTrace (m_cellId, rnti);      
   return rnti;

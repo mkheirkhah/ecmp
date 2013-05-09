@@ -21,7 +21,7 @@
 
 #include <ns3/object-factory.h>
 #include <ns3/log.h>
-#include <math.h>
+#include <cmath>
 #include <ns3/simulator.h>
 #include <ns3/attribute-accessor-helper.h>
 #include <ns3/double.h>
@@ -229,12 +229,12 @@ LteEnbPhy::DoDispose ()
 }
 
 void
-LteEnbPhy::DoStart ()
+LteEnbPhy::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
   Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_ulEarfcn, m_ulBandwidth, m_noiseFigure);
   m_uplinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
-  LtePhy::DoStart ();
+  LtePhy::DoInitialize ();
 }
 
 
@@ -457,9 +457,41 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
             m_enbPhySapUser->ReceiveRachPreamble (rachPreamble->GetRapId ());
           }
           break;
-          
+        case LteControlMessage::DL_CQI:
+          {
+            Ptr<DlCqiLteControlMessage> dlcqiMsg = DynamicCast<DlCqiLteControlMessage> (*it);
+            CqiListElement_s dlcqi = dlcqiMsg->GetDlCqi ();
+            // check whether the UE is connected
+            if (m_ueAttached.find (dlcqi.m_rnti) != m_ueAttached.end ())
+              {
+                m_enbPhySapUser->ReceiveLteControlMessage (*it);
+              }
+          }
+          break;
+        case LteControlMessage::BSR:
+          {
+            Ptr<BsrLteControlMessage> bsrMsg = DynamicCast<BsrLteControlMessage> (*it);
+            MacCeListElement_s bsr = bsrMsg->GetBsr ();
+            // check whether the UE is connected
+            if (m_ueAttached.find (bsr.m_rnti) != m_ueAttached.end ())
+              {
+                m_enbPhySapUser->ReceiveLteControlMessage (*it);
+              }
+          }
+          break;
+        case LteControlMessage::DL_HARQ:
+          {
+            Ptr<DlHarqFeedbackLteControlMessage> dlharqMsg = DynamicCast<DlHarqFeedbackLteControlMessage> (*it);
+            DlInfoListElement_s dlharq = dlharqMsg->GetDlHarqFeedback ();
+            // check whether the UE is connected
+            if (m_ueAttached.find (dlharq.m_rnti) != m_ueAttached.end ())
+              {
+                m_enbPhySapUser->ReceiveLteControlMessage (*it);
+              }
+          }
+          break;          
         default:
-          m_enbPhySapUser->ReceiveLteControlMessage (*it);
+          NS_FATAL_ERROR ("Unexpected LteControlMessage type");
           break;
         }
     }
@@ -746,7 +778,7 @@ LteEnbPhy::CreatePuschCqiReport (const SpectrumValue& sinr)
   int i = 0;
   for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
     {
-      double sinrdb = 10 * log10 ((*it));
+      double sinrdb = 10 * std::log10 ((*it));
 //       NS_LOG_DEBUG ("ULCQI RB " << i << " value " << sinrdb);
       // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
       int16_t sinrFp = LteFfConverter::double2fpS11dot3 (sinrdb);
