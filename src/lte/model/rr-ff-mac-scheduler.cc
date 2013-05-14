@@ -1061,7 +1061,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
         }
       int tbSize = (m_amc->GetTbSizeFromMcs (newDci.m_mcs.at (0), rbgPerTb * rbgSize) / 8);
       uint16_t rlcPduSize = tbSize / lcNum;
-      while (lcNum > 0)
+      while ((*it).m_rnti == newEl.m_rnti)
         {
           if ( ((*it).m_rlcTransmissionQueueSize > 0)
                || ((*it).m_rlcRetransmissionQueueSize > 0)
@@ -1097,6 +1097,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
             {
               // restart from the first
               it = m_rlcBufferReq.begin ();
+              break;
             }
         }
       uint32_t rbgMask = 0;
@@ -1111,6 +1112,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
               NS_LOG_INFO ("\t " << rbgAllocated);
               i++;
               rbgMap.at (rbgAllocated) = true;
+              rbgAllocatedNum++;
             }
           rbgAllocated++;
         }
@@ -1129,7 +1131,7 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
           std::map <uint16_t, DlHarqProcessesDciBuffer_t>::iterator itDci = m_dlHarqProcessesDciBuffer.find (newEl.m_rnti);
           if (itDci == m_dlHarqProcessesDciBuffer.end ())
             {
-              NS_FATAL_ERROR ("Unable to find RNTI entry in DCI HARQ buffer for RNTI " << (*it).m_rnti);
+              NS_FATAL_ERROR ("Unable to find RNTI entry in DCI HARQ buffer for RNTI " << newEl.m_rnti);
             }
           (*itDci).second.at (newDci.m_harqProcess) = newDci;
           // refresh timer
@@ -1143,9 +1145,9 @@ RrFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       // ...more parameters -> ignored in this version
 
       ret.m_buildDataList.push_back (newEl);
-      if (rbgAllocated == rbgNum)
+      if (rbgAllocatedNum == rbgNum)
         {
-          m_nextRntiDl = (*it).m_rnti; // store last RNTI served
+          m_nextRntiDl = newEl.m_rnti; // store last RNTI served
           break;                       // no more RGB to be allocated
         }
     }
@@ -1835,15 +1837,28 @@ RrFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t s
               }
             else if ((*it).m_rlcTransmissionQueueSize > 0)
               {
+                uint32_t rlcOverhead;
+                if (lcid == 1)
+                  {
+                    // for SRB1 (using RLC AM) it's better to
+                    // overestimate RLC overhead rather than
+                    // underestimate it and risk unneeded
+                    // segmentation which increases delay 
+                    rlcOverhead = 4;                                  
+                  }
+                else
+                  {
+                    // minimum RLC overhead due to header
+                    rlcOverhead = 2;
+                  }
                 // update transmission queue
-                if ((*it).m_rlcTransmissionQueueSize <= size)
+                if ((*it).m_rlcTransmissionQueueSize <= size - rlcOverhead)
                   {
                     (*it).m_rlcTransmissionQueueSize = 0;
                   }
                 else
-                  {
-                    size -= 2; // remove minimun RLC overhead due to header
-                    (*it).m_rlcTransmissionQueueSize -= size;
+                  {                    
+                    (*it).m_rlcTransmissionQueueSize -= size - rlcOverhead;
                   }
               }
           return;

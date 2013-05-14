@@ -335,7 +335,7 @@ LteHelper::InstallSingleEnbDevice (Ptr<Node> n)
   ulPhy->AddDataSinrChunkProcessor (pData); // for evaluating PUSCH UL-CQI
 
   Ptr<LteInterferencePowerChunkProcessor> pInterf = Create<LteInterferencePowerChunkProcessor> (phy);
-  ulPhy->AddInterferenceChunkProcessor (pInterf); // for interference power tracing
+  ulPhy->AddInterferenceDataChunkProcessor (pInterf); // for interference power tracing
 
   dlPhy->SetChannel (m_downlinkChannel);
   ulPhy->SetChannel (m_uplinkChannel);
@@ -474,6 +474,9 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
 
   Ptr<LteRsReceivedPowerChunkProcessor> pRs = Create<LteRsReceivedPowerChunkProcessor> (phy->GetObject<LtePhy> ());
   dlPhy->AddRsPowerChunkProcessor (pRs);
+
+  Ptr<LteInterferencePowerChunkProcessor> pInterf = Create<LteInterferencePowerChunkProcessor> (phy);
+  dlPhy->AddInterferenceCtrlChunkProcessor (pInterf); // for RSRQ evaluation of UE Measurements
   
   Ptr<LteCtrlSinrChunkProcessor> pCtrl = Create<LteCtrlSinrChunkProcessor> (phy->GetObject<LtePhy> (), dlPhy);
   dlPhy->AddCtrlSinrChunkProcessor (pCtrl);
@@ -544,6 +547,7 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
   n->AddDevice (dev);
   dlPhy->SetLtePhyRxDataEndOkCallback (MakeCallback (&LteUePhy::PhyPduReceived, phy));
   dlPhy->SetLtePhyRxCtrlEndOkCallback (MakeCallback (&LteUePhy::ReceiveLteControlMessageList, phy));
+  dlPhy->SetLtePhyRxPssCallback (MakeCallback (&LteUePhy::ReceivePss, phy));
   dlPhy->SetLtePhyDlHarqFeedbackCallback (MakeCallback (&LteUePhy::ReceiveLteDlHarqFeedback, phy));
   nas->SetForwardUpCallback (MakeCallback (&LteUeNetDevice::Receive, dev));
 

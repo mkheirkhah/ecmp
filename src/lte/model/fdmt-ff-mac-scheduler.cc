@@ -1602,8 +1602,8 @@ FdMtFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sch
 
           // translate SINR -> cqi: WILD ACK: same as DL
           double s = log2 ( 1 + (
-                              pow (10, minSinr / 10 )  /
-                              ( (-log (5.0 * 0.00005 )) / 1.5) ));
+                                 std::pow (10, minSinr / 10 )  /
+                                 ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
           cqi = m_amc->GetCqiFromSpectralEfficiency (s);
           if (cqi == 0)
             {
@@ -1987,15 +1987,28 @@ FdMtFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t
         }
       else if ((*it).second.m_rlcTransmissionQueueSize > 0)
         {
+          uint32_t rlcOverhead;
+          if (lcid == 1)
+            {
+              // for SRB1 (using RLC AM) it's better to
+              // overestimate RLC overhead rather than
+              // underestimate it and risk unneeded
+              // segmentation which increases delay 
+              rlcOverhead = 4;                                  
+            }
+          else
+            {
+              // minimum RLC overhead due to header
+              rlcOverhead = 2;
+            }
           // update transmission queue
-          if ((*it).second.m_rlcTransmissionQueueSize <= size)
+          if ((*it).second.m_rlcTransmissionQueueSize <= size - rlcOverhead)
             {
               (*it).second.m_rlcTransmissionQueueSize = 0;
             }
           else
-            {
-              size -= 2; // remove minimun RLC overhead due to header
-              (*it).second.m_rlcTransmissionQueueSize -= size;
+            {                    
+              (*it).second.m_rlcTransmissionQueueSize -= size - rlcOverhead;
             }
         }
     }
