@@ -7396,26 +7396,6 @@ def register_Ns3RadioBearerStatsConnector_methods(root_module, cls):
     cls.add_method('EnsureConnected', 
                    'void', 
                    [])
-    ## radio-bearer-stats-connector.h (module 'lte'): static uint16_t ns3::RadioBearerStatsConnector::FindCellIdFromEnbRlcPath(std::string path) [member function]
-    cls.add_method('FindCellIdFromEnbRlcPath', 
-                   'uint16_t', 
-                   [param('std::string', 'path')], 
-                   is_static=True)
-    ## radio-bearer-stats-connector.h (module 'lte'): static uint16_t ns3::RadioBearerStatsConnector::FindCellIdFromUeRlcPath(std::string path) [member function]
-    cls.add_method('FindCellIdFromUeRlcPath', 
-                   'uint16_t', 
-                   [param('std::string', 'path')], 
-                   is_static=True)
-    ## radio-bearer-stats-connector.h (module 'lte'): static uint64_t ns3::RadioBearerStatsConnector::FindImsiFromEnbRlcPath(std::string path) [member function]
-    cls.add_method('FindImsiFromEnbRlcPath', 
-                   'uint64_t', 
-                   [param('std::string', 'path')], 
-                   is_static=True)
-    ## radio-bearer-stats-connector.h (module 'lte'): static uint64_t ns3::RadioBearerStatsConnector::FindImsiFromUeRlcPath(std::string path) [member function]
-    cls.add_method('FindImsiFromUeRlcPath', 
-                   'uint64_t', 
-                   [param('std::string', 'path')], 
-                   is_static=True)
     ## radio-bearer-stats-connector.h (module 'lte'): static void ns3::RadioBearerStatsConnector::NotifyConnectionReconfigurationEnb(ns3::RadioBearerStatsConnector * c, std::string context, uint64_t imsi, uint16_t cellid, uint16_t rnti) [member function]
     cls.add_method('NotifyConnectionReconfigurationEnb', 
                    'void', 
@@ -8615,11 +8595,6 @@ def register_Ns3EpsBearerTag_methods(root_module, cls):
                    'ns3::TypeId', 
                    [], 
                    is_const=True, is_virtual=True)
-    ## eps-bearer-tag.h (module 'lte'): uint8_t ns3::EpsBearerTag::GetLayer() const [member function]
-    cls.add_method('GetLayer', 
-                   'uint8_t', 
-                   [], 
-                   is_const=True)
     ## eps-bearer-tag.h (module 'lte'): uint16_t ns3::EpsBearerTag::GetRnti() const [member function]
     cls.add_method('GetRnti', 
                    'uint16_t', 
@@ -9550,8 +9525,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'ns3::TypeId', 
                    [], 
                    is_static=True)
-    ## object.h (module 'core'): void ns3::Object::Start() [member function]
-    cls.add_method('Start', 
+    ## object.h (module 'core'): void ns3::Object::Initialize() [member function]
+    cls.add_method('Initialize', 
                    'void', 
                    [])
     ## object.h (module 'core'): ns3::Object::Object(ns3::Object const & o) [copy constructor]
@@ -9562,8 +9537,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## object.h (module 'core'): void ns3::Object::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## object.h (module 'core'): void ns3::Object::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -11113,8 +11088,8 @@ def register_Ns3TraceFadingLossModel_methods(root_module, cls):
     cls.add_method('AssignStreams', 
                    'int64_t', 
                    [param('int64_t', 'stream')])
-    ## trace-fading-loss-model.h (module 'lte'): void ns3::TraceFadingLossModel::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## trace-fading-loss-model.h (module 'lte'): void ns3::TraceFadingLossModel::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    is_virtual=True)
@@ -11370,8 +11345,8 @@ def register_Ns3UeManager_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## lte-enb-rrc.h (module 'lte'): void ns3::UeManager::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-enb-rrc.h (module 'lte'): void ns3::UeManager::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -11592,8 +11567,8 @@ def register_Ns3Application_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## application.h (module 'network'): void ns3::Application::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## application.h (module 'network'): void ns3::Application::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -12612,10 +12587,6 @@ def register_Ns3EpcSgwPgwApplication_methods(root_module, cls):
     cls.add_constructor([param('ns3::EpcSgwPgwApplication const &', 'arg0')])
     ## epc-sgw-pgw-application.h (module 'lte'): ns3::EpcSgwPgwApplication::EpcSgwPgwApplication(ns3::Ptr<ns3::VirtualNetDevice> const tunDevice, ns3::Ptr<ns3::Socket> const s1uSocket) [constructor]
     cls.add_constructor([param('ns3::Ptr< ns3::VirtualNetDevice > const', 'tunDevice'), param('ns3::Ptr< ns3::Socket > const', 's1uSocket')])
-    ## epc-sgw-pgw-application.h (module 'lte'): uint32_t ns3::EpcSgwPgwApplication::ActivateS1Bearer(ns3::Ipv4Address ueAddr, ns3::Ipv4Address enbAddr, ns3::Ptr<ns3::EpcTft> tft) [member function]
-    cls.add_method('ActivateS1Bearer', 
-                   'uint32_t', 
-                   [param('ns3::Ipv4Address', 'ueAddr'), param('ns3::Ipv4Address', 'enbAddr'), param('ns3::Ptr< ns3::EpcTft >', 'tft')])
     ## epc-sgw-pgw-application.h (module 'lte'): void ns3::EpcSgwPgwApplication::AddEnb(uint16_t cellId, ns3::Ipv4Address enbAddr, ns3::Ipv4Address sgwAddr) [member function]
     cls.add_method('AddEnb', 
                    'void', 
@@ -14992,8 +14963,8 @@ def register_Ns3LteHelper_methods(root_module, cls):
     cls.add_method('SetUeAntennaModelType', 
                    'void', 
                    [param('std::string', 'type')])
-    ## lte-helper.h (module 'lte'): void ns3::LteHelper::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-helper.h (module 'lte'): void ns3::LteHelper::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -15382,6 +15353,11 @@ def register_Ns3LteRlcSm_methods(root_module, cls):
                    'void', 
                    [], 
                    is_virtual=True)
+    ## lte-rlc.h (module 'lte'): void ns3::LteRlcSm::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
+                   'void', 
+                   [], 
+                   is_virtual=True)
     ## lte-rlc.h (module 'lte'): void ns3::LteRlcSm::DoNotifyHarqDeliveryFailure() [member function]
     cls.add_method('DoNotifyHarqDeliveryFailure', 
                    'void', 
@@ -15396,11 +15372,6 @@ def register_Ns3LteRlcSm_methods(root_module, cls):
     cls.add_method('DoReceivePdu', 
                    'void', 
                    [param('ns3::Ptr< ns3::Packet >', 'p')], 
-                   is_virtual=True)
-    ## lte-rlc.h (module 'lte'): void ns3::LteRlcSm::DoStart() [member function]
-    cls.add_method('DoStart', 
-                   'void', 
-                   [], 
                    is_virtual=True)
     ## lte-rlc.h (module 'lte'): void ns3::LteRlcSm::DoTransmitPdcpPdu(ns3::Ptr<ns3::Packet> p) [member function]
     cls.add_method('DoTransmitPdcpPdu', 
@@ -15873,8 +15844,8 @@ def register_Ns3LteUePhy_methods(root_module, cls):
                    'void', 
                    [], 
                    is_virtual=True)
-    ## lte-ue-phy.h (module 'lte'): void ns3::LteUePhy::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-ue-phy.h (module 'lte'): void ns3::LteUePhy::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    is_virtual=True)
@@ -16108,8 +16079,8 @@ def register_Ns3LteUeRrc_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
-    ## lte-ue-rrc.h (module 'lte'): void ns3::LteUeRrc::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-ue-rrc.h (module 'lte'): void ns3::LteUeRrc::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -16582,8 +16553,8 @@ def register_Ns3Node_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## node.h (module 'network'): void ns3::Node::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## node.h (module 'network'): void ns3::Node::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -18758,8 +18729,8 @@ def register_Ns3LteEnbPhy_methods(root_module, cls):
                    'void', 
                    [], 
                    is_virtual=True)
-    ## lte-enb-phy.h (module 'lte'): void ns3::LteEnbPhy::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-enb-phy.h (module 'lte'): void ns3::LteEnbPhy::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    is_virtual=True)
@@ -19138,8 +19109,8 @@ def register_Ns3LteUeNetDevice_methods(root_module, cls):
     cls.add_method('GetTargetEnb', 
                    'ns3::Ptr< ns3::LteEnbNetDevice >', 
                    [])
-    ## lte-ue-net-device.h (module 'lte'): void ns3::LteUeNetDevice::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-ue-net-device.h (module 'lte'): void ns3::LteUeNetDevice::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -19497,11 +19468,6 @@ def register_Ns3RrcConnectionReleaseHeader_methods(root_module, cls):
                    'ns3::LteRrcSap::RrcConnectionRelease', 
                    [], 
                    is_const=True)
-    ## lte-rrc-header.h (module 'lte'): uint8_t ns3::RrcConnectionReleaseHeader::GetRrcTransactionIdentifier() const [member function]
-    cls.add_method('GetRrcTransactionIdentifier', 
-                   'uint8_t', 
-                   [], 
-                   is_const=True)
     ## lte-rrc-header.h (module 'lte'): void ns3::RrcConnectionReleaseHeader::PreSerialize() const [member function]
     cls.add_method('PreSerialize', 
                    'void', 
@@ -19740,8 +19706,8 @@ def register_Ns3LteEnbNetDevice_methods(root_module, cls):
     cls.add_method('SetUlEarfcn', 
                    'void', 
                    [param('uint16_t', 'earfcn')])
-    ## lte-enb-net-device.h (module 'lte'): void ns3::LteEnbNetDevice::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## lte-enb-net-device.h (module 'lte'): void ns3::LteEnbNetDevice::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
