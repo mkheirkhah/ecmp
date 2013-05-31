@@ -38,6 +38,7 @@
 #include <ns3/lte-sinr-chunk-processor.h>
 #include <ns3/multi-model-spectrum-channel.h>
 #include <ns3/friis-spectrum-propagation-loss.h>
+#include <ns3/trace-fading-loss-model.h>
 #include <ns3/isotropic-antenna-model.h>
 #include <ns3/lte-enb-net-device.h>
 #include <ns3/lte-ue-net-device.h>
@@ -62,8 +63,9 @@ namespace ns3 {
 NS_OBJECT_ENSURE_REGISTERED (LteHelper);
 
 LteHelper::LteHelper (void)
-  :   m_imsiCounter (0),
-      m_cellIdCounter (0)
+  :  m_fadingStreamsAssigned (false),
+     m_imsiCounter (0),
+     m_cellIdCounter (0)
 {
   NS_LOG_FUNCTION (this);
   m_enbNetDeviceFactory.SetTypeId (LteEnbNetDevice::GetTypeId ());
@@ -110,7 +112,6 @@ LteHelper::DoInitialize (void)
     }
   if (!m_fadingModelType.empty ())
     {
-      Ptr<SpectrumPropagationLossModel> m_fadingModule;
       m_fadingModule = m_fadingModelFactory.Create<SpectrumPropagationLossModel> ();
       m_fadingModule->Initialize ();
       m_downlinkChannel->AddSpectrumPropagationLossModel (m_fadingModule);
@@ -335,7 +336,7 @@ LteHelper::InstallSingleEnbDevice (Ptr<Node> n)
   ulPhy->AddDataSinrChunkProcessor (pData); // for evaluating PUSCH UL-CQI
 
   Ptr<LteInterferencePowerChunkProcessor> pInterf = Create<LteInterferencePowerChunkProcessor> (phy);
-  ulPhy->AddInterferenceChunkProcessor (pInterf); // for interference power tracing
+  ulPhy->AddInterferenceDataChunkProcessor (pInterf); // for interference power tracing
 
   dlPhy->SetChannel (m_downlinkChannel);
   ulPhy->SetChannel (m_uplinkChannel);
@@ -474,6 +475,9 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
 
   Ptr<LteRsReceivedPowerChunkProcessor> pRs = Create<LteRsReceivedPowerChunkProcessor> (phy->GetObject<LtePhy> ());
   dlPhy->AddRsPowerChunkProcessor (pRs);
+
+  Ptr<LteInterferencePowerChunkProcessor> pInterf = Create<LteInterferencePowerChunkProcessor> (phy);
+  dlPhy->AddInterferenceCtrlChunkProcessor (pInterf); // for RSRQ evaluation of UE Measurements
   
   Ptr<LteCtrlSinrChunkProcessor> pCtrl = Create<LteCtrlSinrChunkProcessor> (phy->GetObject<LtePhy> (), dlPhy);
   dlPhy->AddCtrlSinrChunkProcessor (pCtrl);
@@ -544,6 +548,7 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
   n->AddDevice (dev);
   dlPhy->SetLtePhyRxDataEndOkCallback (MakeCallback (&LteUePhy::PhyPduReceived, phy));
   dlPhy->SetLtePhyRxCtrlEndOkCallback (MakeCallback (&LteUePhy::ReceiveLteControlMessageList, phy));
+  dlPhy->SetLtePhyRxPssCallback (MakeCallback (&LteUePhy::ReceivePss, phy));
   dlPhy->SetLtePhyDlHarqFeedbackCallback (MakeCallback (&LteUePhy::ReceiveLteDlHarqFeedback, phy));
   nas->SetForwardUpCallback (MakeCallback (&LteUeNetDevice::Receive, dev));
 
@@ -837,6 +842,15 @@ int64_t
 LteHelper::AssignStreams (NetDeviceContainer c, int64_t stream)
 {
   int64_t currentStream = stream;
+  if ((m_fadingModule != 0) && (m_fadingStreamsAssigned == false))
+    {
+      Ptr<TraceFadingLossModel> tflm = m_fadingModule->GetObject<TraceFadingLossModel> ();
+      if (tflm != 0)
+        {
+          currentStream += tflm->AssignStreams (currentStream);
+          m_fadingStreamsAssigned = true;
+        }
+    }
   Ptr<NetDevice> netDevice;
   for (NetDeviceContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {

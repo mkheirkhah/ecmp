@@ -108,12 +108,34 @@ public:
    */
   virtual ~LteUeCphySapUser ();
 
+  
+  /**
+   * Parameters of the ReportUeMeasurements primitive: RSRP [dBm] and RSRQ [dB]
+   * See section 5.1.1 and 5.1.3 of TS 36.214
+   */
+  struct UeMeasurementsElement
+    {
+      uint16_t m_cellId;
+      double m_rsrp;  // [dBm]
+      double m_rsrq;  // [dB]
+    };
+  struct UeMeasurementsParameters
+    {
+      std::vector <struct UeMeasurementsElement> m_ueMeasurementsList;
+    };
+
 
   /** 
    * 
    * \param mib the Master Information Block received on the BCH
    */
   virtual void RecvMasterInformationBlock (LteRrcSap::MasterInformationBlock mib) = 0;
+
+  /**
+   *
+   * \param params the structure containing the vector of cellId, SRSP and RSRQ
+   */
+  virtual void ReportUeMeasurements (UeMeasurementsParameters params) = 0;
 };
 
 
@@ -220,6 +242,8 @@ public:
   // methods inherited from LteUeCphySapUser go here
   virtual void RecvMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
 
+  virtual void ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
+
 private:
   MemberLteUeCphySapUser ();
   C* m_owner;
@@ -243,7 +267,12 @@ MemberLteUeCphySapUser<C>::RecvMasterInformationBlock (LteRrcSap::MasterInformat
   m_owner->DoRecvMasterInformationBlock (mib);
 }
 
-
+template <class C>
+void
+MemberLteUeCphySapUser<C>::ReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params)
+{
+  m_owner->DoReportUeMeasurements (params);
+}
 
 
 } // namespace ns3

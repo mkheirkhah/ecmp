@@ -7,6 +7,14 @@ This file documents the user-visible features that have been added
 within each release of the ns-3 LTE module.
 
 
+Milestone 6 (M6) release of the LENA project (April 30, 2013)
+================================================================
+
+ - PHY support for UE measurements (RSRP and RSRQ)
+ - RRC support for UE measurements (configuration, execution, reporting)
+ - Automatic Handover trigger based on RRC UE measurement reports
+
+
 Milestone 5 (M5) release of the LENA project (January 23, 2013)
 ================================================================
 

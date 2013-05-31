@@ -3,6 +3,17 @@ The ns-3 LTE module is the result of the development effort carried out by diffe
 
 
 ====================================================
+  LTE-EPC Network simulAtor (LENA) Project (2011-13)
+====================================================
+
+Nicola Baldo, CTTC <nbaldo@cttc.es>
+Marco Miozzo, CTTC <mmiozzo@cttc.es>
+Manuel Requena, CTTC <mrequena@cttc.es>
+Jaume Nin, CTTC <jnin@cttc.es>
+Lluis Parcerisa, CTTC <lparcerisa@cttc.es>
+
+
+====================================================
         Google Summer of Code (GSoC) (2012)
 ====================================================
  
@@ -24,15 +35,4 @@ design and development
 Nicola Baldo, CTTC <nbaldo@cttc.es>
 Marco Miozzo, CTTC <mmiozzo@cttc.es>
 supervision and GSoC project mentorship
-
-
-====================================================
-  LTE-EPC Network simulAtor (LENA) Project (2011-12)
-====================================================
-
-Nicola Baldo, CTTC <nbaldo@cttc.es>
-Marco Miozzo, CTTC <mmiozzo@cttc.es>
-Manuel Requena, CTTC <mrequena@cttc.es>
-Jaume Nin, CTTC <jnin@cttc.es>
-
 
