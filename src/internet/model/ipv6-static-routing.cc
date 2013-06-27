@@ -97,6 +97,8 @@ Ipv6StaticRouting::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 void Ipv6StaticRouting::AddHostRouteTo (Ipv6Address dst, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse, uint32_t metric)
 {
   NS_LOG_FUNCTION (this << dst << nextHop << interface << prefixToUse << metric);
+  NS_ASSERT_MSG(nextHop.IsLinkLocal(), "Ipv6StaticRouting::AddHostRouteTo - Next hop must be link-local");
+
   AddNetworkRouteTo (dst, Ipv6Prefix::GetOnes (), nextHop, interface, prefixToUse, metric);
 }
 
@@ -117,6 +119,8 @@ void Ipv6StaticRouting::AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix netwo
 void Ipv6StaticRouting::AddNetworkRouteTo (Ipv6Address network, Ipv6Prefix networkPrefix, Ipv6Address nextHop, uint32_t interface, Ipv6Address prefixToUse, uint32_t metric)
 {
   NS_LOG_FUNCTION (this << network << networkPrefix << nextHop << interface << prefixToUse << metric);
+  NS_ASSERT_MSG(nextHop.IsLinkLocal(), "Ipv6StaticRouting::AddNetworkRouteTo - Next hop must be link-local");
+
   Ipv6RoutingTableEntry* route = new Ipv6RoutingTableEntry ();
   *route = Ipv6RoutingTableEntry::CreateNetworkRouteTo (network, networkPrefix, nextHop, interface, prefixToUse);
   m_networkRoutes.push_back (std::make_pair (route, metric));
@@ -555,7 +559,7 @@ bool Ipv6StaticRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &heade
       if (mrtentry)
         {
           NS_LOG_LOGIC ("Multicast route found");
-          mcb (mrtentry, p, header); // multicast forwarding callback
+          mcb (idev, mrtentry, p, header); // multicast forwarding callback
           return true;
         }
       else
@@ -565,7 +569,7 @@ bool Ipv6StaticRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &heade
         }
     }
 
-  // TODO:  Configurable option to enable RFC 1222 Strong End System Model
+  /// \todo  Configurable option to enable RFC 1222 Strong End System Model
   // Right now, we will be permissive and allow a source to send us
   // a packet to one of our other interface addresses; that is, the
   // destination unicast address does not match one of the iif addresses,
@@ -607,7 +611,7 @@ bool Ipv6StaticRouting::RouteInput (Ptr<const Packet> p, const Ipv6Header &heade
   if (rtentry != 0)
     {
       NS_LOG_LOGIC ("Found unicast destination- calling unicast callback");
-      ucb (rtentry, p, header);  // unicast forwarding callback
+      ucb (idev, rtentry, p, header);  // unicast forwarding callback
       return true;
     }
   else
