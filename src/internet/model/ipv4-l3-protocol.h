@@ -194,6 +194,7 @@ public:
   Ipv4InterfaceAddress GetAddress (uint32_t interfaceIndex, uint32_t addressIndex) const;
   uint32_t GetNAddresses (uint32_t interface) const;
   bool RemoveAddress (uint32_t interfaceIndex, uint32_t addressIndex);
+  bool RemoveAddress (uint32_t interface, Ipv4Address address);
   Ipv4Address SelectSourceAddress (Ptr<const NetDevice> device,
                                    Ipv4Address dst, Ipv4InterfaceAddress::InterfaceAddressScope_e scope);
 
@@ -234,6 +235,7 @@ private:
     uint8_t protocol,
     uint16_t payloadSize,
     uint8_t ttl,
+    uint8_t tos,
     bool mayFragment);
 
   void
@@ -297,6 +299,7 @@ private:
   bool m_weakEsModel;
   L4List_t m_protocols;
   Ipv4InterfaceList m_interfaces;
+  uint8_t m_defaultTos;
   uint8_t m_defaultTtl;
   uint16_t m_identification;
   Ptr<Node> m_node;

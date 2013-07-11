@@ -150,6 +150,8 @@ def register_types(module):
     module.add_class('PacketTagList', import_from_module='ns.network')
     ## packet-tag-list.h (module 'network'): ns3::PacketTagList::TagData [struct]
     module.add_class('TagData', import_from_module='ns.network', outer_class=root_module['ns3::PacketTagList'])
+    ## packet-tag-list.h (module 'network'): ns3::PacketTagList::TagData::TagData_e [enumeration]
+    module.add_enum('TagData_e', ['MAX_SIZE'], outer_class=root_module['ns3::PacketTagList::TagData'], import_from_module='ns.network')
     ## pcap-file.h (module 'network'): ns3::PcapFile [class]
     module.add_class('PcapFile', import_from_module='ns.network')
     ## trace-helper.h (module 'network'): ns3::PcapHelper [class]
@@ -280,6 +282,8 @@ def register_types(module):
     module.add_class('SimpleRefCount', automatic_type_narrowing=True, import_from_module='ns.core', template_parameters=['ns3::TraceSourceAccessor', 'ns3::empty', 'ns3::DefaultDeleter<ns3::TraceSourceAccessor>'], parent=root_module['ns3::empty'], memory_policy=cppclass.ReferenceCountingMethodsPolicy(incref_method='Ref', decref_method='Unref', peekref_method='GetReferenceCount'))
     ## simple-ref-count.h (module 'core'): ns3::SimpleRefCount<ns3::WifiInformationElement, ns3::empty, ns3::DefaultDeleter<ns3::WifiInformationElement> > [class]
     module.add_class('SimpleRefCount', automatic_type_narrowing=True, template_parameters=['ns3::WifiInformationElement', 'ns3::empty', 'ns3::DefaultDeleter<ns3::WifiInformationElement>'], parent=root_module['ns3::empty'], memory_policy=cppclass.ReferenceCountingMethodsPolicy(incref_method='Ref', decref_method='Unref', peekref_method='GetReferenceCount'))
+    ## snr-tag.h (module 'wifi'): ns3::SnrTag [class]
+    module.add_class('SnrTag', parent=root_module['ns3::Tag'])
     ## propagation-loss-model.h (module 'propagation'): ns3::ThreeLogDistancePropagationLossModel [class]
     module.add_class('ThreeLogDistancePropagationLossModel', import_from_module='ns.propagation', parent=root_module['ns3::PropagationLossModel'])
     ## nstime.h (module 'core'): ns3::Time [class]
@@ -504,8 +508,6 @@ def register_types(module):
     module.add_class('StaWifiMac', parent=root_module['ns3::RegularWifiMac'])
     ## supported-rates.h (module 'wifi'): ns3::SupportedRates [class]
     module.add_class('SupportedRates', parent=root_module['ns3::WifiInformationElement'])
-    ## nstime.h (module 'core'): ns3::TimeChecker [class]
-    module.add_class('TimeChecker', import_from_module='ns.core', parent=root_module['ns3::AttributeChecker'])
     ## nstime.h (module 'core'): ns3::TimeValue [class]
     module.add_class('TimeValue', import_from_module='ns.core', parent=root_module['ns3::AttributeValue'])
     ## type-id.h (module 'core'): ns3::TypeIdChecker [class]
@@ -704,6 +706,7 @@ def register_methods(root_module):
     register_Ns3SimpleRefCount__Ns3Packet_Ns3Empty_Ns3DefaultDeleter__lt__ns3Packet__gt___methods(root_module, root_module['ns3::SimpleRefCount< ns3::Packet, ns3::empty, ns3::DefaultDeleter<ns3::Packet> >'])
     register_Ns3SimpleRefCount__Ns3TraceSourceAccessor_Ns3Empty_Ns3DefaultDeleter__lt__ns3TraceSourceAccessor__gt___methods(root_module, root_module['ns3::SimpleRefCount< ns3::TraceSourceAccessor, ns3::empty, ns3::DefaultDeleter<ns3::TraceSourceAccessor> >'])
     register_Ns3SimpleRefCount__Ns3WifiInformationElement_Ns3Empty_Ns3DefaultDeleter__lt__ns3WifiInformationElement__gt___methods(root_module, root_module['ns3::SimpleRefCount< ns3::WifiInformationElement, ns3::empty, ns3::DefaultDeleter<ns3::WifiInformationElement> >'])
+    register_Ns3SnrTag_methods(root_module, root_module['ns3::SnrTag'])
     register_Ns3ThreeLogDistancePropagationLossModel_methods(root_module, root_module['ns3::ThreeLogDistancePropagationLossModel'])
     register_Ns3Time_methods(root_module, root_module['ns3::Time'])
     register_Ns3TraceSourceAccessor_methods(root_module, root_module['ns3::TraceSourceAccessor'])
@@ -802,7 +805,6 @@ def register_methods(root_module):
     register_Ns3SsidValue_methods(root_module, root_module['ns3::SsidValue'])
     register_Ns3StaWifiMac_methods(root_module, root_module['ns3::StaWifiMac'])
     register_Ns3SupportedRates_methods(root_module, root_module['ns3::SupportedRates'])
-    register_Ns3TimeChecker_methods(root_module, root_module['ns3::TimeChecker'])
     register_Ns3TimeValue_methods(root_module, root_module['ns3::TimeValue'])
     register_Ns3TypeIdChecker_methods(root_module, root_module['ns3::TypeIdChecker'])
     register_Ns3TypeIdValue_methods(root_module, root_module['ns3::TypeIdValue'])
@@ -2553,6 +2555,11 @@ def register_Ns3MacLowTransmissionListener_methods(root_module, cls):
                    'void', 
                    [], 
                    is_pure_virtual=True, is_virtual=True)
+    ## mac-low.h (module 'wifi'): void ns3::MacLowTransmissionListener::EndTxNoAck() [member function]
+    cls.add_method('EndTxNoAck', 
+                   'void', 
+                   [], 
+                   is_pure_virtual=True, is_virtual=True)
     ## mac-low.h (module 'wifi'): void ns3::MacLowTransmissionListener::GotAck(double snr, ns3::WifiMode txMode) [member function]
     cls.add_method('GotAck', 
                    'void', 
@@ -3159,6 +3166,10 @@ def register_Ns3PacketTagList_methods(root_module, cls):
     cls.add_method('RemoveAll', 
                    'void', 
                    [])
+    ## packet-tag-list.h (module 'network'): bool ns3::PacketTagList::Replace(ns3::Tag & tag) [member function]
+    cls.add_method('Replace', 
+                   'bool', 
+                   [param('ns3::Tag &', 'tag')])
     return
 
 def register_Ns3PacketTagListTagData_methods(root_module, cls):
@@ -4791,8 +4802,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'ns3::TypeId', 
                    [], 
                    is_static=True)
-    ## object.h (module 'core'): void ns3::Object::Start() [member function]
-    cls.add_method('Start', 
+    ## object.h (module 'core'): void ns3::Object::Initialize() [member function]
+    cls.add_method('Initialize', 
                    'void', 
                    [])
     ## object.h (module 'core'): ns3::Object::Object(ns3::Object const & o) [copy constructor]
@@ -4803,8 +4814,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## object.h (module 'core'): void ns3::Object::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## object.h (module 'core'): void ns3::Object::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -5332,6 +5343,54 @@ def register_Ns3SimpleRefCount__Ns3WifiInformationElement_Ns3Empty_Ns3DefaultDel
                    is_static=True)
     return
 
+def register_Ns3SnrTag_methods(root_module, cls):
+    ## snr-tag.h (module 'wifi'): ns3::SnrTag::SnrTag(ns3::SnrTag const & arg0) [copy constructor]
+    cls.add_constructor([param('ns3::SnrTag const &', 'arg0')])
+    ## snr-tag.h (module 'wifi'): ns3::SnrTag::SnrTag() [constructor]
+    cls.add_constructor([])
+    ## snr-tag.h (module 'wifi'): ns3::SnrTag::SnrTag(double snr) [constructor]
+    cls.add_constructor([param('double', 'snr')])
+    ## snr-tag.h (module 'wifi'): void ns3::SnrTag::Deserialize(ns3::TagBuffer i) [member function]
+    cls.add_method('Deserialize', 
+                   'void', 
+                   [param('ns3::TagBuffer', 'i')], 
+                   is_virtual=True)
+    ## snr-tag.h (module 'wifi'): double ns3::SnrTag::Get() const [member function]
+    cls.add_method('Get', 
+                   'double', 
+                   [], 
+                   is_const=True)
+    ## snr-tag.h (module 'wifi'): ns3::TypeId ns3::SnrTag::GetInstanceTypeId() const [member function]
+    cls.add_method('GetInstanceTypeId', 
+                   'ns3::TypeId', 
+                   [], 
+                   is_const=True, is_virtual=True)
+    ## snr-tag.h (module 'wifi'): uint32_t ns3::SnrTag::GetSerializedSize() const [member function]
+    cls.add_method('GetSerializedSize', 
+                   'uint32_t', 
+                   [], 
+                   is_const=True, is_virtual=True)
+    ## snr-tag.h (module 'wifi'): static ns3::TypeId ns3::SnrTag::GetTypeId() [member function]
+    cls.add_method('GetTypeId', 
+                   'ns3::TypeId', 
+                   [], 
+                   is_static=True)
+    ## snr-tag.h (module 'wifi'): void ns3::SnrTag::Print(std::ostream & os) const [member function]
+    cls.add_method('Print', 
+                   'void', 
+                   [param('std::ostream &', 'os')], 
+                   is_const=True, is_virtual=True)
+    ## snr-tag.h (module 'wifi'): void ns3::SnrTag::Serialize(ns3::TagBuffer i) const [member function]
+    cls.add_method('Serialize', 
+                   'void', 
+                   [param('ns3::TagBuffer', 'i')], 
+                   is_const=True, is_virtual=True)
+    ## snr-tag.h (module 'wifi'): void ns3::SnrTag::Set(double snr) [member function]
+    cls.add_method('Set', 
+                   'void', 
+                   [param('double', 'snr')])
+    return
+
 def register_Ns3ThreeLogDistancePropagationLossModel_methods(root_module, cls):
     ## propagation-loss-model.h (module 'propagation'): static ns3::TypeId ns3::ThreeLogDistancePropagationLossModel::GetTypeId() [member function]
     cls.add_method('GetTypeId', 
@@ -5486,6 +5545,16 @@ def register_Ns3Time_methods(root_module, cls):
                    'bool', 
                    [], 
                    is_const=True)
+    ## nstime.h (module 'core'): static ns3::Time ns3::Time::MAX() [member function]
+    cls.add_method('MAX', 
+                   'ns3::Time', 
+                   [], 
+                   is_static=True)
+    ## nstime.h (module 'core'): static ns3::Time ns3::Time::MIN() [member function]
+    cls.add_method('MIN', 
+                   'ns3::Time', 
+                   [], 
+                   is_static=True)
     ## nstime.h (module 'core'): static void ns3::Time::SetResolution(ns3::Time::Unit resolution) [member function]
     cls.add_method('SetResolution', 
                    'void', 
@@ -5619,14 +5688,10 @@ def register_Ns3TwoRayGroundPropagationLossModel_methods(root_module, cls):
                    is_static=True)
     ## propagation-loss-model.h (module 'propagation'): ns3::TwoRayGroundPropagationLossModel::TwoRayGroundPropagationLossModel() [constructor]
     cls.add_constructor([])
-    ## propagation-loss-model.h (module 'propagation'): void ns3::TwoRayGroundPropagationLossModel::SetLambda(double frequency, double speed) [member function]
-    cls.add_method('SetLambda', 
+    ## propagation-loss-model.h (module 'propagation'): void ns3::TwoRayGroundPropagationLossModel::SetFrequency(double frequency) [member function]
+    cls.add_method('SetFrequency', 
                    'void', 
-                   [param('double', 'frequency'), param('double', 'speed')])
-    ## propagation-loss-model.h (module 'propagation'): void ns3::TwoRayGroundPropagationLossModel::SetLambda(double lambda) [member function]
-    cls.add_method('SetLambda', 
-                   'void', 
-                   [param('double', 'lambda')])
+                   [param('double', 'frequency')])
     ## propagation-loss-model.h (module 'propagation'): void ns3::TwoRayGroundPropagationLossModel::SetSystemLoss(double systemLoss) [member function]
     cls.add_method('SetSystemLoss', 
                    'void', 
@@ -5640,8 +5705,8 @@ def register_Ns3TwoRayGroundPropagationLossModel_methods(root_module, cls):
                    'double', 
                    [], 
                    is_const=True)
-    ## propagation-loss-model.h (module 'propagation'): double ns3::TwoRayGroundPropagationLossModel::GetLambda() const [member function]
-    cls.add_method('GetLambda', 
+    ## propagation-loss-model.h (module 'propagation'): double ns3::TwoRayGroundPropagationLossModel::GetFrequency() const [member function]
+    cls.add_method('GetFrequency', 
                    'double', 
                    [], 
                    is_const=True)
@@ -8918,6 +8983,10 @@ def register_Ns3EdcaTxopN_methods(root_module, cls):
     cls.add_method('Cancel', 
                    'void', 
                    [])
+    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::EndTxNoAck() [member function]
+    cls.add_method('EndTxNoAck', 
+                   'void', 
+                   [])
     ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::RestartAccessIfNeeded() [member function]
     cls.add_method('RestartAccessIfNeeded', 
                    'void', 
@@ -9009,8 +9078,8 @@ def register_Ns3EdcaTxopN_methods(root_module, cls):
     cls.add_method('AssignStreams', 
                    'int64_t', 
                    [param('int64_t', 'stream')])
-    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -9265,14 +9334,10 @@ def register_Ns3FriisPropagationLossModel_methods(root_module, cls):
                    is_static=True)
     ## propagation-loss-model.h (module 'propagation'): ns3::FriisPropagationLossModel::FriisPropagationLossModel() [constructor]
     cls.add_constructor([])
-    ## propagation-loss-model.h (module 'propagation'): void ns3::FriisPropagationLossModel::SetLambda(double frequency, double speed) [member function]
-    cls.add_method('SetLambda', 
+    ## propagation-loss-model.h (module 'propagation'): void ns3::FriisPropagationLossModel::SetFrequency(double frequency) [member function]
+    cls.add_method('SetFrequency', 
                    'void', 
-                   [param('double', 'frequency'), param('double', 'speed')])
-    ## propagation-loss-model.h (module 'propagation'): void ns3::FriisPropagationLossModel::SetLambda(double lambda) [member function]
-    cls.add_method('SetLambda', 
-                   'void', 
-                   [param('double', 'lambda')])
+                   [param('double', 'frequency')])
     ## propagation-loss-model.h (module 'propagation'): void ns3::FriisPropagationLossModel::SetSystemLoss(double systemLoss) [member function]
     cls.add_method('SetSystemLoss', 
                    'void', 
@@ -9286,8 +9351,8 @@ def register_Ns3FriisPropagationLossModel_methods(root_module, cls):
                    'double', 
                    [], 
                    is_const=True)
-    ## propagation-loss-model.h (module 'propagation'): double ns3::FriisPropagationLossModel::GetLambda() const [member function]
-    cls.add_method('GetLambda', 
+    ## propagation-loss-model.h (module 'propagation'): double ns3::FriisPropagationLossModel::GetFrequency() const [member function]
+    cls.add_method('GetFrequency', 
                    'double', 
                    [], 
                    is_const=True)
@@ -10458,8 +10523,8 @@ def register_Ns3Node_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## node.h (module 'network'): void ns3::Node::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## node.h (module 'network'): void ns3::Node::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -10825,6 +10890,10 @@ def register_Ns3Packet_methods(root_module, cls):
     cls.add_method('RemoveTrailer', 
                    'uint32_t', 
                    [param('ns3::Trailer &', 'trailer')])
+    ## packet.h (module 'network'): bool ns3::Packet::ReplacePacketTag(ns3::Tag & tag) [member function]
+    cls.add_method('ReplacePacketTag', 
+                   'bool', 
+                   [param('ns3::Tag &', 'tag')])
     ## packet.h (module 'network'): uint32_t ns3::Packet::Serialize(uint8_t * buffer, uint32_t maxSize) const [member function]
     cls.add_method('Serialize', 
                    'uint32_t', 
@@ -11052,8 +11121,8 @@ def register_Ns3RegularWifiMac_methods(root_module, cls):
                    'ns3::Time', 
                    [], 
                    is_const=True, is_virtual=True)
-    ## regular-wifi-mac.h (module 'wifi'): void ns3::RegularWifiMac::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## regular-wifi-mac.h (module 'wifi'): void ns3::RegularWifiMac::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -11365,13 +11434,6 @@ def register_Ns3SupportedRates_methods(root_module, cls):
                    [param('uint32_t', 'bs')])
     ## supported-rates.h (module 'wifi'): ns3::SupportedRates::extended [variable]
     cls.add_instance_attribute('extended', 'ns3::ExtendedSupportedRatesIE', is_const=False)
-    return
-
-def register_Ns3TimeChecker_methods(root_module, cls):
-    ## nstime.h (module 'core'): ns3::TimeChecker::TimeChecker() [constructor]
-    cls.add_constructor([])
-    ## nstime.h (module 'core'): ns3::TimeChecker::TimeChecker(ns3::TimeChecker const & arg0) [copy constructor]
-    cls.add_constructor([param('ns3::TimeChecker const &', 'arg0')])
     return
 
 def register_Ns3TimeValue_methods(root_module, cls):
@@ -11774,8 +11836,8 @@ def register_Ns3WifiNetDevice_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
-    ## wifi-net-device.h (module 'wifi'): void ns3::WifiNetDevice::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## wifi-net-device.h (module 'wifi'): void ns3::WifiNetDevice::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -11985,8 +12047,8 @@ def register_Ns3ApWifiMac_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
-    ## ap-wifi-mac.h (module 'wifi'): void ns3::ApWifiMac::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## ap-wifi-mac.h (module 'wifi'): void ns3::ApWifiMac::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -12063,8 +12125,8 @@ def register_Ns3DcaTxop_methods(root_module, cls):
     cls.add_method('AssignStreams', 
                    'int64_t', 
                    [param('int64_t', 'stream')])
-    ## dca-txop.h (module 'wifi'): void ns3::DcaTxop::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## dca-txop.h (module 'wifi'): void ns3::DcaTxop::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)

@@ -75,15 +75,15 @@ RegularWifiMac::~RegularWifiMac ()
 }
 
 void
-RegularWifiMac::DoStart ()
+RegularWifiMac::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
 
-  m_dca->Start ();
+  m_dca->Initialize ();
 
   for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
     {
-      i->second->Start ();
+      i->second->Initialize ();
     }
 }
 
@@ -512,10 +512,13 @@ RegularWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
             default:
               NS_FATAL_ERROR ("Unsupported Action field in Block Ack Action frame");
+              return;
             }
+
 
         default:
           NS_FATAL_ERROR ("Unsupported Action frame received");
+          return;
         }
     }
   NS_FATAL_ERROR ("Don't know how to handle frame (type=" << hdr->GetType ());

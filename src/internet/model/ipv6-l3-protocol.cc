@@ -59,6 +59,10 @@ TypeId Ipv6L3Protocol::GetTypeId ()
                    UintegerValue (64),
                    MakeUintegerAccessor (&Ipv6L3Protocol::m_defaultTtl),
                    MakeUintegerChecker<uint8_t> ())
+    .AddAttribute ("DefaultTclass", "The TCLASS value set by default on all outgoing packets generated on this node.",
+                   UintegerValue (0),
+                   MakeUintegerAccessor (&Ipv6L3Protocol::m_defaultTclass),
+                   MakeUintegerChecker<uint8_t> ())
     .AddAttribute ("InterfaceList", "The set of IPv6 interfaces associated to this IPv6 stack.",
                    ObjectVectorValue (),
                    MakeObjectVectorAccessor (&Ipv6L3Protocol::m_interfaces),
@@ -259,7 +263,7 @@ void Ipv6L3Protocol::AddAutoconfiguredAddress (uint32_t interface, Ipv6Address n
 
   if (flags & (1 << 6)) /* auto flag */
     {
-      /* XXX : add other L2 address case */
+      /** \todo add other L2 address case */
       if (Mac48Address::IsMatchingType (addr))
         {
           address = Ipv6InterfaceAddress (Ipv6Address::MakeAutoconfiguredAddress (Mac48Address::ConvertFrom (addr), network));
@@ -289,7 +293,10 @@ void Ipv6L3Protocol::AddAutoconfiguredAddress (uint32_t interface, Ipv6Address n
       /* add default router
        * if a previous default route exists, the new ones is simply added
        */
-      GetRoutingProtocol ()->NotifyAddRoute (Ipv6Address::GetAny (), Ipv6Prefix ((uint8_t)0), defaultRouter, interface, network);
+      if (!defaultRouter.IsAny())
+        {
+          GetRoutingProtocol ()->NotifyAddRoute (Ipv6Address::GetAny (), Ipv6Prefix ((uint8_t)0), defaultRouter, interface, network);
+        }
 
       Ptr<Ipv6AutoconfiguredPrefix> aPrefix = CreateObject<Ipv6AutoconfiguredPrefix> (m_node, interface, network, mask, preferredTime, validTime, defaultRouter);
       aPrefix->StartPreferredTimer ();
@@ -371,6 +378,29 @@ bool Ipv6L3Protocol::RemoveAddress (uint32_t i, uint32_t addressIndex)
         }
       return true;
     }
+  return false;
+}
+
+bool 
+Ipv6L3Protocol::RemoveAddress (uint32_t i, Ipv6Address address)
+{
+  NS_LOG_FUNCTION (this << i << address);
+
+  if (address == Ipv6Address::GetLoopback())
+    {
+      NS_LOG_WARN ("Cannot remove loopback address.");
+      return false;
+    }
+  Ptr<Ipv6Interface> interface = GetInterface (i);
+  Ipv6InterfaceAddress ifAddr = interface->RemoveAddress (address);
+  if (ifAddr != Ipv6InterfaceAddress ())
+  {
+    if (m_routingProtocol != 0)
+    {
+      m_routingProtocol->NotifyRemoveAddress (i, ifAddr);
+    }
+    return true;
+  }
   return false;
 }
 
@@ -605,17 +635,32 @@ void Ipv6L3Protocol::SetDefaultTtl (uint8_t ttl)
   m_defaultTtl = ttl;
 }
 
+void Ipv6L3Protocol::SetDefaultTclass (uint8_t tclass)
+{
+  NS_LOG_FUNCTION (this << tclass);
+  m_defaultTclass = tclass;
+}
+
 void Ipv6L3Protocol::Send (Ptr<Packet> packet, Ipv6Address source, Ipv6Address destination, uint8_t protocol, Ptr<Ipv6Route> route)
 {
   NS_LOG_FUNCTION (this << packet << source << destination << (uint32_t)protocol << route);
   Ipv6Header hdr;
   uint8_t ttl = m_defaultTtl;
-  SocketIpTtlTag tag;
+  SocketIpv6HopLimitTag tag;
   bool found = packet->RemovePacketTag (tag);
 
   if (found)
     {
-      ttl = tag.GetTtl ();
+      ttl = tag.GetHopLimit ();
+    }
+
+  SocketIpv6TclassTag tclassTag;
+  uint8_t tclass = m_defaultTclass;
+  found = packet->RemovePacketTag (tclassTag);
+  
+  if (found)
+    {
+      tclass = tclassTag.GetTclass ();
     }
 
   /* Handle 3 cases:
@@ -628,7 +673,7 @@ void Ipv6L3Protocol::Send (Ptr<Packet> packet, Ipv6Address source, Ipv6Address d
   if (route && route->GetGateway () != Ipv6Address::GetZero ())
     {
       NS_LOG_LOGIC ("Ipv6L3Protocol::Send case 1: passed in with a route");
-      hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl);
+      hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl, tclass);
       SendRealOut (route, packet, hdr);
       return;
     }
@@ -638,7 +683,7 @@ void Ipv6L3Protocol::Send (Ptr<Packet> packet, Ipv6Address source, Ipv6Address d
     {
       NS_LOG_LOGIC ("Ipv6L3Protocol::Send case 1: probably sent to machine on same IPv6 network");
       /* NS_FATAL_ERROR ("This case is not yet implemented"); */
-      hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl);
+      hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl, tclass);
       SendRealOut (route, packet, hdr);
       return;
     }
@@ -649,7 +694,7 @@ void Ipv6L3Protocol::Send (Ptr<Packet> packet, Ipv6Address source, Ipv6Address d
   Ptr<NetDevice> oif (0);
   Ptr<Ipv6Route> newRoute = 0;
 
-  hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl);
+  hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl, tclass);
 
   //for link-local traffic, we need to determine the interface
   if (source.IsLinkLocal ()
@@ -778,7 +823,20 @@ void Ipv6L3Protocol::SendRealOut (Ptr<Ipv6Route> route, Ptr<Packet> packet, Ipv6
   if (packet->GetSize () > (size_t)(dev->GetMtu () + 40)) /* 40 => size of IPv6 header */
     {
       // Router => drop
-      if (m_ipForward)
+
+      bool fromMe = false;
+      for (uint32_t i=0; i<GetNInterfaces(); i++ )
+        {
+          for (uint32_t j=0; j<GetNAddresses(i); j++ )
+            {
+              if (GetAddress(i,j).GetAddress() == ipHeader.GetSourceAddress())
+                {
+                  fromMe = true;
+                  break;
+                }
+            }
+        }
+      if (!fromMe)
         {
           Ptr<Icmpv6L4Protocol> icmpv6 = GetIcmpv6 ();
           if ( icmpv6 )
@@ -795,6 +853,7 @@ void Ipv6L3Protocol::SendRealOut (Ptr<Ipv6Route> route, Ptr<Packet> packet, Ipv6
 
       // To get specific method GetFragments from Ipv6ExtensionFragmentation
       Ipv6ExtensionFragment *ipv6Fragment = dynamic_cast<Ipv6ExtensionFragment *> (PeekPointer (ipv6ExtensionDemux->GetExtension (Ipv6Header::IPV6_EXT_FRAGMENTATION)));
+      NS_ASSERT (ipv6Fragment != 0);
       ipv6Fragment->GetFragments (packet, outInterface->GetDevice ()->GetMtu (), fragments);
     }
 
@@ -860,10 +919,18 @@ void Ipv6L3Protocol::SendRealOut (Ptr<Ipv6Route> route, Ptr<Packet> packet, Ipv6
     }
 }
 
-void Ipv6L3Protocol::IpForward (Ptr<Ipv6Route> rtentry, Ptr<const Packet> p, const Ipv6Header& header)
+void Ipv6L3Protocol::IpForward (Ptr<const NetDevice> idev, Ptr<Ipv6Route> rtentry, Ptr<const Packet> p, const Ipv6Header& header)
 {
   NS_LOG_FUNCTION (this << rtentry << p << header);
   NS_LOG_LOGIC ("Forwarding logic for node: " << m_node->GetId ());
+
+  // Drop RFC 3849 packets: 2001:db8::/32
+  if (header.GetDestinationAddress().IsDocumentation())
+    {
+      NS_LOG_WARN ("Received a packet for 2001:db8::/32 (documentation class).  Drop.");
+      m_dropTrace (header, p, DROP_ROUTE_ERROR, m_node->GetObject<Ipv6> (), 0);
+      return;
+    }
 
   // Forwarding
   Ipv6Header ipHeader = header;
@@ -897,9 +964,12 @@ void Ipv6L3Protocol::IpForward (Ptr<Ipv6Route> rtentry, Ptr<const Packet> p, con
    * exists.
    */
 
-  if (m_sendIcmpv6Redirect &&
-      ((!rtentry->GetGateway ().IsAny () && rtentry->GetGateway ().CombinePrefix (Ipv6Prefix (64)) == header.GetSourceAddress ().CombinePrefix (Ipv6Prefix (64)))
-      || (rtentry->GetDestination ().CombinePrefix (Ipv6Prefix (64)) == header.GetSourceAddress ().CombinePrefix (Ipv6Prefix (64)))))
+  /* Theoretically we should also check if the redirect target is on the same network
+   * as the source node. On the other hand, we are sure that the router we're redirecting to
+   * used a link-local address. As a consequence, they MUST be on the same network, the link-local net.
+   */
+
+  if (m_sendIcmpv6Redirect && (rtentry->GetOutputDevice ()==idev))
     {
       NS_LOG_LOGIC ("ICMPv6 redirect!");
       Ptr<Icmpv6L4Protocol> icmpv6 = GetIcmpv6 ();
@@ -915,21 +985,22 @@ void Ipv6L3Protocol::IpForward (Ptr<Ipv6Route> rtentry, Ptr<const Packet> p, con
         }
 
       copy->AddHeader (header);
+      Ipv6Address linkLocal = GetInterface (GetInterfaceForDevice (rtentry->GetOutputDevice ()))->GetLinkLocalAddress ().GetAddress ();
 
       if (icmpv6->Lookup (target, rtentry->GetOutputDevice (), 0, &hardwareTarget))
         {
-          icmpv6->SendRedirection (copy, src, target, dst, hardwareTarget);
+          icmpv6->SendRedirection (copy, linkLocal, src, target, dst, hardwareTarget);
         }
       else
         {
-          icmpv6->SendRedirection (copy, src, target, dst, Address ());
+          icmpv6->SendRedirection (copy, linkLocal, src, target, dst, Address ());
         }
     }
 
   SendRealOut (rtentry, packet, ipHeader);
 }
 
-void Ipv6L3Protocol::IpMulticastForward (Ptr<Ipv6MulticastRoute> mrtentry, Ptr<const Packet> p, const Ipv6Header& header)
+void Ipv6L3Protocol::IpMulticastForward (Ptr<const NetDevice> idev, Ptr<Ipv6MulticastRoute> mrtentry, Ptr<const Packet> p, const Ipv6Header& header)
 {
   NS_LOG_FUNCTION (this << mrtentry << p << header);
   NS_LOG_LOGIC ("Multicast forwarding logic for node: " << m_node->GetId ());
@@ -974,15 +1045,17 @@ void Ipv6L3Protocol::LocalDeliver (Ptr<const Packet> packet, Ipv6Header const& i
   uint8_t nextHeaderPosition = 0;
   bool isDropped = false;
 
-  /* process hop-by-hop extension first if exists */
+  // check for a malformed hop-by-hop extension
+  // this is a common case when forging IPv6 raw packets
   if (nextHeader == Ipv6Header::IPV6_EXT_HOP_BY_HOP)
     {
-      uint8_t buf[2];
-      p->CopyData (buf, sizeof(buf));
-      nextHeader = buf[0];
-      nextHeaderPosition = buf[1];
-      NS_ASSERT_MSG (nextHeader != Ipv6Header::IPV6_EXT_HOP_BY_HOP, "Double Ipv6Header::IPV6_EXT_HOP_BY_HOP in packet, aborting");
-      NS_ASSERT_MSG (nextHeaderPosition != 0, "Zero-size IPv6 Option Header, aborting");
+      uint8_t buf;
+      p->CopyData (&buf, 1);
+      if (buf == Ipv6Header::IPV6_EXT_HOP_BY_HOP)
+        {
+          NS_LOG_WARN("Double Ipv6Header::IPV6_EXT_HOP_BY_HOP in packet, dropping packet");
+          return;
+        }
     }
 
   /* process all the extensions found and the layer 4 protocol */
@@ -1034,7 +1107,7 @@ void Ipv6L3Protocol::LocalDeliver (Ptr<const Packet> packet, Ipv6Header const& i
 
               /* L4 protocol */
               Ptr<Packet> copy = p->Copy ();
-              enum IpL4Protocol::RxStatus status = protocol->Receive (p, src, dst, GetInterface (iif));
+              enum IpL4Protocol::RxStatus status = protocol->Receive (p, ip, GetInterface (iif));
 
               switch (status)
                 {
@@ -1067,9 +1140,9 @@ void Ipv6L3Protocol::RouteInputError (Ptr<const Packet> p, const Ipv6Header& ipH
   m_dropTrace (ipHeader, p, DROP_ROUTE_ERROR, m_node->GetObject<Ipv6> (), 0);
 }
 
-Ipv6Header Ipv6L3Protocol::BuildHeader (Ipv6Address src, Ipv6Address dst, uint8_t protocol, uint16_t payloadSize, uint8_t ttl)
+Ipv6Header Ipv6L3Protocol::BuildHeader (Ipv6Address src, Ipv6Address dst, uint8_t protocol, uint16_t payloadSize, uint8_t ttl, uint8_t tclass)
 {
-  NS_LOG_FUNCTION (this << src << dst << (uint32_t)protocol << (uint32_t)payloadSize << (uint32_t)ttl);
+  NS_LOG_FUNCTION (this << src << dst << (uint32_t)protocol << (uint32_t)payloadSize << (uint32_t)ttl << (uint32_t)tclass);
   Ipv6Header hdr;
 
   hdr.SetSourceAddress (src);
@@ -1077,6 +1150,7 @@ Ipv6Header Ipv6L3Protocol::BuildHeader (Ipv6Address src, Ipv6Address dst, uint8_
   hdr.SetNextHeader (protocol);
   hdr.SetPayloadLength (payloadSize);
   hdr.SetHopLimit (ttl);
+  hdr.SetTrafficClass (tclass);
   return hdr;
 }
 

@@ -113,17 +113,14 @@ RandomVariable::RandomVariable ()
 RandomVariable::RandomVariable (const RandomVariable&o)
   : m_variable (o.m_variable->Copy ())
 {
-  NS_LOG_FUNCTION (this << o);
 }
 RandomVariable::RandomVariable (const RandomVariableBase &variable)
   : m_variable (variable.Copy ())
 {
-  NS_LOG_FUNCTION (&variable);
 }
 RandomVariable &
 RandomVariable::operator = (const RandomVariable &o)
 {
-  NS_LOG_FUNCTION (this << o);
   if (&o == this)
     {
       return *this;
@@ -1703,8 +1700,8 @@ ErlangVariableImpl::GetValue ()
 double
 ErlangVariableImpl::GetValue (unsigned int k, double lambda)
 {
-  // XXX: Fixme: do not create a new 
-  // RNG stream every time the function is called !
+  /// \todo do not create a new 
+  /// RNG stream every time the function is called !
   NS_LOG_FUNCTION (this << k << lambda);
   ExponentialVariable exponential (lambda);
 
@@ -2018,7 +2015,6 @@ ZetaVariable::ZetaVariable (double alpha)
 
 std::ostream & operator << (std::ostream &os, const RandomVariable &var)
 {
-  NS_LOG_FUNCTION (&os << &var);
   RandomVariableBase *base = var.Peek ();
   ConstantVariableImpl *constant = dynamic_cast<ConstantVariableImpl *> (base);
   if (constant != 0)
@@ -2043,13 +2039,12 @@ std::ostream & operator << (std::ostream &os, const RandomVariable &var)
         }
       return os;
     }
-  // XXX: support other distributions
+  /// \todo support other distributions
   os.setstate (std::ios_base::badbit);
   return os;
 }
 std::istream & operator >> (std::istream &is, RandomVariable &var)
 {
-  NS_LOG_FUNCTION (&is << &var);
   std::string value;
   is >> value;
   std::string::size_type tmp;
@@ -2130,7 +2125,7 @@ std::istream & operator >> (std::istream &is, RandomVariable &var)
   else
     {
       NS_FATAL_ERROR ("RandomVariable deserialization not implemented for " << type);
-      // XXX: support other distributions.
+      /// \todo support other distributions.
     }
   return is;
 }

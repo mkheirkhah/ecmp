@@ -347,6 +347,197 @@ more resources to the users that use a higher MCS index.
    where the UEs have MCS index :math:`28, 24, 16, 12, 6`
 
 
+Maximum Throughput scheduler performance
+----------------------------------------
+
+Test suites ``lte-fdmt-ff-mac-scheduler`` and ``lte-tdmt-ff-mac-scheduler`` 
+create different test cases with a single eNB and several UEs, all having the same 
+Radio Bearer specification, using the Frequency Domain Maximum Throughput (FDMT) 
+scheduler and Time Domain Maximum Throughput (TDMT) scheduler respectively.
+In other words, UEs are all placed at the
+same distance from the eNB, and hence all placed in order to have the
+same SNR. Different test cases are implemented by using a different
+SNR values and a different number of UEs. The test consists on
+checking that the obtained throughput performance matches with the
+known reference throughput up to a given tolerance.The expected
+behavior of both FDMT and TDMT scheduler when all UEs have the same SNR is that
+scheduler allocates all RBGs to the first UE defined in script. This is because
+the current FDMT and TDMT implementation always select the first UE to serve when there are
+multiple UEs having the same SNR value. We calculate the reference
+throughput value for first UE by the throughput achievable of a single UE
+at the given SNR, while reference throughput value for other UEs by zero.
+Let :math:`\tau` be the TTI duration, :math:`B` the transmission
+bandwidth configuration in number of RBs, :math:`M` the modulation and
+coding scheme in use at the given SNR and :math:`S(M, B)` be the
+transport block size as defined in [TS36213]_. The reference
+throughput :math:`T` in bit/s achieved by each UE is calculated as 
+
+.. math::
+
+   T = \frac{S(M,B)}{\tau}
+
+Throughput to Average scheduler performance
+-------------------------------------------
+
+Test suites ``lte-tta-ff-mac-scheduler``
+create different test cases with a single eNB and several UEs, all having the same 
+Radio Bearer specification using TTA scheduler. Network topology and configurations in
+TTA test case are as the same as the test for MT scheduler. More complex test case needs to be 
+developed to show the fairness feature of TTA scheduler.
+
+
+Blind Average Throughput scheduler performance
+----------------------------------------------
+
+Test suites ``lte-tdbet-ff-mac-scheduler`` and ``lte-fdbet-ff-mac-scheduler`` create different
+test cases with a single eNB and several UEs, all having the same Radio Bearer specification. 
+
+In the first test case of ``lte-tdbet-ff-mac-scheduler`` and ``lte-fdbet-ff-mac-scheduler``, 
+the UEs are all placed at the same distance from the eNB, and hence all placed in order to 
+have the same SNR. Different test cases are implemented by using a different SNR value and 
+a different number of UEs. The test consists on checking that the obtained throughput performance 
+matches with the known reference throughput up to a given tolerance. In long term, the expected
+behavior of both TD-BET and FD-BET when all UEs have the same SNR is that each UE should get an 
+equal throughput. However, the exact throughput value of TD-BET and FD-BET in this test case is not
+the same.
+
+When all UEs have the same SNR, TD-BET can be seen as a specific case of PF where achievable rate equals
+to 1. Therefore, the throughput obtained by TD-BET is equal to that of PF. On the other hand, FD-BET performs
+very similar to the round robin (RR) scheduler in case of that all UEs have the same SNR and the number of UE( or RBG)
+is an integer multiple of the number of RBG( or UE). In this case, FD-BET always allocate the same number of RBGs 
+to each UE. For example, if eNB has 12 RBGs and there are 6 UEs, then each UE will get 2 RBGs in each TTI.
+Or if eNB has 12 RBGs and there are 24 UEs, then each UE will get 2 RBGs per two TTIs. When the number of 
+UE (RBG) is not an integer multiple of the number of RBG (UE), FD-BET will not follow the RR behavior because
+it will assigned different number of RBGs to some UEs, while the throughput of each UE is still the same.
+
+The second category of tests aims at verifying the fairness of the both TD-BET and FD-BET schedulers in a more realistic 
+simulation scenario where the UEs have a different SNR (constant for the whole simulation). In this case, 
+both scheduler should give the same amount of averaged throughput to each user.
+
+Specifically, for TD-BET, let :math:`F_i` be the fraction of time allocated to user i in total simulation time, 
+:math:`R^{fb}_i` be the the full bandwidth achievable rate for user i and :math:`T_i` be the achieved throughput of 
+user i. Then we have:
+
+.. math::
+    
+      T_i = F_i R^{fb}_i
+
+In TD-BET, the sum of :math:`F_i` for all user equals one. In long term, all UE has the same :math:`T_i` so that we replace 
+:math:`T_i` by :math:`T`.  Then we have:
+
+.. math::
+    
+      T = \frac{1}{ \sum_{i=1}^{N} \frac{1}{R^{fb}_i} }
+
+Token Band Fair Queue scheduler performance
+-------------------------------------------
+
+Test suites ``lte-fdtbfq-ff-mac-scheduler`` and ``lte-tdtbfq-ff-mac-scheduler`` create different
+test cases for testing three key features of TBFQ scheduler: traffic policing, fairness and traffic
+balance. Constant Bit Rate UDP traffic is used in both downlink and uplink in all test cases. 
+The packet interval is set to 1ms to keep the RLC buffer non-empty. Different traffic rate is 
+achieved by setting different packet size. Specifically, two classes of flows are created in the 
+testsuites:
+
+ * Homogeneous flow: flows with the same token generation rate and packet arrival rate
+ * Heterogeneous flow: flows with different packet arrival rate, but with the same token generation rate
+
+In test case 1 verifies traffic policing and fairness features for the scenario that all UEs are 
+placed at the same distance from the eNB. In this case, all Ues have the same SNR value. Different
+test cases are implemented by using a different SNR value and a different number of UEs. Because each 
+flow have the same traffic rate and token generation rate, TBFQ scheduler will guarantee the same
+throughput among UEs without the constraint of token generation rate. In addition, the exact value 
+of UE throughput is depended on the total traffic rate:
+        
+ * If total traffic rate <= maximum throughput, UE throughput = traffic rate
+
+ * If total traffic rate > maximum throughput,  UE throughput = maximum throughput / N
+
+Here, N is the number of UE connected to eNodeB. The maximum throughput in this case equals to the rate
+that all RBGs are assigned to one UE(e.g., when distance equals 0, maximum throughput is 2196000 byte/sec).
+When the traffic rate is smaller than max bandwidth, TBFQ can police the traffic by token generation rate
+so that the UE throughput equals its actual traffic rate (token generation rate is set to traffic 
+generation rate); On the other hand, when total traffic rate is bigger than the max throughput, eNodeB
+cannot forward all traffic to UEs. Therefore, in each TTI, TBFQ will allocate all RBGs to one UE due to
+the large packets buffered in RLC buffer. When  a UE is scheduled in current TTI, its token counter is decreased 
+so that it will not be scheduled in the next TTI. Because each UE has the same traffic generation rate, 
+TBFQ will serve each UE in turn and only serve one UE in each TTI (both in TD TBFQ and FD TBFQ). 
+Therefore, the UE throughput in the second condition equals to the evenly share of maximum throughput.
+
+Test case 2 verifies traffic policing and fairness features for the scenario that each UE is placed at 
+the different distance from the eNB. In this case, each UE has the different SNR value. Similar to test
+case 1, UE throughput in test case 2 is also depended on the total traffic rate but with a different 
+maximum throughput. Suppose all UEs have a high traffic load. Then the traffic will saturate the RLC buffer 
+in eNodeB. In each TTI, after selecting one UE with highest metric, TBFQ will allocate all RBGs to this 
+UE due to the large RLC buffer size. On the other hand, once RLC buffer is saturated, the total throughput 
+of all UEs cannot increase any more. In addition, as we discussed in test case 1, for homogeneous flows 
+which have the same t_i and r_i, each UE will achieve the same throughput in long term. Therefore, we 
+can use the same method in TD BET to calculate the maximum throughput:
+
+.. math::
+    
+      T = \frac{N}{ \sum_{i=1}^{N} \frac{1}{R^{fb}_i} }
+
+Here, :math:`T` is the maximum throughput. :math:`R^{fb}_i` be the the full bandwidth achievable rate 
+for user i. :math:`N` is the number of UE.
+
+When the totol traffic rate is bigger than :math:`T`, the UE throughput equals to :math:`\frac{T}{N}` . Otherwise, UE throughput
+equals to its traffic generation rate.
+
+In test case 3, three flows with different traffic rate are created. Token generation rate for each 
+flow is the same and equals to the average traffic rate of three flows. Because TBFQ use a shared token
+bank, tokens contributed by UE with lower traffic load can be utilized by UE with higher traffic load.
+In this way, TBFQ can guarantee the traffic rate for each flow. Although we use heterogeneous flow here,
+the calculation of maximum throughput is as same as that in test case 2. In calculation max throughput
+of test case 2, we assume that all UEs suffer high traffic load so that scheduler always assign all RBGs
+to one UE in each TTI. This assumes is also true in heterogeneous flow case. In other words, whether 
+those flows have the same traffic rate and token generation rate, if their traffic rate is bigger enough, 
+TBFQ performs as same as it in test case 2. Therefore, the maximum bandwidth in test case 3 is as 
+same as it in test case 2.
+
+In test case 3, in some flows, token generate rate does not equal to MBR, although all flows are CBR 
+traffic. This is not accorded with our parameter setting rules. Actually, the traffic balance feature
+is used in VBR traffic. Because different UE's peak rate may occur in different time, TBFQ use shared
+token bank to balance the traffic among those VBR traffics. Test case 3 use CBR traffic to verify this 
+feature. But in the real simulation, it is recommended to set token generation rate to MBR.
+
+Priority Set scheduler performance
+----------------------------------
+
+Test suites ``lte-pss-ff-mac-scheduler`` create different test cases with a single eNB and several UEs.
+In all test cases, we select PFsch in FD scheduler. Same testing results can also be obtained by using CoItA
+scheduler. In addition, all test cases do not define nMux so that TD scheduler in PSS will always select half
+of total UE.
+
+In the first class test case of ``lte-pss-ff-mac-scheduler``, the UEs are all placed at the same distance from
+the eNB, and hence all placed in order to have the same SNR. Different test cases are implemented 
+by using a different TBR for each UEs. In each test cases, all UEs have the same
+Target Bit Rate configured by GBR in EPS bear setting. The expected behavior of PSS is to guarantee that 
+each UE's throughput at least equals its TBR if the total flow rate is blow maximum throughput. Similar 
+to TBFQ, the maximum throughput in this case equals to the rate that all RBGs are assigned to one UE.
+When the traffic rate is smaller than max bandwidth, the UE throughput equals its actual traffic rate;
+On the other hand, UE throughput equals to the evenly share of the maximum throughput.
+
+In the first class of test cases, each UE has the same SNR. Therefore, the priority metric in PF scheduler will be 
+determined by past average throughput :math:`T_{j}(t)` because each UE has the same achievable throughput
+:math:`R_{j}(k,t)` in PFsch or same :math:`CoI[k,n]` in CoItA. This means that PSS will performs like a 
+TD-BET which allocates all RBGs to one UE in each TTI. Then the maximum value of UE throughput equals to
+the achievable rate that all RBGs are allocated to this UE.
+
+In the second class of test case of ``lte-pss-ff-mac-scheduler``, the UEs are all placed at the same distance from
+the eNB, and hence all placed in order to have the same SNR. Different TBR values are assigned to each UE. 
+There also exist an maximum throughput in this case. Once total traffic rate is bigger than this threshold,
+there will be some UEs that cannot achieve their TBR. Because there is no fading, subband CQIs for each
+RBGs frequency are the same. Therefore, in FD scheduler,in each TTI, priority metrics of UE for all RBGs
+are the same. This means that FD scheduler will always allocate all RBGs to one user. Therefore, in the
+maximum throughput case, PSS performs like a TD-BET. Then we have:
+
+.. math::
+    
+      T = \frac{N}{ \sum_{i=1}^N \frac{1}{R^{fb}_i} }
+
+Here, :math:`T` is the maximum throughput. :math:`R^{fb}_i` be the the full bandwidth achievable rate 
+for user i. :math:`N` is the number of UE.
 
 Building Propagation Loss Model
 -------------------------------
@@ -368,16 +559,16 @@ Physical Error Model
 --------------------
 
 
-The test suite ``lte-phy-error-model`` generates different test cases for evaluating both data and control error models. For what concern the data, the test consists of nine test cases with single eNB and a various number of UEs, all having the same Radio Bearer specification. Each test is designed for evaluating the error rate perceived by a specific TB size in order to verify that it corresponds to the expected values according to the BLER generated for CB size analog to the TB size. This means that, for instance, the test will check that the performance of a TB of :math:`N` bits is analogous to the one of a a CB size of :math:`N` bits by collecting the performance of a user which has been forced the generation of a such TB size according to the distance to eNB. In order to significantly test the BER at MAC level, we modified the Adaptive Modulation and Coding (AMC) module, the ``LteAmc`` class, for making it less robust to channel conditions by adding a configurable BER parameter (called ``Ber`` in the ns3 attribute system) which enable the selection of the desired BER at MAC level when choosing the MCS to be used. In detail, the AMC module has been forced to select the AMC considering a BER of 0.01 (instead of the standard value equal to 0.00005). We note that, these values do not reflect actual BER since they come from an analytical bound which do not consider all the transmission chain aspects; therefore the resulted BER might be different. 
+The test suite ``lte-phy-error-model`` generates different test cases for evaluating both data and control error models. For what concern the data, the test consists of nine test cases with single eNB and a various number of UEs, all having the same Radio Bearer specification. Each test is designed for evaluating the error rate perceived by a specific TB size in order to verify that it corresponds to the expected values according to the BLER generated for CB size analog to the TB size. This means that, for instance, the test will check that the performance of a TB of :math:`N` bits is analogous to the one of a a CB size of :math:`N` bits by collecting the performance of a user which has been forced the generation of a such TB size according to the distance to eNB. In order to significantly test the BLER at MAC level, we configured the Adaptive Modulation and Coding (AMC) module, the ``LteAmc`` class, for making it less robust to channel conditions by using the PiroEW2010 AMC model and configuring it to select the MCS considering a target BER of 0.03 (instead of the default value of 0.00005). We note that these values do not reflect the actual BER, since they come from an analytical bound which does not consider all the transmission chain aspects; therefore the BER and BLER actually experienced at the reception of a TB is in general different. 
 
 The parameters of the nine test cases are reported in the following:
 
- #. 4 UEs placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 256 bits, that in turns produce a BER of 0.33 (see point A in figure :ref:`fig-mcs-2-test`).
- #. 2 UEs placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 528 bits, that in turns produce a BER of 0.11 (see point B in figure :ref:`fig-mcs-2-test`).
- #. 1 UE placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 1088 bits, that in turns produce a BER of 0.02 (see point C in figure :ref:`fig-mcs-2-test`).
- #. 1 UE placed 600 meters far from the eNB, which implies the use of MCS 12 (SINR of 4.43 dB) and a TB of 4800 bits, that in turns produce a BER of 0.3 (see point D in figure :ref:`fig-mcs-12-test`).
- #. 3 UEs placed 600 meters far from the eNB, which implies the use of MCS 12 (SINR of 4.43 dB) and a TB of 1632 bits, that in turns produce a BER of 0.55 (see point E in figure :ref:`fig-mcs-12-test`).
- #. 1 UE placed 470 meters far from the eNB, which implies the use of MCS 16 (SINR of 8.48 dB) and a TB of 7272 bits (segmented in 2 CBs of 3648 and 3584 bits), that in turns produce a BER of 0.14, since each CB has CBLER equal to 0.075 (see point F in figure :ref:`fig-mcs-14-test`).
+ #. 4 UEs placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 256 bits, that in turns produce a BLER of 0.33 (see point A in figure :ref:`fig-mcs-2-test`).
+ #. 2 UEs placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 528 bits, that in turns produce a BLER of 0.11 (see point B in figure :ref:`fig-mcs-2-test`).
+ #. 1 UE placed 1800 meters far from the eNB, which implies the use of MCS 2 (SINR of -5.51 dB) and a TB of 1088 bits, that in turns produce a BLER of 0.02 (see point C in figure :ref:`fig-mcs-2-test`).
+ #. 1 UE placed 600 meters far from the eNB, which implies the use of MCS 12 (SINR of 4.43 dB) and a TB of 4800 bits, that in turns produce a BLER of 0.3 (see point D in figure :ref:`fig-mcs-12-test`).
+ #. 3 UEs placed 600 meters far from the eNB, which implies the use of MCS 12 (SINR of 4.43 dB) and a TB of 1632 bits, that in turns produce a BLER of 0.55 (see point E in figure :ref:`fig-mcs-12-test`).
+ #. 1 UE placed 470 meters far from the eNB, which implies the use of MCS 16 (SINR of 8.48 dB) and a TB of 7272 bits (segmented in 2 CBs of 3648 and 3584 bits), that in turns produce a BLER of 0.14, since each CB has CBLER equal to 0.075 (see point F in figure :ref:`fig-mcs-14-test`).
 
 
 .. _fig-mcs-2-test:
@@ -403,15 +594,42 @@ The parameters of the nine test cases are reported in the following:
    BLER for test 6.
 
 
-The test verifies that in each case the expected number of packets received correct corresponds to a Bernoulli distribution with a confidence interval of 95%, where the probability of success in each trail is :math:`1-BER` and :math:`n` is the total number of packet sent.
+The test verifies that in each case the expected number of packets received correct corresponds to a Bernoulli distribution with a confidence interval of 99%, where the probability of success in each trail is :math:`p=1-BER` and :math:`n` is the total number of packet sent.
 
 The error model of PCFICH-PDDCH channels consists of 4 test cases with a single UE and several eNBs, where the UE is connected to only one eNB in order to have the remaining acting as interfering ones. The errors on data are disabled in order to verify only the ones due to erroneous decodification of PCFICH-PDCCH. The test verifies that the error on the data received respects the decodification error probability of the PCFICH-PDCCH with a tolerance of 0.1 due to the errors that might be produced in quantizing the MI and the error curve. As before, the system has been forced on working in a less conservative fashion in the AMC module for appreciating the results in border situations. The parameters of the 4 tests cases are reported in the following:
 
- #. 2 eNBs placed 1078 meters far from the UE, which implies a SINR of -2.00 dB and a TB of 217 bits, that in turns produce a BER of 0.007.
- #. 3 eNBs placed 1078 meters far from the UE, which implies a SINR of -4.00 dB and a TB of 217 bits, that in turns produce a BER of 0.045.
- #. 4 eNBs placed 1078 meters far from the UE, which implies a SINR of -6.00 dB and a TB of 133 bits, that in turns produce a BER of 0.206.
- #. 5 eNBs placed 1078 meters far from the UE, which implies a SINR of -7.00 dB and a TB of 81 bits, that in turns produce a BER of 0.343.
- 
+ #. 2 eNBs placed 1078 meters far from the UE, which implies a SINR of -2.00 dB and a TB of 217 bits, that in turns produce a BLER of 0.007.
+ #. 3 eNBs placed 1078 meters far from the UE, which implies a SINR of -4.00 dB and a TB of 217 bits, that in turns produce a BLER of 0.045.
+ #. 4 eNBs placed 1078 meters far from the UE, which implies a SINR of -6.00 dB and a TB of 133 bits, that in turns produce a BLER of 0.206.
+ #. 5 eNBs placed 1078 meters far from the UE, which implies a SINR of -7.00 dB and a TB of 81 bits, that in turns produce a BLER of 0.343.
+
+
+HARQ Model
+----------
+
+The test suite ``lte-harq`` includes two tests for evaluating the HARQ model and the related extension in the error model. The test consists on checking whether the amount of bytes received during the simulation corresponds to the expected ones according to the values of transport block and the HARQ dynamics. In detail, the test checks whether the throughput obtained after one HARQ retransmission is the expeted one. For evaluating the expected throughput the expected TB delivering time has been evaluated according to the following formula:
+
+.. math::
+
+   \mathrm{T} = P_s^1 \times 1 + P_s^2 \times 2 + (1-P_s^2) \times 3
+
+where :math:`P_s^i` is the probability of receiving with success the HARQ block at the attempt :math:`i` (i.e., the RV with 3GPP naming). According to the scenarios, in the test we always have :math:`P_s^1` equal to 0.0, while :math:`P_s^2` varies in the two tests, in detail:
+
+
+.. math::
+
+   \mathrm{T_{test-1}} = 0.0 \times 1 + 0.77 \times 2 + 0.23 \times 3 = 2.23
+
+   \mathrm{T_{test-2}} = 0.0 \times 1 + 0.9862 \times 2 + 0.0138 \times 3 = 2.0138
+
+The expected throughput is calculted by counting the number of transmission slots available during the simulation (e.g., the number of TTIs) and the size of the TB in the simulation, in detail:
+
+.. math::
+
+   \mathrm{Thr_{test-i}} = \frac{TTI_{NUM}}{T_{test-i}} TB_{size} = \left\{ \begin{array}{lll} \dfrac{1000}{2.23}41 = 18375\mbox{ bps} & \mbox{ for test-1} \\ & \\ \dfrac{1000}{2.0138}469 = 236096\mbox{ bps} & \mbox{ for test-2}\end{array} \right.
+
+where :math:`TTI_{NUM}` is the total number of TTIs in 1 second.
+The test is performed both for Round Robin scheduler. The test passes if the measured throughput matches with the reference throughput within a relative tolerance of 0.1. This tolerance is needed to account for the transient behavior at the beginning of the simulation and the on-fly blocks at the end of the simulation.
 
 
 MIMO Model
@@ -477,6 +695,86 @@ transmitted by the RLC instance, both the size and the content of the
 PDU are verified to check for an exact match with the test vector.
 
 
+RRC
+---
+
+The test suite ``lte-rrc`` tests the correct functionality of the following aspects:
+ 
+ #. MAC Random Access
+ #. RRC System Information Acquisition
+ #. RRC Connection Establishment 
+ #. RRC Reconfiguration
+
+The test suite considers a type of scenario with a single eNB and multiple UEs that are instructed to connect to the eNB. Each test case implement an instance of this scenario with specific values of the following parameters:
+
+ - number of UEs
+ - number of Data Radio Bearers to be activated for each UE
+ - time :math:`t^c_0` at which the first UE is instructed to start connecting to the eNB
+ - time interval :math:`d^i` between the start of connection of UE :math:`n` and UE :math:`n+1`; the time at which user :math:`n` connects is thus determined as :math:`t^c_n = t^c_0 + n d^i` sdf
+ - a boolean flag indicating whether the ideal or the real RRC protocol model is used
+
+Each test cases passes if a number of test conditions are positively evaluated for each UE after a delay :math:`d^e` from the time it started connecting to the eNB. The delay :math:`d^e` is determined as 
+
+.. math::
+
+   d^e = d^{si} + d^{ra} + d^{ce} + d^{cr}
+
+where:
+
+ - :math:`d^{si}` is the max delay necessary for the acquisition of System Information. We set it to 90ms accounting for 10ms for the MIB acquisition and 80ms for the subsequent SIB2 acquisition
+ - :math:`d^{ra}` is the delay for the MAC Random Access (RA)
+   procedure. This depends on preamble collisions as well as on the
+   availability of resources for the UL grant allocation. The total amount of
+   necessary RA attempts depends on preamble collisions and failures
+   to allocate the UL grant because of lack of resources. The number
+   of collisions depends on the number of UEs that try to access
+   simultaneously; we estimated that for a :math:`0.99` RA success
+   probability, 5 attempts are sufficient for up to 20 UEs, and 10
+   attempts for up to 50 UEs. For the UL
+   grant, considered the system bandwidth and the
+   default MCS used for the UL grant (MCS 0), at most 4 UL grants can
+   be assigned in a TTI; so for :math:`n` UEs trying to
+   do RA simultaneously the max number of attempts due to the UL grant
+   issue is :math:`\lceil n/4 \rceil`. The time for
+   a RA attempt  is determined by 3ms + the value of
+   LteEnbMac::RaResponseWindowSize, which defaults to 3ms, plus 1ms
+   for the scheduling of the new transmission.
+ - :math:`d^{ce}` is the delay required for the transmission of RRC CONNECTION
+   SETUP + RRC CONNECTION SETUP COMPLETED. We consider a round trip
+   delay of 10ms plus :math:`\lceil 2n/4 \rceil` considering that 2
+   RRC packets have to be transmitted and that at most 4 such packets
+   can be transmitted per TTI.
+ - :math:`d^{cr}` is the delay required for eventually needed RRC
+   CONNECTION RECONFIGURATION transactions. The number of transactions needed is
+   1 for each bearer activation plus a variable number for SRS
+   reconfiguration that depends on:math:`n`:
+    
+     + 0 for :math:`n \le 2`
+     + 1 for :math:`n \le 5`
+     + 2 for :math:`n \le 10`
+     + 3 for :math:`n \le 20`
+     + 4 for :math:`n > 20`
+
+   Similarly to what done for :math:`d^{ce}`, for each transaction we consider a round trip
+   delay of 10ms plus :math:`\lceil 2n/4 \rceil`.
+   delay of 20ms.
+
+The conditions that are evaluated for a test case to pass are, for
+each UE:
+
+ - the eNB has the context of the UE (identified by the RNTI value
+   retrieved from the UE RRC)
+ - the RRC state of the UE at the eNB is CONNECTED_NORMALLY
+ - the RRC state at the UE is CONNECTED_NORMALLY
+ - the UE is configured with the CellId, DlBandwidth, UlBandwidth,
+   DlEarfcn and UlEarfcn of the eNB
+ - the IMSI of the UE stored at the eNB is correct
+ - the number of active Data Radio Bearers is the expected one, both
+   at the eNB and at the UE
+ - for each Data Radio Bearer, the following identifiers match between
+   the UE and the eNB: EPS bearer id, DRB id, LCID
+
+ 
 
 
 
@@ -556,4 +854,89 @@ test passes if all the following conditions are satisfied:
    RadioBearer instance  
 
 
+X2 handover
+-----------
 
+The test suite ``lte-x2-handover`` checks the correct functionality of the X2 handover procedure. The scenario being tested is a topology with two eNBs connected by an X2 interface. Each test case is a particular instance of this scenario defined by the following parameters:
+
+ - the number of UEs that are initially attached to the first eNB
+ - the number of EPS bearers activated for each UE
+ - a list of handover events to be triggered, where each event is defined by:
+   + the start time of the handover trigger
+   + the index of the UE doing the handover
+   + the index of the source eNB
+   + the index of the target eNB
+ - a boolean flag indicating whether the target eNB admits the handover or not
+ - a boolean flag indicating whether the ideal RRC protocol is to be used instead of the real RRC protocol
+ - the type of scheduler to be used (RR or PF)
+
+Each test cases passes if the following conditions are true:
+
+ - at time 0.06s, the test CheckConnected verifies that each UE is connected to the first eNB
+ - for each event in the handover list:
+
+   + at the indicated event start time, the indicated UE is connected to the indicated source eNB
+   + 0.1s after the start time, the indicated UE is connected to the indicated target eNB
+   + 0.6s after the start time, for each active EPS bearer, the uplink and downlink sink applications of the indicated UE have achieved a number of bytes which is at least half the number of bytes transmitted by the corresponding source applications
+
+The condition "UE is connected to eNB" is evaluated positively if and only if all the following conditions are met:
+
+ - the eNB has the context of the UE (identified by the RNTI value
+   retrieved from the UE RRC)
+ - the RRC state of the UE at the eNB is CONNECTED_NORMALLY
+ - the RRC state at the UE is CONNECTED_NORMALLY
+ - the UE is configured with the CellId, DlBandwidth, UlBandwidth,
+   DlEarfcn and UlEarfcn of the eNB
+ - the IMSI of the UE stored at the eNB is correct
+ - the number of active Data Radio Bearers is the expected one, both
+   at the eNB and at the UE
+ - for each Data Radio Bearer, the following identifiers match between
+   the UE and the eNB: EPS bearer id, DRB id, LCID
+
+
+Handover delays
+---------------
+
+Handover procedure consists of several message exchanges between UE, source
+eNodeB, and target eNodeB over both RRC protocol and X2 interface. Test suite
+``lte-handover-delay`` verifies that this procedure consistently spends the
+same amount of time.
+
+The test suite will run several handover test cases. Eact test case is an
+individual simulation featuring a handover at a specified time in simulation.
+For example, the handover in the first test case is invoked at time +0.100s,
+while in the second test case it is at +0.101s. There are 10 test cases, each
+testing a different subframe in LTE. Thus the last test case has the handover
+at +0.109s.
+
+The simulation scenario in the test cases is as follow:
+
+ - EPC is enabled
+ - 2 eNodeBs with circular (isotropic) antenna, separated by 1000 meters
+ - 1 static UE positioned exactly in the center between the eNodeBs
+ - no application installed
+ - no channel fading
+ - default path loss model (Friis)
+ - 0.300s simulation duration
+
+The test case runs as follow. At the beginning of the simulation, the UE is
+attached to the first eNodeB. Then at the time specified by the test case input
+argument, a handover request will be explicitly issued to the second eNodeB.
+The test case will then record the starting time, wait until the handover is
+completed, and then record the completion time. If the difference between the
+completion time and starting time is less than a predefined threshold, then the
+test passes.
+
+A typical handover in the current ns-3 implementation takes 4.2141 ms when using
+Ideal RRC protocol model, and 19.9283 ms when using Real RRC protocol model.
+Accordingly, the test cases use 5 ms and 20 ms as the maximum threshold values.
+The test suite runs 10 test cases with Ideal RRC protocol model and 10 test
+cases with Real RRC protocol model. More information regarding these models can
+be found in Section :ref:`sec-rrc-protocol-models`.
+
+The motivation behind using subframes as the main test parameters is the fact
+that subframe index is one of the factors for calculating RA-RNTI, which is used
+by Random Access during the handover procedure. The test cases verify this
+computation, utilizing the fact that the handover will be delayed when this
+computation is broken. In the default simulation configuration, the handover
+delay observed because of a broken RA-RNTI computation is typically 6 ms.

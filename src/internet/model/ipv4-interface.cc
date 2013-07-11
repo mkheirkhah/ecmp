@@ -70,13 +70,13 @@ Ipv4Interface::Ipv4Interface ()
 
 Ipv4Interface::~Ipv4Interface ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 }
 
 void
 Ipv4Interface::DoDispose (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_node = 0;
   m_device = 0;
   Object::DoDispose ();
@@ -85,6 +85,7 @@ Ipv4Interface::DoDispose (void)
 void 
 Ipv4Interface::SetNode (Ptr<Node> node)
 {
+  NS_LOG_FUNCTION (this << node);
   m_node = node;
   DoSetup ();
 }
@@ -92,6 +93,7 @@ Ipv4Interface::SetNode (Ptr<Node> node)
 void 
 Ipv4Interface::SetDevice (Ptr<NetDevice> device)
 {
+  NS_LOG_FUNCTION (this << device);
   m_device = device;
   DoSetup ();
 }
@@ -99,6 +101,7 @@ Ipv4Interface::SetDevice (Ptr<NetDevice> device)
 void
 Ipv4Interface::DoSetup (void)
 {
+  NS_LOG_FUNCTION (this);
   if (m_node == 0 || m_device == 0)
     {
       return;
@@ -114,32 +117,35 @@ Ipv4Interface::DoSetup (void)
 Ptr<NetDevice>
 Ipv4Interface::GetDevice (void) const
 {
+  NS_LOG_FUNCTION (this);
   return m_device;
 }
 
 void
 Ipv4Interface::SetMetric (uint16_t metric)
 {
-  NS_LOG_FUNCTION (metric);
+  NS_LOG_FUNCTION (this << metric);
   m_metric = metric;
 }
 
 uint16_t
 Ipv4Interface::GetMetric (void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return m_metric;
 }
 
 void
 Ipv4Interface::SetArpCache (Ptr<ArpCache> a)
 {
+  NS_LOG_FUNCTION (this << a);
   m_cache = a;
 }
 
 Ptr<ArpCache>
 Ipv4Interface::GetArpCache () const
 {
+  NS_LOG_FUNCTION (this);
   return m_cache;
 }
 
@@ -151,49 +157,49 @@ Ipv4Interface::GetArpCache () const
 bool 
 Ipv4Interface::IsUp (void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return m_ifup;
 }
 
 bool 
 Ipv4Interface::IsDown (void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return !m_ifup;
 }
 
 void 
 Ipv4Interface::SetUp (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_ifup = true;
 }
 
 void 
 Ipv4Interface::SetDown (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_ifup = false;
 }
 
 bool 
 Ipv4Interface::IsForwarding (void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return m_forwarding;
 }
 
 void 
 Ipv4Interface::SetForwarding (bool val)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this << val);
   m_forwarding = val;
 }
 
 void
 Ipv4Interface::Send (Ptr<Packet> p, Ipv4Address dest)
 {
-  NS_LOG_FUNCTION (dest << *p);
+  NS_LOG_FUNCTION (this << *p << dest);
   if (!IsUp ())
     {
       return;
@@ -201,8 +207,8 @@ Ipv4Interface::Send (Ptr<Packet> p, Ipv4Address dest)
   // Check for a loopback device
   if (DynamicCast<LoopbackNetDevice> (m_device))
     {
-      // XXX additional checks needed here (such as whether multicast
-      // goes to loopback)?
+      /// \todo additional checks needed here (such as whether multicast
+      /// goes to loopback)?
       m_device->Send (p, m_device->GetBroadcast (), 
                       Ipv4L3Protocol::PROT_NUMBER);
       return;
@@ -281,14 +287,14 @@ Ipv4Interface::Send (Ptr<Packet> p, Ipv4Address dest)
 uint32_t
 Ipv4Interface::GetNAddresses (void) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return m_ifaddrs.size ();
 }
 
 bool
 Ipv4Interface::AddAddress (Ipv4InterfaceAddress addr)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this << addr);
   m_ifaddrs.push_back (addr);
   return true;
 }
@@ -296,7 +302,7 @@ Ipv4Interface::AddAddress (Ipv4InterfaceAddress addr)
 Ipv4InterfaceAddress
 Ipv4Interface::GetAddress (uint32_t index) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this << index);
   if (index < m_ifaddrs.size ())
     {
       uint32_t tmp = 0;
@@ -317,7 +323,7 @@ Ipv4Interface::GetAddress (uint32_t index) const
 Ipv4InterfaceAddress
 Ipv4Interface::RemoveAddress (uint32_t index)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this << index);
   if (index >= m_ifaddrs.size ())
     {
       NS_ASSERT_MSG (false, "Bug in Ipv4Interface::RemoveAddress");
@@ -338,6 +344,29 @@ Ipv4Interface::RemoveAddress (uint32_t index)
   NS_ASSERT_MSG (false, "Address " << index << " not found");
   Ipv4InterfaceAddress addr;
   return (addr);  // quiet compiler
+}
+
+Ipv4InterfaceAddress
+Ipv4Interface::RemoveAddress(Ipv4Address address)
+{
+  NS_LOG_FUNCTION(this << address);
+
+  if (address == address.GetLoopback())
+    {
+      NS_LOG_WARN ("Cannot remove loopback address.");
+      return Ipv4InterfaceAddress();
+    }
+
+  for(Ipv4InterfaceAddressListI it = m_ifaddrs.begin(); it != m_ifaddrs.end(); it++)
+    {
+      if((*it).GetLocal() == address)
+        {
+          Ipv4InterfaceAddress ifAddr = *it;
+          m_ifaddrs.erase(it);
+          return ifAddr;
+        }
+    }
+  return Ipv4InterfaceAddress();
 }
 
 } // namespace ns3

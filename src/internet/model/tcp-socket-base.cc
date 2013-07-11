@@ -450,9 +450,11 @@ TcpSocketBase::Close (void)
   // Bug number 426 claims we should send reset in this case.
   if (m_rxBuffer.Size () != 0)
     {
+      NS_LOG_INFO ("Socket " << this << " << unread rx data during close.  Sending reset");
       SendRST ();
       return 0;
     }
+ 
   if (m_txBuffer.SizeFromSequence (m_nextTxSequence) > 0)
     { // App close with pending data must wait until all data transmitted
       if (m_closeOnEmpty == false)
@@ -470,7 +472,32 @@ int
 TcpSocketBase::ShutdownSend (void)
 {
   NS_LOG_FUNCTION (this);
+  
+  //this prevents data from being added to the buffer
   m_shutdownSend = true;
+  m_closeOnEmpty = true;
+  //if buffer is already empty, send a fin now
+  //otherwise fin will go when buffer empties.
+  if (m_txBuffer.Size () == 0)
+    {
+      if (m_state == ESTABLISHED || m_state == CLOSE_WAIT)
+        {
+          NS_LOG_INFO("Emtpy tx buffer, send fin");
+          SendEmptyPacket (TcpHeader::FIN);  
+
+          if (m_state == ESTABLISHED)
+            { // On active close: I am the first one to send FIN
+              NS_LOG_INFO ("ESTABLISHED -> FIN_WAIT_1");
+              m_state = FIN_WAIT_1;
+            }
+          else
+            { // On passive close: Peer sent me FIN already
+              NS_LOG_INFO ("CLOSE_WAIT -> LAST_ACK");
+              m_state = LAST_ACK;
+            }  
+        }
+    }
+ 
   return 0;
 }
 
@@ -496,6 +523,11 @@ TcpSocketBase::Send (Ptr<Packet> p, uint32_t flags)
       if (!m_txBuffer.Add (p))
         { // TxBuffer overflow, send failed
           m_errno = ERROR_MSGSIZE;
+          return -1;
+        }
+      if (m_shutdownSend)
+        {
+          m_errno = ERROR_SHUTDOWN;
           return -1;
         }
       // Submit the data to lower layers
@@ -777,9 +809,9 @@ TcpSocketBase::ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port,
 }
 
 void
-TcpSocketBase::ForwardUp6 (Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port)
+TcpSocketBase::ForwardUp6 (Ptr<Packet> packet, Ipv6Header header, uint16_t port)
 {
-  DoForwardUp (packet, saddr, daddr, port);
+  DoForwardUp (packet, header, port);
 }
 
 void
@@ -908,15 +940,15 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port
 }
 
 void
-TcpSocketBase::DoForwardUp (Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address daddr, uint16_t port)
+TcpSocketBase::DoForwardUp (Ptr<Packet> packet, Ipv6Header header, uint16_t port)
 {
   NS_LOG_LOGIC ("Socket " << this << " forward up " <<
                 m_endPoint6->GetPeerAddress () <<
                 ":" << m_endPoint6->GetPeerPort () <<
                 " to " << m_endPoint6->GetLocalAddress () <<
                 ":" << m_endPoint6->GetLocalPort ());
-  Address fromAddress = Inet6SocketAddress (saddr, port);
-  Address toAddress = Inet6SocketAddress (daddr, m_endPoint6->GetLocalPort ());
+  Address fromAddress = Inet6SocketAddress (header.GetSourceAddress (), port);
+  Address toAddress = Inet6SocketAddress (header.GetDestinationAddress (), m_endPoint6->GetLocalPort ());
 
   // Peel off TCP header and do validity checking
   TcpHeader tcpHeader;
@@ -977,7 +1009,7 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, Ipv6Address saddr, Ipv6Address d
           h.SetDestinationPort (tcpHeader.GetSourcePort ());
           h.SetWindowSize (AdvertisedWindowSize ());
           AddOptions (h);
-          m_tcp->SendPacket (Create<Packet> (), h, daddr, saddr, m_boundnetdevice);
+          m_tcp->SendPacket (Create<Packet> (), h, header.GetDestinationAddress (), header.GetSourceAddress (), m_boundnetdevice);
         }
       break;
     case SYN_SENT:
@@ -1528,6 +1560,40 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   TcpHeader header;
   SequenceNumber32 s = m_nextTxSequence;
 
+  /*
+   * Add tags for each socket option.
+   * Note that currently the socket adds both IPv4 tag and IPv6 tag
+   * if both options are set. Once the packet got to layer three, only
+   * the corresponding tags will be read.
+   */
+  if (IsManualIpTos ())
+    {
+      SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (GetIpTos ());
+      p->AddPacketTag (ipTosTag);
+    }
+
+  if (IsManualIpv6Tclass ())
+    {
+      SocketIpv6TclassTag ipTclassTag;
+      ipTclassTag.SetTclass (GetIpv6Tclass ());
+      p->AddPacketTag (ipTclassTag);
+    }
+
+  if (IsManualIpTtl ())
+    {
+      SocketIpTtlTag ipTtlTag;
+      ipTtlTag.SetTtl (GetIpTtl ());
+      p->AddPacketTag (ipTtlTag);
+    }
+
+  if (IsManualIpv6HopLimit ())
+    {
+      SocketIpv6HopLimitTag ipHopLimitTag;
+      ipHopLimitTag.SetHopLimit (GetIpv6HopLimit ());
+      p->AddPacketTag (ipHopLimitTag);
+    }
+
   if (m_endPoint == 0 && m_endPoint6 == 0)
     {
       NS_LOG_WARN ("Failed to send empty packet due to null endpoint");
@@ -1764,6 +1830,41 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
   uint32_t sz = p->GetSize (); // Size of packet
   uint8_t flags = withAck ? TcpHeader::ACK : 0;
   uint32_t remainingData = m_txBuffer.SizeFromSequence (seq + SequenceNumber32 (sz));
+
+  /*
+   * Add tags for each socket option.
+   * Note that currently the socket adds both IPv4 tag and IPv6 tag
+   * if both options are set. Once the packet got to layer three, only
+   * the corresponding tags will be read.
+   */
+  if (IsManualIpTos ())
+    {
+      SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (GetIpTos ());
+      p->AddPacketTag (ipTosTag);
+    }
+
+  if (IsManualIpv6Tclass ())
+    {
+      SocketIpv6TclassTag ipTclassTag;
+      ipTclassTag.SetTclass (GetIpv6Tclass ());
+      p->AddPacketTag (ipTclassTag);
+    }
+
+  if (IsManualIpTtl ())
+    {
+      SocketIpTtlTag ipTtlTag;
+      ipTtlTag.SetTtl (GetIpTtl ());
+      p->AddPacketTag (ipTtlTag);
+    }
+
+  if (IsManualIpv6HopLimit ())
+    {
+      SocketIpv6HopLimitTag ipHopLimitTag;
+      ipHopLimitTag.SetHopLimit (GetIpv6HopLimit ());
+      p->AddPacketTag (ipHopLimitTag);
+    }
+
   if (m_closeOnEmpty && (remainingData == 0))
     {
       flags |= TcpHeader::FIN;
@@ -1853,12 +1954,6 @@ TcpSocketBase::SendPendingData (bool withAck)
                     " highestRxAck " << m_txBuffer.HeadSequence () <<
                     " pd->Size " << m_txBuffer.Size () <<
                     " pd->SFS " << m_txBuffer.SizeFromSequence (m_nextTxSequence));
-      // Quit if send disallowed
-      if (m_shutdownSend)
-        {
-          m_errno = ERROR_SHUTDOWN;
-          return false;
-        }
       // Stop sending if we need to wait for a larger Tx window (prevent silly window syndrome)
       if (w < m_segmentSize && m_txBuffer.SizeFromSequence (m_nextTxSequence) > w)
         {

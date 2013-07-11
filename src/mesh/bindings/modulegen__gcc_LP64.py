@@ -126,6 +126,8 @@ def register_types(module):
     module.add_class('PacketTagList', import_from_module='ns.network')
     ## packet-tag-list.h (module 'network'): ns3::PacketTagList::TagData [struct]
     module.add_class('TagData', import_from_module='ns.network', outer_class=root_module['ns3::PacketTagList'])
+    ## packet-tag-list.h (module 'network'): ns3::PacketTagList::TagData::TagData_e [enumeration]
+    module.add_enum('TagData_e', ['MAX_SIZE'], outer_class=root_module['ns3::PacketTagList::TagData'], import_from_module='ns.network')
     ## pcap-file.h (module 'network'): ns3::PcapFile [class]
     module.add_class('PcapFile', import_from_module='ns.network')
     ## trace-helper.h (module 'network'): ns3::PcapHelper [class]
@@ -368,8 +370,6 @@ def register_types(module):
     module.add_class('SsidValue', import_from_module='ns.wifi', parent=root_module['ns3::AttributeValue'])
     ## supported-rates.h (module 'wifi'): ns3::SupportedRates [class]
     module.add_class('SupportedRates', import_from_module='ns.wifi', parent=root_module['ns3::WifiInformationElement'])
-    ## nstime.h (module 'core'): ns3::TimeChecker [class]
-    module.add_class('TimeChecker', import_from_module='ns.core', parent=root_module['ns3::AttributeChecker'])
     ## nstime.h (module 'core'): ns3::TimeValue [class]
     module.add_class('TimeValue', import_from_module='ns.core', parent=root_module['ns3::AttributeValue'])
     ## type-id.h (module 'core'): ns3::TypeIdChecker [class]
@@ -676,7 +676,6 @@ def register_methods(root_module):
     register_Ns3SsidChecker_methods(root_module, root_module['ns3::SsidChecker'])
     register_Ns3SsidValue_methods(root_module, root_module['ns3::SsidValue'])
     register_Ns3SupportedRates_methods(root_module, root_module['ns3::SupportedRates'])
-    register_Ns3TimeChecker_methods(root_module, root_module['ns3::TimeChecker'])
     register_Ns3TimeValue_methods(root_module, root_module['ns3::TimeValue'])
     register_Ns3TypeIdChecker_methods(root_module, root_module['ns3::TypeIdChecker'])
     register_Ns3TypeIdValue_methods(root_module, root_module['ns3::TypeIdValue'])
@@ -2609,6 +2608,10 @@ def register_Ns3PacketTagList_methods(root_module, cls):
     cls.add_method('RemoveAll', 
                    'void', 
                    [])
+    ## packet-tag-list.h (module 'network'): bool ns3::PacketTagList::Replace(ns3::Tag & tag) [member function]
+    cls.add_method('Replace', 
+                   'bool', 
+                   [param('ns3::Tag &', 'tag')])
     return
 
 def register_Ns3PacketTagListTagData_methods(root_module, cls):
@@ -4068,8 +4071,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'ns3::TypeId', 
                    [], 
                    is_static=True)
-    ## object.h (module 'core'): void ns3::Object::Start() [member function]
-    cls.add_method('Start', 
+    ## object.h (module 'core'): void ns3::Object::Initialize() [member function]
+    cls.add_method('Initialize', 
                    'void', 
                    [])
     ## object.h (module 'core'): ns3::Object::Object(ns3::Object const & o) [copy constructor]
@@ -4080,8 +4083,8 @@ def register_Ns3Object_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## object.h (module 'core'): void ns3::Object::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## object.h (module 'core'): void ns3::Object::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -4474,6 +4477,16 @@ def register_Ns3Time_methods(root_module, cls):
                    'bool', 
                    [], 
                    is_const=True)
+    ## nstime.h (module 'core'): static ns3::Time ns3::Time::MAX() [member function]
+    cls.add_method('MAX', 
+                   'ns3::Time', 
+                   [], 
+                   is_static=True)
+    ## nstime.h (module 'core'): static ns3::Time ns3::Time::MIN() [member function]
+    cls.add_method('MIN', 
+                   'ns3::Time', 
+                   [], 
+                   is_static=True)
     ## nstime.h (module 'core'): static void ns3::Time::SetResolution(ns3::Time::Unit resolution) [member function]
     cls.add_method('SetResolution', 
                    'void', 
@@ -6682,6 +6695,10 @@ def register_Ns3EdcaTxopN_methods(root_module, cls):
     cls.add_method('Cancel', 
                    'void', 
                    [])
+    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::EndTxNoAck() [member function]
+    cls.add_method('EndTxNoAck', 
+                   'void', 
+                   [])
     ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::RestartAccessIfNeeded() [member function]
     cls.add_method('RestartAccessIfNeeded', 
                    'void', 
@@ -6773,8 +6790,8 @@ def register_Ns3EdcaTxopN_methods(root_module, cls):
     cls.add_method('AssignStreams', 
                    'int64_t', 
                    [param('int64_t', 'stream')])
-    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## edca-txop-n.h (module 'wifi'): void ns3::EdcaTxopN::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -7532,8 +7549,8 @@ def register_Ns3Node_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
-    ## node.h (module 'network'): void ns3::Node::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## node.h (module 'network'): void ns3::Node::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -7762,6 +7779,10 @@ def register_Ns3Packet_methods(root_module, cls):
     cls.add_method('RemoveTrailer', 
                    'uint32_t', 
                    [param('ns3::Trailer &', 'trailer')])
+    ## packet.h (module 'network'): bool ns3::Packet::ReplacePacketTag(ns3::Tag & tag) [member function]
+    cls.add_method('ReplacePacketTag', 
+                   'bool', 
+                   [param('ns3::Tag &', 'tag')])
     ## packet.h (module 'network'): uint32_t ns3::Packet::Serialize(uint8_t * buffer, uint32_t maxSize) const [member function]
     cls.add_method('Serialize', 
                    'uint32_t', 
@@ -7946,8 +7967,8 @@ def register_Ns3RegularWifiMac_methods(root_module, cls):
                    'ns3::Time', 
                    [], 
                    is_const=True, is_virtual=True)
-    ## regular-wifi-mac.h (module 'wifi'): void ns3::RegularWifiMac::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## regular-wifi-mac.h (module 'wifi'): void ns3::RegularWifiMac::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='protected', is_virtual=True)
@@ -8151,13 +8172,6 @@ def register_Ns3SupportedRates_methods(root_module, cls):
                    [param('uint32_t', 'bs')])
     ## supported-rates.h (module 'wifi'): ns3::SupportedRates::extended [variable]
     cls.add_instance_attribute('extended', 'ns3::ExtendedSupportedRatesIE', is_const=False)
-    return
-
-def register_Ns3TimeChecker_methods(root_module, cls):
-    ## nstime.h (module 'core'): ns3::TimeChecker::TimeChecker() [constructor]
-    cls.add_constructor([])
-    ## nstime.h (module 'core'): ns3::TimeChecker::TimeChecker(ns3::TimeChecker const & arg0) [copy constructor]
-    cls.add_constructor([param('ns3::TimeChecker const &', 'arg0')])
     return
 
 def register_Ns3TimeValue_methods(root_module, cls):
@@ -8441,8 +8455,8 @@ def register_Ns3DcaTxop_methods(root_module, cls):
     cls.add_method('AssignStreams', 
                    'int64_t', 
                    [param('int64_t', 'stream')])
-    ## dca-txop.h (module 'wifi'): void ns3::DcaTxop::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## dca-txop.h (module 'wifi'): void ns3::DcaTxop::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -8817,8 +8831,8 @@ def register_Ns3MeshWifiInterfaceMac_methods(root_module, cls):
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
-    ## mesh-wifi-interface-mac.h (module 'mesh'): void ns3::MeshWifiInterfaceMac::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## mesh-wifi-interface-mac.h (module 'mesh'): void ns3::MeshWifiInterfaceMac::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -8973,8 +8987,8 @@ def register_Ns3Dot11sHwmpProtocol_methods(root_module, cls):
     cls.add_method('UnsetRoot', 
                    'void', 
                    [])
-    ## hwmp-protocol.h (module 'mesh'): void ns3::dot11s::HwmpProtocol::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## hwmp-protocol.h (module 'mesh'): void ns3::dot11s::HwmpProtocol::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)
@@ -10286,8 +10300,8 @@ def register_Ns3Dot11sPeerManagementProtocol_methods(root_module, cls):
     cls.add_method('TransmissionSuccess', 
                    'void', 
                    [param('uint32_t', 'interface'), param('ns3::Mac48Address const', 'peerAddress')])
-    ## peer-management-protocol.h (module 'mesh'): void ns3::dot11s::PeerManagementProtocol::DoStart() [member function]
-    cls.add_method('DoStart', 
+    ## peer-management-protocol.h (module 'mesh'): void ns3::dot11s::PeerManagementProtocol::DoInitialize() [member function]
+    cls.add_method('DoInitialize', 
                    'void', 
                    [], 
                    visibility='private', is_virtual=True)

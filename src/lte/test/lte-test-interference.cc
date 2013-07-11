@@ -68,21 +68,19 @@ LteTestUlSchedulingCallback (LteInterferenceTestCase *testcase, std::string path
 LteInterferenceTestSuite::LteInterferenceTestSuite ()
   : TestSuite ("lte-interference", SYSTEM)
 {
-  NS_LOG_INFO ("Creating LteInterferenceTestSuite");
-
-  AddTestCase (new LteInterferenceTestCase ("d1=3000, d2=6000",  3000.000000, 6000.000000,  3.844681, 1.714583,  0.761558, 0.389662, 6, 4));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=10",  50.000000, 10.000000,  0.040000, 0.040000,  0.010399, 0.010399, 0, 0));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=20",  50.000000, 20.000000,  0.160000, 0.159998,  0.041154, 0.041153, 0, 0));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=50",  50.000000, 50.000000,  0.999997, 0.999907,  0.239828, 0.239808, 2, 2));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=100",  50.000000, 100.000000,  3.999955, 3.998520,  0.785259, 0.785042, 6, 6));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=200",  50.000000, 200.000000,  15.999282, 15.976339,  1.961072, 1.959533, 14, 14));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=500",  50.000000, 500.000000,  99.971953, 99.082845,  4.254003, 4.241793, 22, 22));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=1000",  50.000000, 1000.000000,  399.551632, 385.718468,  6.194952, 6.144825, 28, 28));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=10000",  50.000000, 10000.000000,  35964.181431, 8505.970614,  12.667381, 10.588084, 28, 28));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=100000",  50.000000, 100000.000000,  327284.773828, 10774.181090,  15.853097, 10.928917, 28, 28));
-  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=1000000",  50.000000, 1000000.000000,  356132.574152, 10802.988445,  15.974963, 10.932767, 28, 28));
-  AddTestCase (new LteInterferenceTestCase ("d1=4500, d2=12600",  4500.000000, 12600.000000,  6.654462, 1.139831,  1.139781, 0.270399, 8, 2));
-  AddTestCase (new LteInterferenceTestCase ("d1=5400, d2=12600",  5400.000000, 12600.000000,  4.621154, 0.791549,  0.876368, 0.193019, 6, 0));
+  AddTestCase (new LteInterferenceTestCase ("d1=3000, d2=6000",  3000.000000, 6000.000000,  3.844681, 1.714583,  0.761558, 0.389662, 6, 4), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=10",  50.000000, 10.000000,  0.040000, 0.040000,  0.010399, 0.010399, 0, 0), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=20",  50.000000, 20.000000,  0.160000, 0.159998,  0.041154, 0.041153, 0, 0), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=50",  50.000000, 50.000000,  0.999997, 0.999907,  0.239828, 0.239808, 2, 2), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=100",  50.000000, 100.000000,  3.999955, 3.998520,  0.785259, 0.785042, 6, 6), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=200",  50.000000, 200.000000,  15.999282, 15.976339,  1.961072, 1.959533, 14, 14), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=500",  50.000000, 500.000000,  99.971953, 99.082845,  4.254003, 4.241793, 22, 22), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=1000",  50.000000, 1000.000000,  399.551632, 385.718468,  6.194952, 6.144825, 28, 28), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=10000",  50.000000, 10000.000000,  35964.181431, 8505.970614,  12.667381, 10.588084, 28, 28), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=100000",  50.000000, 100000.000000,  327284.773828, 10774.181090,  15.853097, 10.928917, 28, 28), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=50, d2=1000000",  50.000000, 1000000.000000,  356132.574152, 10802.988445,  15.974963, 10.932767, 28, 28), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=4500, d2=12600",  4500.000000, 12600.000000,  6.654462, 1.139831,  1.139781, 0.270399, 8, 2), TestCase::QUICK);
+  AddTestCase (new LteInterferenceTestCase ("d1=5400, d2=12600",  5400.000000, 12600.000000,  4.621154, 0.791549,  0.876368, 0.193019, 6, 0), TestCase::QUICK);
 
 
 }
@@ -114,15 +112,15 @@ LteInterferenceTestCase::~LteInterferenceTestCase ()
 void
 LteInterferenceTestCase::DoRun (void)
 {
+  NS_LOG_INFO (this << GetName ());
+  
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteAmc::AmcModel", EnumValue (LteAmc::PiroEW2010));
   Config::SetDefault ("ns3::LteAmc::Ber", DoubleValue (0.00005));
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
-//   lteHelper->EnableLogComponents ();
-  lteHelper->EnableMacTraces ();
-  lteHelper->EnableRlcTraces ();
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
+  lteHelper->SetAttribute ("UseIdealRrc", BooleanValue (false));
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
@@ -167,8 +165,8 @@ LteInterferenceTestCase::DoRun (void)
   // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
   EpsBearer bearer (q);
-  lteHelper->ActivateEpsBearer (ueDevs1, bearer, EpcTft::Default ());
-  lteHelper->ActivateEpsBearer (ueDevs2, bearer, EpcTft::Default ());
+  lteHelper->ActivateDataRadioBearer (ueDevs1, bearer);
+  lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
   // Use testing chunk processor in the PHY layer
   // It will be used to test that the SNR is as intended
@@ -190,7 +188,7 @@ LteInterferenceTestCase::DoRun (void)
 
 
   // same as above for eNB2 and UE2
-  
+
   Ptr<LtePhy> ue2Phy = ueDevs2.Get (0)->GetObject<LteUeNetDevice> ()->GetPhy ()->GetObject<LtePhy> ();
   Ptr<LteTestSinrChunkProcessor> testDlSinr2 = Create<LteTestSinrChunkProcessor> (ue2Phy);
   ue2Phy->GetDownlinkSpectrumPhy ()->AddDataSinrChunkProcessor (testDlSinr2);
@@ -205,25 +203,29 @@ LteInterferenceTestCase::DoRun (void)
   Config::Connect ("/NodeList/1/DeviceList/0/LteEnbMac/UlScheduling",
                    MakeBoundCallback (&LteTestUlSchedulingCallback, this));
 
-
-  Simulator::Stop (Seconds (0.020));
+// need to allow for RRC connection establishment + SRS
+  Simulator::Stop (Seconds (0.100));
   Simulator::Run ();
-  
 
-  double dlSinr1Db = 10.0 * std::log10 (testDlSinr1->GetSinr ()->operator[] (0));
-  NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr1Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB1 --> UE1)");
+  if (m_dlMcs > 0)
+    {
+      double dlSinr1Db = 10.0 * std::log10 (testDlSinr1->GetSinr ()->operator[] (0));
+      NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr1Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB1 --> UE1)");
 
-  double ulSinr1Db = 10.0 * std::log10 (testUlSinr1->GetSinr ()->operator[] (0));
-  NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr1Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE1 --> eNB1)");
-
-  double dlSinr2Db = 10.0 * std::log10 (testDlSinr2->GetSinr ()->operator[] (0));
-  NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr2Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB2 --> UE2)");
-  
-  double ulSinr2Db = 10.0 * std::log10 (testUlSinr2->GetSinr ()->operator[] (0));
-  NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr2Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE2 --> eNB2)");
+      double dlSinr2Db = 10.0 * std::log10 (testDlSinr2->GetSinr ()->operator[] (0));
+      NS_TEST_ASSERT_MSG_EQ_TOL (dlSinr2Db, m_dlSinrDb, 0.01, "Wrong SINR in DL! (eNB2 --> UE2)");
+    }
+  if (m_ulMcs > 0)
+    {
+      double ulSinr1Db = 10.0 * std::log10 (testUlSinr1->GetSinr ()->operator[] (0));
+      NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr1Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE1 --> eNB1)");
+      
+      double ulSinr2Db = 10.0 * std::log10 (testUlSinr2->GetSinr ()->operator[] (0));
+      NS_TEST_ASSERT_MSG_EQ_TOL (ulSinr2Db, m_ulSinrDb, 0.01, "Wrong SINR in UL!  (UE2 --> eNB2)");
+    }
 
   Simulator::Destroy ();
- 
+
 }
 
 
@@ -231,14 +233,10 @@ void
 LteInterferenceTestCase::DlScheduling (uint32_t frameNo, uint32_t subframeNo, uint16_t rnti,
                                        uint8_t mcsTb1, uint16_t sizeTb1, uint8_t mcsTb2, uint16_t sizeTb2)
 {
-  /**
-   * Note:
-   *    For first 4 subframeNo in the first frameNo, the MCS cannot be properly evaluated,
-   *    because CQI feedback is still not available at the eNB.
-   */
-  if ( (frameNo > 1) || (subframeNo > 9) )
+  // need to allow for RRC connection establishment + CQI feedback reception
+  if (Simulator::Now () > MilliSeconds (35))
     {
-      NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcsTb1, m_dlMcs, "Wrong DL MCS ");
+      NS_TEST_ASSERT_MSG_EQ ((uint32_t)mcsTb1, (uint32_t)m_dlMcs, "Wrong DL MCS ");
     }
 }
 
@@ -246,14 +244,10 @@ void
 LteInterferenceTestCase::UlScheduling (uint32_t frameNo, uint32_t subframeNo, uint16_t rnti,
                                        uint8_t mcs, uint16_t sizeTb)
 {
-  /**
-   * Note:
-   *    For first 5 subframeNo in the first frameNo, the MCS cannot be properly evaluated,
-   *    because CQI feedback is still not available at the eNB.
-   */
-  if ( (frameNo > 1) && (subframeNo > 6) )
+  // need to allow for RRC connection establishment + SRS transmission
+  if (Simulator::Now () > MilliSeconds (50))
     {
-      NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcs, m_ulMcs, "Wrong UL MCS");
+      NS_TEST_ASSERT_MSG_EQ ((uint32_t)mcs, (uint32_t)m_ulMcs, "Wrong UL MCS");
     }
 }
 

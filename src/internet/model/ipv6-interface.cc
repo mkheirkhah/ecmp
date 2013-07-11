@@ -103,7 +103,10 @@ void Ipv6Interface::DoSetup ()
     }
 
   Ptr<Icmpv6L4Protocol> icmpv6 = m_node->GetObject<Ipv6L3Protocol> ()->GetIcmpv6 ();
-  m_ndCache = icmpv6->CreateCache (m_device, this);
+  if (m_device->NeedsArp ())
+    {
+      m_ndCache = icmpv6->CreateCache (m_device, this);
+    }
 }
 
 void Ipv6Interface::SetNode (Ptr<Node> node)
@@ -288,6 +291,29 @@ Ipv6InterfaceAddress Ipv6Interface::RemoveAddress (uint32_t index)
   return addr;  /* quiet compiler */
 }
 
+Ipv6InterfaceAddress 
+Ipv6Interface::RemoveAddress(Ipv6Address address)
+{
+  NS_LOG_FUNCTION(this << address);
+
+  if (address == address.GetLoopback())
+    {
+      NS_LOG_WARN ("Cannot remove loopback address.");
+      return Ipv6InterfaceAddress();
+    }
+
+  for (Ipv6InterfaceAddressListI it = m_addresses.begin (); it != m_addresses.end (); ++it)
+    {
+      if((*it).GetAddress() == address)
+        {
+          Ipv6InterfaceAddress iface = (*it);
+          m_addresses.erase(it);
+          return iface;
+        }
+    }
+  return Ipv6InterfaceAddress();
+}
+
 Ipv6InterfaceAddress Ipv6Interface::GetAddressMatchingDestination (Ipv6Address dst)
 {
   NS_LOG_FUNCTION (this << dst);
@@ -320,7 +346,7 @@ void Ipv6Interface::Send (Ptr<Packet> p, Ipv6Address dest)
   /* check if destination is localhost (::1) */
   if (DynamicCast<LoopbackNetDevice> (m_device))
     {
-      /* XXX additional checks needed here (such as whether multicast
+      /** \todo additional checks needed here (such as whether multicast
        * goes to loopback)?
        */
       m_device->Send (p, m_device->GetBroadcast (), Ipv6L3Protocol::PROT_NUMBER);

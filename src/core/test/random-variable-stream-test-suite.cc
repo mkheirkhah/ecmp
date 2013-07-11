@@ -1597,10 +1597,10 @@ RandomVariableStreamLogNormalTestCase::DoRun (void)
 
   // Test that values have approximately the right mean value.
   //
-  // XXX This test fails sometimes if the required tolerance is less
-  // than 3%, which may be because there is a bug in the
-  // implementation or that the mean of this distribution is more
-  // senstive to its parameters than the others are.
+  /// \todo This test fails sometimes if the required tolerance is less
+  /// than 3%, which may be because there is a bug in the
+  /// implementation or that the mean of this distribution is more
+  /// senstive to its parameters than the others are.
   double TOLERANCE = expectedMean * 3e-2;
   NS_TEST_ASSERT_MSG_EQ_TOL (valueMean, expectedMean, TOLERANCE, "Wrong mean value."); 
 }
@@ -1740,10 +1740,10 @@ RandomVariableStreamLogNormalAntitheticTestCase::DoRun (void)
 
   // Test that values have approximately the right mean value.
   //
-  // XXX This test fails sometimes if the required tolerance is less
-  // than 3%, which may be because there is a bug in the
-  // implementation or that the mean of this distribution is more
-  // senstive to its parameters than the others are.
+  /// \todo This test fails sometimes if the required tolerance is less
+  /// than 3%, which may be because there is a bug in the
+  /// implementation or that the mean of this distribution is more
+  /// senstive to its parameters than the others are.
   double TOLERANCE = expectedMean * 3e-2;
   NS_TEST_ASSERT_MSG_EQ_TOL (valueMean, expectedMean, TOLERANCE, "Wrong mean value."); 
 }
@@ -2785,41 +2785,41 @@ public:
 RandomVariableStreamTestSuite::RandomVariableStreamTestSuite ()
   : TestSuite ("random-variable-stream-generators", UNIT)
 {
-  AddTestCase (new RandomVariableStreamUniformTestCase);
-  AddTestCase (new RandomVariableStreamUniformAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamConstantTestCase);
-  AddTestCase (new RandomVariableStreamSequentialTestCase);
-  AddTestCase (new RandomVariableStreamNormalTestCase);
-  AddTestCase (new RandomVariableStreamNormalAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamExponentialTestCase);
-  AddTestCase (new RandomVariableStreamExponentialAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamParetoTestCase);
-  AddTestCase (new RandomVariableStreamParetoAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamWeibullTestCase);
-  AddTestCase (new RandomVariableStreamWeibullAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamLogNormalTestCase);
-  // XXX This test is currently disabled because it fails sometimes.
-  // A possible reason for the failure is that the antithetic code is
-  // not implemented properly for this log-normal case.
+  AddTestCase (new RandomVariableStreamUniformTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamUniformAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamConstantTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamSequentialTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamNormalTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamNormalAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamExponentialTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamExponentialAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamParetoTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamParetoAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamWeibullTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamWeibullAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamLogNormalTestCase, TestCase::QUICK);
+  /// \todo This test is currently disabled because it fails sometimes.
+  /// A possible reason for the failure is that the antithetic code is
+  /// not implemented properly for this log-normal case.
   /*
-  AddTestCase (new RandomVariableStreamLogNormalAntitheticTestCase);
+  AddTestCase (new RandomVariableStreamLogNormalAntitheticTestCase, TestCase::QUICK);
   */
-  AddTestCase (new RandomVariableStreamGammaTestCase);
-  // XXX This test is currently disabled because it fails sometimes.
-  // A possible reason for the failure is that the antithetic code is
-  // not implemented properly for this gamma case.
+  AddTestCase (new RandomVariableStreamGammaTestCase, TestCase::QUICK);
+  /// \todo This test is currently disabled because it fails sometimes.
+  /// A possible reason for the failure is that the antithetic code is
+  /// not implemented properly for this gamma case.
   /*
-  AddTestCase (new RandomVariableStreamGammaAntitheticTestCase);
+  AddTestCase (new RandomVariableStreamGammaAntitheticTestCase, TestCase::QUICK);
   */
-  AddTestCase (new RandomVariableStreamErlangTestCase);
-  AddTestCase (new RandomVariableStreamErlangAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamZipfTestCase);
-  AddTestCase (new RandomVariableStreamZipfAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamZetaTestCase);
-  AddTestCase (new RandomVariableStreamZetaAntitheticTestCase);
-  AddTestCase (new RandomVariableStreamDeterministicTestCase);
-  AddTestCase (new RandomVariableStreamEmpiricalTestCase);
-  AddTestCase (new RandomVariableStreamEmpiricalAntitheticTestCase);
+  AddTestCase (new RandomVariableStreamErlangTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamErlangAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamZipfTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamZipfAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamZetaTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamZetaAntitheticTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamDeterministicTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamEmpiricalTestCase, TestCase::QUICK);
+  AddTestCase (new RandomVariableStreamEmpiricalAntitheticTestCase, TestCase::QUICK);
 }
 
 static RandomVariableStreamTestSuite randomVariableStreamTestSuite;

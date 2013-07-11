@@ -99,7 +99,8 @@ public:
 
   ///\name Plugins
   // \{
-  /// Install plugin. TODO return unique ID to allow unregister plugins
+  /// Install plugin.
+  /// \todo return unique ID to allow unregister plugins
   void InstallPlugin (Ptr<MeshWifiInterfaceMacPlugin> plugin);
   // \}
 
@@ -147,7 +148,8 @@ public:
 private:
   /// Frame receive handler
   void  Receive (Ptr<Packet> packet, WifiMacHeader const *hdr);
-  /// Send frame. Frame is supposed to be tagged by routing information. TODO: clarify this point
+  /// Send frame. Frame is supposed to be tagged by routing information.
+  /// \todo clarify this point
   void  ForwardDown (Ptr<const Packet> packet, Mac48Address from, Mac48Address to);
   /// Send beacon
   void SendBeacon ();
@@ -161,7 +163,7 @@ private:
 private:
   typedef std::vector<Ptr<MeshWifiInterfaceMacPlugin> > PluginList;
 
-  virtual void DoStart ();
+  virtual void DoInitialize ();
 
   ///\name Mesh timing intervals
   // \{

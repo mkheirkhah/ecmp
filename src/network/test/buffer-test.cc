@@ -58,9 +58,8 @@ BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const cha
     }
 }
 
-/* Note: works only when variadic macros are
+/** \todo Works only when variadic macros are
  * available which is the case for gcc.
- * XXX
  */
 #define ENSURE_WRITTEN_BYTES(buffer, n, ...)                    \
   {                                                             \
@@ -332,7 +331,7 @@ public:
 BufferTestSuite::BufferTestSuite ()
   : TestSuite ("buffer", UNIT)
 {
-  AddTestCase (new BufferTest);
+  AddTestCase (new BufferTest, TestCase::QUICK);
 }
 
 static BufferTestSuite g_bufferTestSuite;

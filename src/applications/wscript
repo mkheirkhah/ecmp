@@ -1,7 +1,7 @@
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
 def build(bld):
-    module = bld.create_ns3_module('applications', ['internet', 'config-store', 'tools'])
+    module = bld.create_ns3_module('applications', ['internet', 'config-store','stats'])
     module.source = [
         'model/bulk-send-application.cc',
         'model/onoff-application.cc',
@@ -32,7 +32,7 @@ def build(bld):
         'test/udp-client-server-test.cc',
         ]
 
-    headers = bld.new_task_gen(features=['ns3header'])
+    headers = bld(features='ns3header')
     headers.module = 'applications'
     headers.source = [
         'model/bulk-send-application.h',

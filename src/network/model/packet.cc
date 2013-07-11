@@ -112,7 +112,9 @@ void
 PacketTagIterator::Item::GetTag (Tag &tag) const
 {
   NS_ASSERT (tag.GetInstanceTypeId () == m_data->tid);
-  tag.Deserialize (TagBuffer ((uint8_t*)m_data->data, (uint8_t*)m_data->data+PACKET_TAG_MAX_SIZE));
+  tag.Deserialize (TagBuffer ((uint8_t*)m_data->data,
+                              (uint8_t*)m_data->data
+                              + PacketTagList::TagData::MAX_SIZE));
 }
 
 
@@ -582,7 +584,7 @@ uint32_t Packet::GetSerializedSize (void) const
     }
 
   //Tag size
-  //XXX
+  /// \todo Serialze Tags size
   //size += m_tags.GetSerializedSize ();
 
   // increment total size by size of meta-data 
@@ -656,7 +658,7 @@ Packet::Serialize (uint8_t* buffer, uint32_t maxSize) const
     }
 
   // Serialize Tags
-  // XXX
+  /// \todo Serialize Tags
 
   // Serialize Metadata
   uint32_t metaSize = m_metadata.GetSerializedSize ();
@@ -754,7 +756,7 @@ Packet::Deserialize (const uint8_t* buffer, uint32_t size)
     }
 
   // read tags
-  //XXX
+  /// \todo Deserialize Tags
   //uint32_t tagsDeserialized = m_tags.Deserialize (buffer.Begin ());
   //buffer.RemoveAtStart (tagsDeserialized);
 
@@ -841,6 +843,7 @@ Packet::AddPacketTag (const Tag &tag) const
   NS_LOG_FUNCTION (this << tag.GetInstanceTypeId ().GetName () << tag.GetSerializedSize ());
   m_packetTagList.Add (tag);
 }
+
 bool 
 Packet::RemovePacketTag (Tag &tag)
 {
@@ -848,6 +851,14 @@ Packet::RemovePacketTag (Tag &tag)
   bool found = m_packetTagList.Remove (tag);
   return found;
 }
+bool
+Packet::ReplacePacketTag (Tag &tag)
+{
+  NS_LOG_FUNCTION (this << tag.GetInstanceTypeId ().GetName () << tag.GetSerializedSize ());
+  bool found = m_packetTagList.Replace (tag);
+  return found;
+}
+
 bool 
 Packet::PeekPacketTag (Tag &tag) const
 {

@@ -242,7 +242,7 @@ UdpSocketImplTest::DoSendData (Ptr<Socket> socket, std::string to)
 {
   Address realTo = InetSocketAddress (Ipv4Address (to.c_str ()), 1234);
   NS_TEST_EXPECT_MSG_EQ (socket->SendTo (Create<Packet> (123), 0, realTo),
-                         123, "XXX");
+                         123, "100");
 }
 
 void
@@ -445,7 +445,7 @@ Udp6SocketImplTest::DoSendData (Ptr<Socket> socket, std::string to)
 {
   Address realTo = Inet6SocketAddress (Ipv6Address (to.c_str ()), 1234);
   NS_TEST_EXPECT_MSG_EQ (socket->SendTo (Create<Packet> (123), 0, realTo),
-                         123, "XXX");
+                         123, "200");
 }
 
 void
@@ -576,9 +576,9 @@ class UdpTestSuite : public TestSuite
 public:
   UdpTestSuite () : TestSuite ("udp", UNIT)
   {
-    AddTestCase (new UdpSocketImplTest);
-    AddTestCase (new UdpSocketLoopbackTest);
-    AddTestCase (new Udp6SocketImplTest);
-    AddTestCase (new Udp6SocketLoopbackTest);
+    AddTestCase (new UdpSocketImplTest, TestCase::QUICK);
+    AddTestCase (new UdpSocketLoopbackTest, TestCase::QUICK);
+    AddTestCase (new Udp6SocketImplTest, TestCase::QUICK);
+    AddTestCase (new Udp6SocketLoopbackTest, TestCase::QUICK);
   }
 } g_udpTestSuite;

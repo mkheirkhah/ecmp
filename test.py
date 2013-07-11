@@ -52,11 +52,13 @@ interesting_config_items = [
     "EXAMPLE_DIRECTORIES",
     "ENABLE_PYTHON_BINDINGS",
     "ENABLE_CLICK",
+    "ENABLE_BRITE",
     "ENABLE_OPENFLOW",
     "APPNAME",
     "BUILD_PROFILE",
     "VERSION",
     "PYTHON",
+    "VALGRIND_FOUND",
 ]
 
 NSC_ENABLED = False
@@ -65,12 +67,15 @@ ENABLE_THREADING = False
 ENABLE_EXAMPLES = True
 ENABLE_TESTS = True
 ENABLE_CLICK = False
+ENABLE_BRITE = False
 ENABLE_OPENFLOW = False
 EXAMPLE_DIRECTORIES = []
 APPNAME = ""
 BUILD_PROFILE = ""
+BUILD_PROFILE_SUFFIX = ""
 VERSION = ""
 PYTHON = ""
+VALGRIND_FOUND = True
 
 #
 # This will be given a prefix and a suffix when the waf config file is
@@ -93,6 +98,16 @@ core_valgrind_skip_tests = [
     "nsc-tcp-loss",
     "ns3-tcp-interoperability",
     "routing-click",
+    "lte-rr-ff-mac-scheduler",
+    "lte-tdmt-ff-mac-scheduler",
+    "lte-fdmt-ff-mac-scheduler",
+    "lte-pf-ff-mac-scheduler",
+    "lte-tta-ff-mac-scheduler",
+    "lte-fdbet-ff-mac-scheduler",
+    "lte-ttbet-ff-mac-scheduler",
+    "lte-fdtbfq-ff-mac-scheduler",
+    "lte-tdtbfq-ff-mac-scheduler",
+    "lte-pss-ff-mac-scheduler",
 ]
 
 # 
@@ -116,6 +131,7 @@ def parse_examples_to_run_file(
     cpp_executable_dir,
     python_script_dir,
     example_tests,
+    example_names_original,
     python_tests):
 
     # Look for the examples-to-run file exists.
@@ -138,7 +154,9 @@ def parse_examples_to_run_file(
         #
         cpp_examples = get_list_from_file(examples_to_run_path, "cpp_examples")
         for example_name, do_run, do_valgrind_run in cpp_examples:
+
             # Seperate the example name from its arguments.
+            example_name_original = example_name
             example_name_parts = example_name.split(' ', 1)
             if len(example_name_parts) == 1:
                 example_name      = example_name_parts[0]
@@ -149,7 +167,7 @@ def parse_examples_to_run_file(
 
             # Add the proper prefix and suffix to the example name to
             # match what is done in the wscript file.
-            example_name = "%s%s-%s-%s" % (APPNAME, VERSION, example_name, BUILD_PROFILE)
+            example_name = "%s%s-%s%s" % (APPNAME, VERSION, example_name, BUILD_PROFILE_SUFFIX)
 
             # Set the full path for the example.
             example_path = os.path.join(cpp_executable_dir, example_name)
@@ -162,6 +180,7 @@ def parse_examples_to_run_file(
 
                 # Add this example.
                 example_tests.append((example_path, do_run, do_valgrind_run))
+                example_names_original.append(example_name_original)
     
         # Each tuple in the Python list of examples to run contains
         #
@@ -983,10 +1002,19 @@ def run_tests():
     read_waf_config()
 
     #
+    # Set the proper suffix.
+    #
+    global BUILD_PROFILE_SUFFIX
+    if BUILD_PROFILE == 'release': 
+        BUILD_PROFILE_SUFFIX = ""
+    else:
+        BUILD_PROFILE_SUFFIX = "-" + BUILD_PROFILE
+
+    #
     # Add the proper prefix and suffix to the test-runner name to
     # match what is done in the wscript file.
     #
-    test_runner_name = "%s%s-%s-%s" % (APPNAME, VERSION, "test-runner", BUILD_PROFILE)
+    test_runner_name = "%s%s-%s%s" % (APPNAME, VERSION, "test-runner", BUILD_PROFILE_SUFFIX)
 
     #
     # Run waf to make sure that everything is built, configured and ready to go
@@ -1068,6 +1096,7 @@ def run_tests():
     # ensure that they remain buildable and runnable over time.
     #
     example_tests = []
+    example_names_original = []
     python_tests = []
     for directory in EXAMPLE_DIRECTORIES:
         # Set the directories and paths for this example. 
@@ -1082,6 +1111,7 @@ def run_tests():
             cpp_executable_dir,
             python_script_dir,
             example_tests,
+            example_names_original,
             python_tests)
 
     for module in NS3_ENABLED_MODULES:
@@ -1101,6 +1131,7 @@ def run_tests():
             cpp_executable_dir,
             python_script_dir,
             example_tests,
+            example_names_original,
             python_tests)
 
     #
@@ -1134,6 +1165,9 @@ def run_tests():
         for item in list_items:
             if len(item.strip()):
                 print item
+        example_names_original.sort()
+        for item in example_names_original:
+                print "example     ", item
         print
 
     if options.kinds or options.list:
@@ -1312,8 +1346,14 @@ def run_tests():
                 multiple = ""
             else:
                 multiple = " --stop-on-failure"
+            if (len(options.fullness)):
+                fullness = options.fullness.upper()
+                fullness = " --fullness=%s" % fullness
+            else:
+                fullness = " --fullness=QUICK"
 
-            path_cmd = os.path.join("utils", test_runner_name + " --test-name=%s%s" % (test, multiple))
+            path_cmd = os.path.join("utils", test_runner_name + " --test-name=%s%s%s" % (test, multiple, fullness))
+
             job.set_shell_command(path_cmd)
 
             if options.valgrind and test in core_valgrind_skip_tests:
@@ -1404,7 +1444,7 @@ def run_tests():
     elif len(options.example):
         # Add the proper prefix and suffix to the example name to
         # match what is done in the wscript file.
-        example_name = "%s%s-%s-%s" % (APPNAME, VERSION, options.example, BUILD_PROFILE)
+        example_name = "%s%s-%s%s" % (APPNAME, VERSION, options.example, BUILD_PROFILE_SUFFIX)
 
         # Don't try to run this example if it isn't runnable.
         if not ns3_runnable_programs_dictionary.has_key(example_name):
@@ -1415,6 +1455,7 @@ def run_tests():
             # irrespective of any condition.
             #
             example_path = ns3_runnable_programs_dictionary[example_name]
+            example_path = os.path.abspath(example_path)
             job = Job()
             job.set_is_example(True)
             job.set_is_pyexample(False)
@@ -1736,6 +1777,17 @@ def run_tests():
             print '***  Note: ns-3 examples are currently disabled. Enable them by adding'
             print '***  "--enable-examples" to ./waf configure or modifying your .ns3rc file.'
             print
+
+    #
+    # Let the user know if they tried to use valgrind but it was not
+    # present on their machine.
+    #
+    if options.valgrind and not VALGRIND_FOUND:
+        print
+        print '***  Note: you are trying to use valgrind, but valgrind could not be found'
+        print '***  on your machine.  All tests and examples will crash or be skipped.'
+        print
+
     #
     # If we have been asked to retain all of the little temporary files, we
     # don't delete tm.  If we do delete the temporary files, delete only the
@@ -1769,6 +1821,10 @@ def main(argv):
 
     parser.add_option("-u", "--update-data", action="store_true", dest="update_data", default=False,
                       help="If examples use reference data files, get them to re-generate them")
+
+    parser.add_option("-f", "--fullness", action="store", type="string", dest="fullness", default="QUICK",
+                      metavar="FULLNESS",
+                      help="choose the duration of tests to run: QUICK, EXTENSIVE, or TAKES_FOREVER, where EXTENSIVE includes QUICK and TAKES_FOREVER includes QUICK and EXTENSIVE (only QUICK tests are run by default)")
 
     parser.add_option("-g", "--grind", action="store_true", dest="valgrind", default=False,
                       help="run the test suites and examples using valgrind")

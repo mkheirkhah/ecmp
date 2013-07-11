@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <map>
+
 #include "ns3/object.h"
 #include "ns3/pointer.h"
 #include "ns3/object-vector.h"
@@ -9,6 +10,7 @@
 #include "ns3/global-value.h"
 #include "ns3/string.h"
 #include "ns3/node-container.h"
+#include "ns3/csma-channel.h"
 
 using namespace ns3;
 
@@ -482,6 +484,12 @@ int main (int argc, char *argv[])
 
   NodeContainer c; c.Create (1);
 
+  // The below statements register typical aggregation relationships
+  // in ns-3 programs, that otherwise aren't picked up automatically
+  // by the creation of the above node.  To manually list other common
+  // aggregation relationships that you would like to see show up in
+  // the list of configuration paths in the doxygen, add additional
+  // statements below.
   StaticInformation info;
   info.RecordAggregationInfo ("ns3::Node", "ns3::TcpSocketFactory");
   info.RecordAggregationInfo ("ns3::Node", "ns3::UdpSocketFactory");
@@ -490,6 +498,16 @@ int main (int argc, char *argv[])
   info.RecordAggregationInfo ("ns3::Node", "ns3::MobilityModel");
   info.RecordAggregationInfo ("ns3::Node", "ns3::Ipv4L3Protocol");
   info.RecordAggregationInfo ("ns3::Node", "ns3::ArpL3Protocol");
+  info.RecordAggregationInfo ("ns3::Node", "ns3::Icmpv4L4Protocol");
+  info.RecordAggregationInfo ("ns3::Node", "ns3::UdpL4Protocol");
+  info.RecordAggregationInfo ("ns3::Node", "ns3::Ipv6L3Protocol");
+  info.RecordAggregationInfo ("ns3::Node", "ns3::Icmpv6L4Protocol");
+  info.RecordAggregationInfo ("ns3::Node", "ns3::TcpL4Protocol");
+
+  // Create a channel object so that channels appear in the namespace
+  // paths that will be generated here.
+  Ptr<CsmaChannel> csma;
+  csma = CreateObject<CsmaChannel> ();
 
   for (uint32_t i = 0; i < Config::GetRootNamespaceObjectN (); ++i)
     {
@@ -544,7 +562,7 @@ int main (int argc, char *argv[])
       // Config --------------
       if (paths.empty ())
 	{
-	  std::cout << "This type is not accessible from the Config system."
+	  std::cout << "Doxygen introspection did not find any typical Config paths."
 		    << breakBoth << std::endl;
 	}
       else
@@ -694,7 +712,7 @@ int main (int argc, char *argv[])
 		<<       anchor
 		<< "GlobalValue" << (*i)->GetName () << " " << (*i)->GetName ()
 		<<     boldStop
-		<< ": " << (*i)->GetHelp () << "(" << val.Get () << ")"
+		<< ": " << (*i)->GetHelp () << ".  Default value: " << val.Get () << "."
 		<<   listLineStop << std::endl;
     }
   std::cout << listStop    << std::endl

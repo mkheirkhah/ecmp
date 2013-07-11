@@ -274,12 +274,13 @@ public:
   /**
    * \brief Send an ICMPv6 Redirection.
    * \param redirectedPacket the redirected packet
-   * \param dst destination IPv6 address
+   * \param src IPv6 address to send the redirect from
+   * \param dst IPv6 address to send the redirect to
    * \param redirTarget IPv6 target address for Icmpv6Redirection
    * \param redirDestination IPv6 destination address for Icmpv6Redirection
    * \param redirHardwareTarget L2 target address for Icmpv6OptionRdirected
    */
-  void SendRedirection (Ptr<Packet> redirectedPacket, Ipv6Address dst, Ipv6Address redirTarget, Ipv6Address redirDestination, Address redirHardwareTarget);
+  void SendRedirection (Ptr<Packet> redirectedPacket, Ipv6Address src, Ipv6Address dst, Ipv6Address redirTarget, Ipv6Address redirDestination, Address redirHardwareTarget);
 
   /**
    * \brief Forge a Neighbor Solicitation.
@@ -339,7 +340,7 @@ public:
    * \param interface the interface from which the packet is coming
    */
   virtual enum IpL4Protocol::RxStatus Receive (Ptr<Packet> p,
-                                               Ipv6Address &src, Ipv6Address &dst,
+                                               Ipv6Header const &header,
                                                Ptr<Ipv6Interface> interface);
 
   /**

@@ -13,7 +13,6 @@ CallbackValue::CallbackValue ()
 CallbackValue::CallbackValue (const CallbackBase &base)
   : m_value (base)
 {
-  NS_LOG_FUNCTION (&base);
 }
 CallbackValue::~CallbackValue ()
 {
@@ -47,6 +46,7 @@ CallbackValue::DeserializeFromString (std::string value, Ptr<const AttributeChec
   return false;
 }
 
+/** Attribute checker */
 ATTRIBUTE_CHECKER_IMPLEMENT (Callback);
 
 } // namespace ns3

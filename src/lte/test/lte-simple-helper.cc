@@ -45,13 +45,13 @@ LteSimpleHelper::LteSimpleHelper (void)
 }
 
 void
-LteSimpleHelper::DoStart (void)
+LteSimpleHelper::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
 
   m_phyChannel = CreateObject<SimpleChannel> ();
 
-  Object::DoStart ();
+  Object::DoInitialize ();
 }
 
 LteSimpleHelper::~LteSimpleHelper (void)
@@ -95,7 +95,7 @@ NetDeviceContainer
 LteSimpleHelper::InstallEnbDevice (NodeContainer c)
 {
   NS_LOG_FUNCTION (this);
-  Start ();  // will run DoStart () if necessary
+  Initialize ();  // will run DoInitialize () if necessary
   NetDeviceContainer devices;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {
@@ -261,7 +261,8 @@ LteSimpleHelperDlRxPduCallback (Ptr<RadioBearerStatsCalculator> rlcStats, std::s
 {
   NS_LOG_FUNCTION (rlcStats << path << rnti << (uint16_t)lcid << packetSize << delay);
   uint64_t imsi = 333;
-  rlcStats->DlRxPdu (imsi, rnti, lcid, packetSize, delay);
+  uint16_t cellId = 555;
+  rlcStats->DlRxPdu (cellId, imsi, rnti, lcid, packetSize, delay);
 }
 
 void
@@ -281,7 +282,8 @@ LteSimpleHelperUlTxPduCallback (Ptr<RadioBearerStatsCalculator> rlcStats, std::s
 {
   NS_LOG_FUNCTION (rlcStats << path << rnti << (uint16_t)lcid << packetSize);
   uint64_t imsi = 1111;
-  rlcStats->UlTxPdu (imsi, rnti, lcid, packetSize);
+  uint16_t cellId = 555;
+  rlcStats->UlTxPdu (cellId, imsi, rnti, lcid, packetSize);
 }
 
 void

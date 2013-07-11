@@ -106,7 +106,7 @@ Ipv6PacketInfoTagTest::DoSendData (Ptr<Socket> socket, std::string to)
   if (DynamicCast<UdpSocket> (socket) != 0)
     {
       NS_TEST_EXPECT_MSG_EQ (socket->SendTo (Create<Packet> (123), 0, realTo),
-                             123, "XXX");
+                             123, "100");
     }
   // Should only Ipv6RawSock
   else
@@ -207,5 +207,5 @@ private:
 Ipv6PacketInfoTagTestSuite::Ipv6PacketInfoTagTestSuite ()
   : TestSuite ("ipv6-packet-info-tag", UNIT)
 {
-  AddTestCase (new Ipv6PacketInfoTagTest ());
+  AddTestCase (new Ipv6PacketInfoTagTest (), TestCase::QUICK);
 }

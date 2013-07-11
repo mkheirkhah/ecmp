@@ -124,6 +124,7 @@ PsrExperiment::Run (struct PsrExperiment::Input input)
     }
   m_tx = tx;
   Simulator::Run ();
+  Simulator::Destroy();
   return m_output;
 }
 
@@ -187,14 +188,16 @@ void
 CollisionExperiment::Receive (Ptr<Packet> p, double snr, WifiMode mode, enum WifiPreamble preamble)
 {
   FlowIdTag tag;
-  p->FindFirstMatchingByteTag (tag);
-  if (tag.GetFlowId () == m_flowIdA)
+  if (p->FindFirstMatchingByteTag (tag))
     {
-      m_output.receivedA++;
-    }
-  else if (tag.GetFlowId () == m_flowIdB)
-    {
-      m_output.receivedB++;
+      if (tag.GetFlowId () == m_flowIdA)
+        {
+          m_output.receivedA++;
+        }
+      else if (tag.GetFlowId () == m_flowIdB)
+        {
+          m_output.receivedB++;
+        }
     }
 }
 
@@ -266,6 +269,7 @@ CollisionExperiment::Run (struct CollisionExperiment::Input input)
   m_txA = txA;
   m_txB = txB;
   Simulator::Run ();
+  Simulator::Destroy();
   return m_output;
 }
 
@@ -428,7 +432,7 @@ int main (int argc, char *argv[])
                 << "PsrVsDistance "
                 << "PsrVsCollisionInterval "
                 << std::endl;
-      return -1;
+      return 0;
     }
   std::string type = argv[1];
   argc--;

@@ -19,10 +19,13 @@
  */
 
 #include "ns3/assert.h"
+#include "ns3/log.h"
 #include "address.h"
 #include <cstring>
 #include <iostream>
 #include <iomanip>
+
+NS_LOG_COMPONENT_DEFINE ("Address");
 
 namespace ns3 {
 
@@ -31,12 +34,15 @@ Address::Address ()
     m_len (0)
 {
   // Buffer left uninitialized
+  NS_LOG_FUNCTION (this);
+
 }
 
 Address::Address (uint8_t type, const uint8_t *buffer, uint8_t len)
   : m_type (type),
     m_len (len)
 {
+  NS_LOG_FUNCTION (this << static_cast<uint32_t> (type) << &buffer << static_cast<uint32_t> (len));
   NS_ASSERT (m_len <= MAX_SIZE);
   std::memcpy (m_data, buffer, m_len);
 }
@@ -61,18 +67,21 @@ Address::operator = (const Address &address)
 bool
 Address::IsInvalid (void) const
 {
+  NS_LOG_FUNCTION (this);
   return m_len == 0 && m_type == 0;
 }
 
 uint8_t 
 Address::GetLength (void) const
 {
+  NS_LOG_FUNCTION (this);
   NS_ASSERT (m_len <= MAX_SIZE);
   return m_len;
 }
 uint32_t
 Address::CopyTo (uint8_t buffer[MAX_SIZE]) const
 {
+  NS_LOG_FUNCTION (this << &buffer);
   NS_ASSERT (m_len <= MAX_SIZE);
   std::memcpy (buffer, m_data, m_len);
   return m_len;
@@ -80,6 +89,7 @@ Address::CopyTo (uint8_t buffer[MAX_SIZE]) const
 uint32_t
 Address::CopyAllTo (uint8_t *buffer, uint8_t len) const
 {
+  NS_LOG_FUNCTION (this << &buffer << static_cast<uint32_t> (len));
   NS_ASSERT (len >= m_len + 2);
   buffer[0] = m_type;
   buffer[1] = m_len;
@@ -90,6 +100,7 @@ Address::CopyAllTo (uint8_t *buffer, uint8_t len) const
 uint32_t
 Address::CopyFrom (const uint8_t *buffer, uint8_t len)
 {
+  NS_LOG_FUNCTION (this << &buffer << static_cast<uint32_t> (len));
   NS_ASSERT (len <= MAX_SIZE);
   std::memcpy (m_data, buffer, len);
   m_len = len;
@@ -98,6 +109,7 @@ Address::CopyFrom (const uint8_t *buffer, uint8_t len)
 uint32_t
 Address::CopyAllFrom (const uint8_t *buffer, uint8_t len)
 {
+  NS_LOG_FUNCTION (this << &buffer << static_cast<uint32_t> (len));
   NS_ASSERT (len >= 2);
   m_type = buffer[0];
   m_len = buffer[1];
@@ -109,18 +121,22 @@ Address::CopyAllFrom (const uint8_t *buffer, uint8_t len)
 bool 
 Address::CheckCompatible (uint8_t type, uint8_t len) const
 {
+  NS_LOG_FUNCTION (this << static_cast<uint32_t> (type) << static_cast<uint32_t> (len));
   NS_ASSERT (len <= MAX_SIZE);
-  return m_len == len && (m_type == type || m_type == 0);
+  // Mac address type/length detection is discussed in bug 1568
+  return (m_len == len && m_type == type) || (m_len >= len && m_type == 0);
 }
 bool 
 Address::IsMatchingType (uint8_t type) const
 {
+  NS_LOG_FUNCTION (this << static_cast<uint32_t> (type));
   return m_type == type;
 }
 
 uint8_t 
 Address::Register (void)
 {
+  NS_LOG_FUNCTION_NOARGS ();
   static uint8_t type = 1;
   type++;
   return type;
@@ -129,12 +145,14 @@ Address::Register (void)
 uint32_t
 Address::GetSerializedSize (void) const
 {
+  NS_LOG_FUNCTION (this);
   return 1 + 1 + m_len;
 }
 
 void
 Address::Serialize (TagBuffer buffer) const
 {
+  NS_LOG_FUNCTION (this << &buffer);
   buffer.WriteU8 (m_type);
   buffer.WriteU8 (m_len);
   buffer.Write (m_data,  m_len);
@@ -143,6 +161,7 @@ Address::Serialize (TagBuffer buffer) const
 void
 Address::Deserialize (TagBuffer buffer)
 {
+  NS_LOG_FUNCTION (this << &buffer);
   m_type = buffer.ReadU8 ();
   m_len = buffer.ReadU8 ();
   NS_ASSERT (m_len <= MAX_SIZE);
@@ -231,9 +250,10 @@ std::ostream& operator<< (std::ostream& os, const Address & address)
 static uint8_t
 AsInt (std::string v)
 {
+  NS_LOG_FUNCTION_NOARGS ();
   std::istringstream iss;
   iss.str (v);
-  uint32_t retval;
+  uint8_t retval;
   iss >> std::hex >> retval >> std::dec;
   return retval;
 }

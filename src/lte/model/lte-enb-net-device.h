@@ -123,7 +123,7 @@ public:
 
 protected:
   // inherited from Object
-  virtual void DoStart (void);
+  virtual void DoInitialize (void);
 
 
 private:
@@ -147,8 +147,6 @@ private:
   Ptr<FfMacScheduler> m_scheduler;
 
   uint16_t m_cellId; /**< Cell Identifer. Part of the CGI, see TS 29.274, section 8.21.1  */
-
-  static uint16_t m_cellIdCounter;
 
   uint8_t m_dlBandwidth; /**< downlink bandwidth in RBs */
   uint8_t m_ulBandwidth; /**< uplink bandwidth in RBs */

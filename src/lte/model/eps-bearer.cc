@@ -27,14 +27,33 @@
 namespace ns3 {
 
 
+GbrQosInformation::GbrQosInformation ()
+  : gbrDl (0),
+    gbrUl (0),
+    mbrDl (0),
+    mbrUl (0)
+{
+}
 
+AllocationRetentionPriority::AllocationRetentionPriority ()
+  : priorityLevel (0),
+    preemptionCapability (false),
+    preemptionVulnerability (false)
+{
+}
 
 EpsBearer::EpsBearer ()
+  : qci (NGBR_VIDEO_TCP_DEFAULT)
 {
 }
 
 EpsBearer::EpsBearer (Qci x)
   : qci (x)
+{
+}
+
+EpsBearer::EpsBearer (Qci x, struct GbrQosInformation y)
+  : qci (x), gbrQosInfo (y)
 {
 }
 
