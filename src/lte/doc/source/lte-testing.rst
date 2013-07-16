@@ -190,7 +190,21 @@ the link budget calculations (including interference) corresponding to the topol
 test case, and outputs the resulting SINR and spectral efficiency. The
 latter is then used to determine (using the same procedure adopted for 
 :ref:`sec-lte-amc-tests`. We note that the test vector
-contains separate values for uplink and downlink. 
+contains separate values for uplink and downlink.
+
+
+
+UE Measurements Tests
+-----------------------------
+
+The test suite `lte-ue-measurements`` provides system tests recreating an
+inter-cell interference scenario identical of the one defined for `lte-interference`` test-suite. However, in this test the quantities to be tested are represented by RSRP and RSRQ measurements performed by the UE in two different points of the stack: the source, which is UE PHY layer, and the destination, that is the eNB RRC.
+
+The test vectors are obtained by use of a dedicated octave script
+(available in
+`src/lte/test/reference/lte-ue-measurements.m`), which does
+the link budget calculations (including interference) corresponding to the topology of each
+test case, and outputs the resulting RSRP and RSRQ. The obtained values are then used for checking the correctness of the UE Measurements at PHY layer, while they have to converted according to 3GPP formatting for checking they correctness at eNB RRC level.
 
 
 
@@ -620,13 +634,13 @@ where :math:`P_s^i` is the probability of receiving with success the HARQ block 
 
    \mathrm{T_{test-1}} = 0.0 \times 1 + 0.77 \times 2 + 0.23 \times 3 = 2.23
 
-   \mathrm{T_{test-2}} = 0.0 \times 1 + 0.9862 \times 2 + 0.0138 \times 3 = 2.0138
+   \mathrm{T_{test-2}} = 0.0 \times 1 + 0.995 \times 2 + 0.005 \times 3 = 2.005
 
 The expected throughput is calculted by counting the number of transmission slots available during the simulation (e.g., the number of TTIs) and the size of the TB in the simulation, in detail:
 
 .. math::
 
-   \mathrm{Thr_{test-i}} = \frac{TTI_{NUM}}{T_{test-i}} TB_{size} = \left\{ \begin{array}{lll} \dfrac{1000}{2.23}41 = 18375\mbox{ bps} & \mbox{ for test-1} \\ & \\ \dfrac{1000}{2.0138}469 = 236096\mbox{ bps} & \mbox{ for test-2}\end{array} \right.
+   \mathrm{Thr_{test-i}} = \frac{TTI_{NUM}}{T_{test-i}} TB_{size} = \left\{ \begin{array}{lll} \dfrac{1000}{2.23}41 = 18375\mbox{ bps} & \mbox{ for test-1} \\ & \\ \dfrac{1000}{2.005}597 = 297755\mbox{ bps} & \mbox{ for test-2}\end{array} \right.
 
 where :math:`TTI_{NUM}` is the total number of TTIs in 1 second.
 The test is performed both for Round Robin scheduler. The test passes if the measured throughput matches with the reference throughput within a relative tolerance of 0.1. This tolerance is needed to account for the transient behavior at the beginning of the simulation and the on-fly blocks at the end of the simulation.
@@ -746,16 +760,8 @@ where:
    can be transmitted per TTI.
  - :math:`d^{cr}` is the delay required for eventually needed RRC
    CONNECTION RECONFIGURATION transactions. The number of transactions needed is
-   1 for each bearer activation plus a variable number for SRS
-   reconfiguration that depends on:math:`n`:
-    
-     + 0 for :math:`n \le 2`
-     + 1 for :math:`n \le 5`
-     + 2 for :math:`n \le 10`
-     + 3 for :math:`n \le 20`
-     + 4 for :math:`n > 20`
-
-   Similarly to what done for :math:`d^{ce}`, for each transaction we consider a round trip
+   1 for each bearer activation. Similarly to what done for
+   :math:`d^{ce}`, for each transaction we consider a round trip 
    delay of 10ms plus :math:`\lceil 2n/4 \rceil`.
    delay of 20ms.
 
@@ -870,7 +876,7 @@ The test suite ``lte-x2-handover`` checks the correct functionality of the X2 ha
  - a boolean flag indicating whether the ideal RRC protocol is to be used instead of the real RRC protocol
  - the type of scheduler to be used (RR or PF)
 
-Each test cases passes if the following conditions are true:
+Each test case passes if the following conditions are true:
 
  - at time 0.06s, the test CheckConnected verifies that each UE is connected to the first eNB
  - for each event in the handover list:
@@ -886,6 +892,52 @@ The condition "UE is connected to eNB" is evaluated positively if and only if al
  - the RRC state of the UE at the eNB is CONNECTED_NORMALLY
  - the RRC state at the UE is CONNECTED_NORMALLY
  - the UE is configured with the CellId, DlBandwidth, UlBandwidth,
+   DlEarfcn and UlEarfcn of the eNB
+ - the IMSI of the UE stored at the eNB is correct
+ - the number of active Data Radio Bearers is the expected one, both
+   at the eNB and at the UE
+ - for each Data Radio Bearer, the following identifiers match between
+   the UE and the eNB: EPS bearer id, DRB id, LCID
+
+
+Automatic X2 handover
+---------------------
+
+The test suite ``lte-x2-handover-measures`` checks the correct functionality of the handover
+algorithm. The scenario being tested is a topology with two, three or four eNBs connected by
+an X2 interface. The eNBs are located in a straight line in the X-axes. A UE moves along the
+X-axes going from the neighbourhood of one eNB to the next eNB. Each test case is a particular
+instance of this scenario defined by the following parameters:
+
+ - the number of eNBs in the X-axes
+ - the number of EPS bearers activated for the UE
+ - a list of check point events to be triggered, where each event is defined by:
+   + the time of the first check point event
+   + the time of the last check point event
+   + interval time between two check point events
+   + the index of the UE doing the handover
+   + the index of the eNB where the UE must be connected
+ - a boolean flag indicating whether the ideal RRC protocol is to be used instead of the
+   real RRC protocol
+ - the type of scheduler to be used (RR or PF)
+
+Each test case passes if the following conditions are true:
+
+ - at time 0.08s, the test CheckConnected verifies that each UE is connected to the first eNB
+ - for each event in the check point list:
+
+   + at the indicated check point time, the indicated UE is connected to the indicated eNB
+   + 0.5s after the check point, for each active EPS bearer, the uplink and downlink sink
+     applications of the UE have achieved a number of bytes which is at least half the number
+     of bytes transmitted by the corresponding source applications
+
+The condition "UE is connected to eNB" is evaluated positively if and only if all the following conditions are met:
+
+ - the eNB has the context of the UE (identified by the RNTI value 
+   retrieved from the UE RRC)
+ - the RRC state of the UE at the eNB is CONNECTED_NORMALLY
+ - the RRC state at the UE is CONNECTED_NORMALLY
+ - the UE is configured with the CellId, DlBandwidth, UlBandwidth, 
    DlEarfcn and UlEarfcn of the eNB
  - the IMSI of the UE stored at the eNB is correct
  - the number of active Data Radio Bearers is the expected one, both

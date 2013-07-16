@@ -161,13 +161,13 @@ LenaTestPssFfMacSchedulerSuite::LenaTestPssFfMacSchedulerSuite ()
   // Traffic1 info
   //   UDP traffic: payload size = 100 bytes, interval = 1 ms
   //   UDP rate in scheduler: (payload + RLC header + PDCP header + IP header + UDP header) * 1000 byte/sec -> 132000 byte/rate 
-  // Maximum throughput = 4 / ( 1/2196000 + 1/903000 + 1/621000 + 1/421000 ) = 720930 byte/s
-  // 132000 * 4 = 528000 < 720930 -> estimated throughput in downlink = 132000 byte/sec
+  // Maximum throughput = 4 / ( 1/2196000 + 1/1191000 + 1/1383000 + 1/775000 ) = 1209046 byte/s
+  // 132000 * 4 = 528000 < 1209046 -> estimated throughput in downlink = 132000 byte/sec
   std::vector<uint16_t> dist1;
   dist1.push_back (0);       // User 0 distance --> MCS 28
-  dist1.push_back (4800);    // User 1 distance --> MCS 16
-  dist1.push_back (6000);    // User 2 distance --> MCS 14
-  dist1.push_back (10000);   // User 3 distance --> MCS 8
+  dist1.push_back (4800);    // User 1 distance --> MCS 22
+  dist1.push_back (6000);    // User 2 distance --> MCS 20
+  dist1.push_back (10000);   // User 3 distance --> MCS 14
   std::vector<uint16_t> packetSize1;
   packetSize1.push_back (100);
   packetSize1.push_back (100);
@@ -178,39 +178,39 @@ LenaTestPssFfMacSchedulerSuite::LenaTestPssFfMacSchedulerSuite ()
   estThrPssDl1.push_back (132000); // User 1 estimated TTI throughput from PSS
   estThrPssDl1.push_back (132000); // User 2 estimated TTI throughput from PSS
   estThrPssDl1.push_back (132000); // User 3 estimated TTI throughput from PSS
-  AddTestCase (new LenaPssFfMacSchedulerTestCase2 (dist1,estThrPssDl1,packetSize1,1,errorModel), TestCase::EXTENSIVE);
+  AddTestCase (new LenaPssFfMacSchedulerTestCase2 (dist1,estThrPssDl1,packetSize1,1,errorModel), TestCase::QUICK);
 
   // Traffic2 info
   //   UDP traffic: payload size = 200 bytes, interval = 1 ms
   //   UDP rate in scheduler: (payload + RLC header + PDCP header + IP header + UDP header) * 1000 byte/sec -> 232000 byte/rate 
-  // Maximum throughput = 4 / ( 1/2196000 + 1/903000 + 1/621000 + 1/421000 ) = 720930 byte/s
-  // 232000 * 4 = 928000 > 720930 -> estimated throughput in downlink = 720930 / 4 = 180232 byte/sec 
+  // Maximum throughput = 4 / ( 1/2196000 + 1/1191000 + 1/1383000 + 1/775000 ) = 1209046 byte/s
+  // 232000 * 4 = 928000 < 1209046 -> estimated throughput in downlink = 928000 / 4 = 230000 byte/sec
   std::vector<uint16_t> dist2;
   dist2.push_back (0);       // User 0 distance --> MCS 28
-  dist2.push_back (4800);    // User 1 distance --> MCS 16
-  dist2.push_back (6000);    // User 2 distance --> MCS 14
-  dist2.push_back (10000);   // User 3 distance --> MCS 8
+  dist2.push_back (4800);    // User 1 distance --> MCS 22
+  dist2.push_back (6000);    // User 2 distance --> MCS 20
+  dist2.push_back (10000);   // User 3 distance --> MCS 14
   std::vector<uint16_t> packetSize2;
   packetSize2.push_back (200);
   packetSize2.push_back (200);
   packetSize2.push_back (200);
   packetSize2.push_back (200);
   std::vector<uint32_t> estThrPssDl2;
-  estThrPssDl2.push_back (180232); // User 0 estimated TTI throughput from PSS
-  estThrPssDl2.push_back (180232); // User 1 estimated TTI throughput from PSS
-  estThrPssDl2.push_back (180232); // User 2 estimated TTI throughput from PSS
-  estThrPssDl2.push_back (180232); // User 3 estimated TTI throughput from PSS
-  AddTestCase (new LenaPssFfMacSchedulerTestCase2 (dist2,estThrPssDl2,packetSize2,1,errorModel), TestCase::EXTENSIVE);
+  estThrPssDl2.push_back (230000); // User 0 estimated TTI throughput from PSS
+  estThrPssDl2.push_back (230000); // User 1 estimated TTI throughput from PSS
+  estThrPssDl2.push_back (230000); // User 2 estimated TTI throughput from PSS
+  estThrPssDl2.push_back (230000); // User 3 estimated TTI throughput from PSS
+  AddTestCase (new LenaPssFfMacSchedulerTestCase2 (dist2,estThrPssDl2,packetSize2,1,errorModel), TestCase::QUICK);
 
   // Test Case 3: heterogeneous flow test in PSS
   //   UDP traffic: payload size = [100,200,300] bytes, interval = 1 ms
-  //   UDP rate in scheduler: (payload + RLC header + PDCP header + IP header + UDP header) * 1000 byte/sec -> [132000, 232000, 332000] byte/rate 
-  // Maximum throughput = 3 / ( 1/2196000 + 1/903000 + 1/621000 ) = 945450  byte/s
-  // 132000 + 232000 + 332000 = 696000 < 945450 -> estimated throughput in downlink = [132000, 232000, 332000] byte/sec
+  //   UDP rate in scheduler: (payload + RLC header + PDCP header + IP header + UDP header) * 1000 byte/sec -> [132000, 232000, 332000] byte/rate
+  // Maximum throughput = 3 / ( 1/2196000 + 1/1191000 + 1/1383000) = 1486569 byte/s
+  // 132000 + 232000 + 332000 = 696000 < 1486569 -> estimated throughput in downlink = [132000, 232000, 332000] byte/sec
   std::vector<uint16_t> dist3;
   dist3.push_back (0);    // User 0 distance --> MCS 28
-  dist3.push_back (4800);    // User 1 distance --> MCS 16
-  dist3.push_back (6000);    // User 2 distance --> MCS 14
+  dist3.push_back (4800);    // User 1 distance --> MCS 22
+  dist3.push_back (6000);    // User 2 distance --> MCS 20
   std::vector<uint16_t> packetSize3;
   packetSize3.push_back (100);
   packetSize3.push_back (200);
@@ -406,11 +406,11 @@ LenaPssFfMacSchedulerTestCase1::DoRun (void)
       clientApps.Add (ulClient.Install (ueNodes.Get (u)));
     }
 
-  serverApps.Start (Seconds (0.001));
-  clientApps.Start (Seconds (0.001));
+  serverApps.Start (Seconds (0.030));
+  clientApps.Start (Seconds (0.030));
 
-  double statsStartTime = 0.001; // need to allow for RRC connection establishment + SRS
-  double statsDuration = 1;
+  double statsStartTime = 0.04; // need to allow for RRC connection establishment + SRS
+  double statsDuration = 0.5;
   double tolerance = 0.1;
   Simulator::Stop (Seconds (statsStartTime + statsDuration - 0.0001));
 
@@ -545,7 +545,7 @@ LenaPssFfMacSchedulerTestCase2::DoRun (void)
   remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
 
-  LogComponentDisableAll (LOG_LEVEL_ALL);
+//   LogComponentDisableAll (LOG_LEVEL_ALL);
   //LogComponentEnable ("LenaTestPssFfMacCheduler", LOG_LEVEL_ALL);
    
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
@@ -647,11 +647,11 @@ LenaPssFfMacSchedulerTestCase2::DoRun (void)
       clientApps.Add (ulClient.Install (ueNodes.Get (u)));
    }
 
-  serverApps.Start (Seconds (0.001));
-  clientApps.Start (Seconds (0.001));
+  serverApps.Start (Seconds (0.030));
+  clientApps.Start (Seconds (0.030));
 
-  double statsStartTime = 0.001; // need to allow for RRC connection establishment + SRS
-  double statsDuration = 1.0;
+  double statsStartTime = 0.04; // need to allow for RRC connection establishment + SRS
+  double statsDuration = 0.5;
   double tolerance = 0.1;
   Simulator::Stop (Seconds (statsStartTime + statsDuration - 0.0001));
 
@@ -676,7 +676,7 @@ LenaPssFfMacSchedulerTestCase2::DoRun (void)
       // get the lcId
       uint8_t lcId = 4;
       dlDataRxed.push_back (rlcStats->GetDlRxData (imsi, lcId));
-      NS_LOG_INFO ("\tUser " << i << " dist " << m_dist.at (i) << " imsi " << imsi << " bytes rxed " << (double)dlDataRxed.at (i) << "  thr " << (double)dlDataRxed.at (i) / statsDuration << " ref " << m_nUser);
+      NS_LOG_INFO ("\tUser " << i << " dist " << m_dist.at (i) << " imsi " << imsi << " bytes rxed " << (double)dlDataRxed.at (i) << "  thr " << (double)dlDataRxed.at (i) / statsDuration << " ref " << m_estThrPssDl.at (i));
     }
 
   for (int i = 0; i < m_nUser; i++)

@@ -148,7 +148,7 @@ PhyRxStatsCalculator::UlPhyReception (PhyReceptionStatParameters params)
           return;
         }
       m_ulRxFirstWrite = false;
-      outFile << "% time\tcellId\tIMSI\tRNTI\ttxMode\tlayer\tmcs\tsize\trv\tndi\tcorrect";
+      outFile << "% time\tcellId\tIMSI\tRNTI\tlayer\tmcs\tsize\trv\tndi\tcorrect";
       outFile << std::endl;
     }
   else
@@ -166,7 +166,6 @@ PhyRxStatsCalculator::UlPhyReception (PhyReceptionStatParameters params)
   outFile << (uint32_t) params.m_cellId << "\t";
   outFile << params.m_imsi << "\t";
   outFile << params.m_rnti << "\t";
-  outFile << (uint32_t) params.m_txMode << "\t";
   outFile << (uint32_t) params.m_layer << "\t";
   outFile << (uint32_t) params.m_mcs << "\t";
   outFile << params.m_size << "\t";
@@ -174,6 +173,50 @@ PhyRxStatsCalculator::UlPhyReception (PhyReceptionStatParameters params)
   outFile << (uint32_t) params.m_ndi << "\t";
   outFile << (uint32_t) params.m_correctness << std::endl;
   outFile.close ();
+}
+
+void
+PhyRxStatsCalculator::DlPhyReceptionCallback (Ptr<PhyRxStatsCalculator> phyRxStats,
+                      std::string path, PhyReceptionStatParameters params)
+{
+  NS_LOG_FUNCTION (phyRxStats << path);
+  uint64_t imsi = 0;
+  std::ostringstream pathAndRnti;
+  pathAndRnti << path << "/" << params.m_rnti;
+  if (phyRxStats->ExistsImsiPath (pathAndRnti.str ()) == true)
+    {
+      imsi = phyRxStats->GetImsiPath (pathAndRnti.str ());
+    }
+  else
+    {
+      imsi = FindImsiForUe (path, params.m_rnti);
+      phyRxStats->SetImsiPath (pathAndRnti.str (), imsi);
+    }
+
+  params.m_imsi = imsi;
+  phyRxStats->DlPhyReception (params);
+}
+
+void
+PhyRxStatsCalculator::UlPhyReceptionCallback (Ptr<PhyRxStatsCalculator> phyRxStats,
+                      std::string path, PhyReceptionStatParameters params)
+{
+  NS_LOG_FUNCTION (phyRxStats << path);
+  uint64_t imsi = 0;
+  std::ostringstream pathAndRnti;
+  pathAndRnti << path << "/" << params.m_rnti;
+  if (phyRxStats->ExistsImsiPath (pathAndRnti.str ()) == true)
+    {
+      imsi = phyRxStats->GetImsiPath (pathAndRnti.str ());
+    }
+  else
+    {
+      imsi = FindImsiForEnb (path, params.m_rnti);
+      phyRxStats->SetImsiPath (pathAndRnti.str (), imsi);
+    }
+
+  params.m_imsi = imsi;
+  phyRxStats->UlPhyReception (params);
 }
 
 } // namespace ns3

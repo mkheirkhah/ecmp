@@ -394,8 +394,6 @@ PssFfMacScheduler::DoCschedLcConfigReq (const struct FfMacCschedSapProvider::Csc
         }
       else
         {
-          //NS_LOG_ERROR ("RNTI already exists");
-
           // update GBR from UeManager::SetupDataRadioBearer ()
           double tbrDlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateDl / 8;   // byte/s
           double tbrUlInBytes = params.m_logicalChannelConfigList.at (i).m_eRabGuaranteedBitrateUl / 8;   // byte/s
@@ -1849,6 +1847,7 @@ PssFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sche
       if ((itRnti != rntiAllocated.end ())||((*it).second == 0))
         {
           // UE already allocated for UL-HARQ -> skip it
+          NS_LOG_DEBUG (this << " UE already allocated in HARQ -> discared, RNTI " << (*it).first);
           it++;
           if (it == m_ceBsrRxed.end ())
             {
@@ -1873,7 +1872,7 @@ PssFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sche
       uldci.m_rnti = (*it).first;
       uldci.m_rbLen = rbPerFlow;
       bool allocated = false;
-      NS_LOG_INFO (this << " RB Allocated " << rbAllocated << " rbPerFlow " << rbPerFlow);
+      NS_LOG_INFO (this << " RB Allocated " << rbAllocated << " rbPerFlow " << rbPerFlow << " flows " << nflows);
       while ((!allocated)&&((rbAllocated + rbPerFlow - 1) < m_cschedCellConfig.m_ulBandwidth) && (rbPerFlow != 0))
         {
           // check availability
@@ -1957,8 +1956,8 @@ PssFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sche
 
           // translate SINR -> cqi: WILD ACK: same as DL
           double s = log2 ( 1 + (
-                              pow (10, minSinr / 10 )  /
-                              ( (-log (5.0 * 0.00005 )) / 1.5) ));
+                                 std::pow (10, minSinr / 10 )  /
+                                 ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
           cqi = m_amc->GetCqiFromSpectralEfficiency (s);
           if (cqi == 0)
             {
@@ -1967,6 +1966,12 @@ PssFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sche
                 {
                   // restart from the first
                   it = m_ceBsrRxed.begin ();
+                }
+              NS_LOG_DEBUG (this << " UE discared for CQI=0, RNTI " << uldci.m_rnti);
+              // remove UE from allocation map
+              for (uint16_t i = uldci.m_rbStart; i < uldci.m_rbStart + uldci.m_rbLen; i++)
+                {
+                  rbgAllocationMap.at (i) = 0;
                 }
               continue; // CQI == 0 means "out of range" (see table 7.2.3-1 of 36.213)
             }
@@ -2340,15 +2345,28 @@ PssFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_t 
         }
       else if ((*it).second.m_rlcTransmissionQueueSize > 0)
         {
+          uint32_t rlcOverhead;
+          if (lcid == 1)
+            {
+              // for SRB1 (using RLC AM) it's better to
+              // overestimate RLC overhead rather than
+              // underestimate it and risk unneeded
+              // segmentation which increases delay 
+              rlcOverhead = 4;                                  
+            }
+          else
+            {
+              // minimum RLC overhead due to header
+              rlcOverhead = 2;
+            }
           // update transmission queue
-          if ((*it).second.m_rlcTransmissionQueueSize <= size)
+          if ((*it).second.m_rlcTransmissionQueueSize <= size - rlcOverhead)
             {
               (*it).second.m_rlcTransmissionQueueSize = 0;
             }
           else
-            {
-              size -= 2; // remove minimun RLC overhead due to header
-              (*it).second.m_rlcTransmissionQueueSize -= size;
+            {                    
+              (*it).second.m_rlcTransmissionQueueSize -= size - rlcOverhead;
             }
         }
     }

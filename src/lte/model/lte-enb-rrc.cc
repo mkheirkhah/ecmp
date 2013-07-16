@@ -241,20 +241,27 @@ UeManager::DoInitialize ()
   switch (m_state)
     {
     case INITIAL_RANDOM_ACCESS:
-      // must account for reception of RAR and transmission of RRC CONNECTION REQUEST over UL GRANT
-      maxConnectionDelay = MilliSeconds (15); 
+      m_connectionTimeout = Simulator::Schedule (m_rrc->m_connectionTimeoutDuration, 
+                                                 &LteEnbRrc::ConnectionTimeout, 
+                                                 m_rrc, m_rnti);
       break;
+
     case HANDOVER_JOINING:
-      // must account for reception of X2 HO REQ ACK by source eNB,
-      // transmission of the Handover Command, and
-      // non-contention-based random access
-      maxConnectionDelay = MilliSeconds (50); 
+      m_handoverJoiningTimeout = Simulator::Schedule (m_rrc->m_handoverJoiningTimeoutDuration, 
+                                                 &LteEnbRrc::HandoverJoiningTimeout, 
+                                                 m_rrc, m_rnti);
       break;      
+
     default:
-      NS_FATAL_ERROR ("unspecified maxConnectionDelay for state " << ToString (m_state));
+      NS_FATAL_ERROR ("unexpected state " << ToString (m_state));
       break;      
     }  
-  m_connectionTimeout = Simulator::Schedule (maxConnectionDelay, &LteEnbRrc::ConnectionTimeout, m_rrc, m_rnti);
+
+  m_servingCellMeasures = CreateObject<UeMeasure> ();
+  m_servingCellMeasures->m_cellId = m_rrc->m_cellId;
+  m_servingCellMeasures->m_rsrp = 0;
+  m_servingCellMeasures->m_rsrq = 0;
+
 }
 
 
@@ -272,7 +279,9 @@ UeManager::DoDispose ()
        ++it)
     {
       m_rrc->m_x2uTeidInfoMap.erase (it->second->m_gtpTeid);
-    }    
+    }
+
+  m_servingCellMeasures = 0;
 }
 
 TypeId UeManager::GetTypeId (void)
@@ -518,12 +527,9 @@ UeManager::PrepareHandover (uint16_t cellId)
         params.bearers = GetErabList ();
   
         LteRrcSap::HandoverPreparationInfo hpi;
-        hpi.asConfig.sourceMeasConfig.haveQuantityConfig = false;
-        hpi.asConfig.sourceMeasConfig.haveMeasGapConfig = false;
-        hpi.asConfig.sourceMeasConfig.haveSmeasure = false;
-        hpi.asConfig.sourceMeasConfig.haveSpeedStatePars = false;
         hpi.asConfig.sourceUeIdentity = m_rnti;
         hpi.asConfig.sourceDlCarrierFreq = m_rrc->m_dlEarfcn;
+        hpi.asConfig.sourceMeasConfig = BuildMeasConfig ();
         hpi.asConfig.sourceRadioResourceConfig = GetRadioResourceConfigForHandoverPreparationInfo ();
         hpi.asConfig.sourceMasterInformationBlock.dlBandwidth = m_rrc->m_dlBandwidth;
         hpi.asConfig.sourceMasterInformationBlock.systemFrameNumber = 0;
@@ -542,7 +548,7 @@ UeManager::PrepareHandover (uint16_t cellId)
         NS_LOG_LOGIC ("oldEnbUeX2apId = " << params.oldEnbUeX2apId);
         NS_LOG_LOGIC ("sourceCellId = " << params.sourceCellId);
         NS_LOG_LOGIC ("targetCellId = " << params.targetCellId);
-        NS_LOG_LOGIC ("mmmUeS1apId = " << params.oldEnbUeX2apId);
+        NS_LOG_LOGIC ("mmeUeS1apId = " << params.mmeUeS1apId);
         NS_LOG_LOGIC ("rrcContext   = " << params.rrcContext);
   
         m_rrc->m_x2SapProvider->SendHandoverRequest (params);
@@ -575,6 +581,9 @@ UeManager::RecvHandoverRequestAck (EpcX2SapUser::HandoverRequestAckParams params
   LteRrcSap::RrcConnectionReconfiguration handoverCommand = m_rrc->m_rrcSapUser->DecodeHandoverCommand (encodedHandoverCommand);
   m_rrc->m_rrcSapUser->SendRrcConnectionReconfiguration (m_rnti, handoverCommand);
   SwitchToState (HANDOVER_LEAVING);
+  m_handoverLeavingTimeout = Simulator::Schedule (m_rrc->m_handoverLeavingTimeoutDuration, 
+                                                  &LteEnbRrc::HandoverLeavingTimeout, 
+                                                  m_rrc, m_rnti);  
   NS_ASSERT (handoverCommand.haveMobilityControlInfo);  
   m_rrc->m_handoverStartTrace (m_imsi, m_rrc->m_cellId, m_rnti, handoverCommand.mobilityControlInfo.targetPhysCellId);
 
@@ -744,6 +753,15 @@ UeManager::RecvSnStatusTransfer (EpcX2SapUser::SnStatusTransferParams params)
     }
 }
 
+void 
+UeManager::RecvUeContextRelease (EpcX2SapUser::UeContextReleaseParams params)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT_MSG (m_state == HANDOVER_LEAVING, "method unexpected in state " << ToString (m_state));
+  m_handoverLeavingTimeout.Cancel ();  
+}
+
+
 // methods forwarded from RRC SAP
 
 void 
@@ -784,8 +802,9 @@ UeManager::RecvRrcConnectionRequest (LteRrcSap::RrcConnectionRequest msg)
             LteRrcSap::RrcConnectionReject rejectMsg;
             rejectMsg.waitTime = 3;
             m_rrc->m_rrcSapUser->SendRrcConnectionReject (m_rnti, rejectMsg);
-            Time maxRecvConnRejectDelay = MilliSeconds (30);
-            m_connectionTimeout = Simulator::Schedule (maxRecvConnRejectDelay, &LteEnbRrc::ConnectionTimeout, m_rrc, m_rnti);
+            m_connectionRejectedTimeout = Simulator::Schedule (m_rrc->m_connectionRejectedTimeoutDuration, 
+                                                       &LteEnbRrc::ConnectionRejectedTimeout, 
+                                                       m_rrc, m_rnti);
             SwitchToState (CONNECTION_REJECTED);
           }        
       }
@@ -846,7 +865,7 @@ UeManager::RecvRrcConnectionReconfigurationCompleted (LteRrcSap::RrcConnectionRe
       
     case HANDOVER_JOINING:
       {
-        m_connectionTimeout.Cancel ();
+        m_handoverJoiningTimeout.Cancel ();
         NS_LOG_INFO ("Send PATH SWITCH REQUEST to the MME");
         EpcEnbS1SapProvider::PathSwitchRequestParameters params;
         params.rnti = m_rnti;
@@ -876,6 +895,20 @@ void
 UeManager::RecvRrcConnectionReestablishmentRequest (LteRrcSap::RrcConnectionReestablishmentRequest msg)
 {
   NS_LOG_FUNCTION (this);
+  switch (m_state)
+    {
+    case CONNECTED_NORMALLY:
+      break;
+
+    case HANDOVER_LEAVING:      
+      m_handoverLeavingTimeout.Cancel ();  
+      break;      
+      
+    default:
+      NS_FATAL_ERROR ("method unexpected in state " << ToString (m_state));
+      break;      
+    }
+
   LteRrcSap::RrcConnectionReestablishment msg2;
   msg2.rrcTransactionIdentifier = GetNewRrcTransactionIdentifier ();
   msg2.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
@@ -894,6 +927,139 @@ void
 UeManager::RecvMeasurementReport (LteRrcSap::MeasurementReport msg)
 {
   NS_LOG_FUNCTION (this);
+  NS_LOG_LOGIC ("measId " << (uint16_t) msg.measResults.measId
+                << " haveMeasResultNeighCells " << msg.measResults.haveMeasResultNeighCells
+                << " measResultListEutra " << msg.measResults.measResultListEutra.size ());
+  NS_LOG_LOGIC ("serving cellId " << m_rrc->m_cellId
+                << " RSRP " << (uint16_t) msg.measResults.rsrpResult
+                << " RSRQ " << (uint16_t) msg.measResults.rsrqResult);
+
+  for (std::list <LteRrcSap::MeasResultEutra>::iterator it = msg.measResults.measResultListEutra.begin ();
+       it != msg.measResults.measResultListEutra.end ();
+       ++it)
+    {
+      NS_LOG_LOGIC ("neighbour cellId " << it->physCellId
+                    << " RSRP " << (it->haveRsrpResult ? (uint16_t) it->rsrpResult : 255)
+                    << " RSRQ " << (it->haveRsrqResult ? (uint16_t) it->rsrqResult : 255));
+    }
+
+  m_rrc->m_recvMeasurementReportTrace (m_imsi, m_rrc->m_cellId, m_rnti, msg);
+
+  // Just these two measId are supported
+  NS_ASSERT_MSG ((msg.measResults.measId == 1) || (msg.measResults.measId == 2),
+                 "Measure identity is unknown");
+
+  /// Event A2 (Serving becomes worse than threshold)
+  if (msg.measResults.measId == 1)
+    {
+      // Keep new RSRQ value reported for the serving cell
+      m_servingCellMeasures->m_rsrq = msg.measResults.rsrqResult;
+      m_servingCellMeasures->m_rsrp = msg.measResults.rsrpResult;
+
+      // Serving cell is worse than a handover threshold.
+      // This handover threshold is independent from the event A2 threshold
+      if (m_servingCellMeasures->m_rsrq <= m_rrc->m_servingCellHandoverThreshold)
+        {
+          // Find the best neighbour cell (eNB)
+          Ptr<UeMeasure> bestNeighbour = 0;
+          uint8_t bestNeighbourRsrq = 0;
+          NS_LOG_LOGIC ("Number of neighbour cells = " << m_neighbourCellMeasures.size ());
+          for (std::map <uint16_t, Ptr<UeMeasure> >::iterator it = m_neighbourCellMeasures.begin ();
+               it != m_neighbourCellMeasures.end ();
+               ++it)
+            {
+              if (it->second->m_rsrq > bestNeighbourRsrq)
+                {
+                  Ptr<NeighbourRelation> neighbourRelation = m_rrc->m_neighbourRelationTable[it->second->m_cellId];
+                  if ((neighbourRelation->m_noHo == false) &&
+                      (neighbourRelation->m_noX2 == false))
+                    {
+                      bestNeighbour = it->second;
+                      bestNeighbourRsrq = it->second->m_rsrq;
+                    }
+                }
+            }
+
+          // Trigger Handover, if needed
+          if (bestNeighbour)
+            {
+              uint16_t targetCellId = bestNeighbour->m_cellId;
+              NS_LOG_LOGIC ("Best neighbour cellId " << targetCellId);
+              if ( (bestNeighbour->m_rsrq - m_servingCellMeasures->m_rsrq >= m_rrc->m_neighbourCellHandoverOffset) &&
+                   (m_state == CONNECTED_NORMALLY) )
+                {
+                  NS_LOG_LOGIC ("Trigger Handover to cellId " << targetCellId);
+                  NS_LOG_LOGIC ("target cell RSRQ " << (uint16_t) bestNeighbour->m_rsrq);
+                  NS_LOG_LOGIC ("serving cell RSRQ " << (uint16_t) m_servingCellMeasures->m_rsrq);
+                  PrepareHandover (targetCellId);
+                }
+            }
+        }
+    }
+  /// Event A4 (Neighbour becomes better than threshold)
+  else if (msg.measResults.measId == 2)
+    {
+      // Update the NRT
+      if (msg.measResults.haveMeasResultNeighCells && ! (msg.measResults.measResultListEutra.empty ()))
+        {
+          for (std::list <LteRrcSap::MeasResultEutra>::iterator it = msg.measResults.measResultListEutra.begin ();
+               it != msg.measResults.measResultListEutra.end ();
+               ++it)
+            {
+              // Keep new RSRQ value reported for the neighbour cell
+              NS_ASSERT_MSG (it->haveRsrqResult == true, "RSRQ measure missing for cellId " << it->physCellId);
+
+              // Update Neighbour Relation Table
+              if (m_rrc->m_neighbourRelationTable.find (it->physCellId) != m_rrc->m_neighbourRelationTable.end ())
+                {
+                  // Update neighbour info
+                  Ptr<NeighbourRelation> neighbourRelation = m_rrc->m_neighbourRelationTable[it->physCellId];
+                  NS_ASSERT_MSG (neighbourRelation->m_physCellId == it->physCellId,
+                                 "Wrong cellId " << neighbourRelation->m_physCellId);
+
+                  if (neighbourRelation->m_noX2 == false)
+                    {
+                      neighbourRelation->m_noHo = false;
+                    }
+                  neighbourRelation->m_detectedAsNeighbour = true;
+                }
+              else // new neighbour
+                {
+                  Ptr<NeighbourRelation> neighbourRelation = CreateObject <NeighbourRelation> ();
+                  neighbourRelation->m_physCellId = it->physCellId;
+                  neighbourRelation->m_noRemove = false;
+                  neighbourRelation->m_noHo = true;
+                  neighbourRelation->m_noX2 = true;
+                  neighbourRelation->m_detectedAsNeighbour = true;
+                  m_rrc->m_neighbourRelationTable[it->physCellId] = neighbourRelation;
+                }
+
+              // Update measure info of the neighbour cell
+              Ptr<UeMeasure> neighbourCellMeasures;
+              if (m_neighbourCellMeasures.find (it->physCellId) != m_neighbourCellMeasures.end ())
+                {
+                  neighbourCellMeasures = m_neighbourCellMeasures[it->physCellId];
+                  neighbourCellMeasures->m_cellId = it->physCellId;
+                  neighbourCellMeasures->m_rsrq = it->rsrqResult;
+                  neighbourCellMeasures->m_rsrp = 0;
+                }
+              else
+                {
+                  neighbourCellMeasures = CreateObject <UeMeasure> ();
+                  neighbourCellMeasures->m_cellId = it->physCellId;
+                  neighbourCellMeasures->m_rsrq = it->rsrqResult;
+                  neighbourCellMeasures->m_rsrp = 0;
+                  m_neighbourCellMeasures[it->physCellId] = neighbourCellMeasures;
+                }
+            }
+        }
+      else
+        {
+           NS_LOG_LOGIC ("WARNING");
+//            NS_ASSERT_MSG ("Event A4 received without measure results for neighbour cells");
+           // TODO Remove neighbours in the neighbourCellMeasures table
+        }
+    }
 }
 
 
@@ -1028,8 +1194,77 @@ UeManager::BuildRrcConnectionReconfiguration ()
   msg.haveRadioResourceConfigDedicated = true;
   msg.radioResourceConfigDedicated = BuildRadioResourceConfigDedicated ();
   msg.haveMobilityControlInfo = false;
-  msg.haveMeasConfig = false;
+  msg.haveMeasConfig = true;
+  msg.measConfig = BuildMeasConfig ();
+
   return msg;
+}
+
+LteRrcSap::MeasConfig
+UeManager::BuildMeasConfig ()
+{
+  // Just intra-frequency measurements are supported,
+  // so just one measurement object is created
+  LteRrcSap::MeasObjectToAddMod measObject;
+  measObject.measObjectId = 1;
+  measObject.measObjectEutra.carrierFreq = m_rrc->m_dlEarfcn;
+  measObject.measObjectEutra.allowedMeasBandwidth = m_rrc->m_dlBandwidth;
+  measObject.measObjectEutra.presenceAntennaPort1 = false;
+  measObject.measObjectEutra.neighCellConfig = 0;
+  measObject.measObjectEutra.offsetFreq = 0;
+  measObject.measObjectEutra.haveCellForWhichToReportCGI = false;
+
+  // Just event A2 and event A4 are supported
+  LteRrcSap::ReportConfigToAddMod reportConfigA2;
+  reportConfigA2.reportConfigId = 1;
+  reportConfigA2.reportConfigEutra.triggerType = LteRrcSap::ReportConfigEutra::EVENT;
+  reportConfigA2.reportConfigEutra.eventId = LteRrcSap::ReportConfigEutra::EVENT_A2;
+  reportConfigA2.reportConfigEutra.threshold1.choice = LteRrcSap::ThresholdEutra::THRESHOLD_RSRQ;
+  reportConfigA2.reportConfigEutra.threshold1.range = m_rrc->m_eventA2Threshold;
+  reportConfigA2.reportConfigEutra.hysteresis = 0;
+  reportConfigA2.reportConfigEutra.timeToTrigger = 0;
+  reportConfigA2.reportConfigEutra.triggerQuantity = LteRrcSap::ReportConfigEutra::RSRQ;
+  reportConfigA2.reportConfigEutra.reportQuantity = LteRrcSap::ReportConfigEutra::SAME_AS_TRIGGER_QUANTITY; 
+  reportConfigA2.reportConfigEutra.maxReportCells = LteRrcSap::MaxReportCells;
+  reportConfigA2.reportConfigEutra.reportInterval = LteRrcSap::ReportConfigEutra::MS480;
+  reportConfigA2.reportConfigEutra.reportAmount = 255;
+
+  LteRrcSap::ReportConfigToAddMod reportConfigA4;
+  reportConfigA4.reportConfigId = 2;
+  reportConfigA4.reportConfigEutra.triggerType = LteRrcSap::ReportConfigEutra::EVENT;
+  reportConfigA4.reportConfigEutra.eventId = LteRrcSap::ReportConfigEutra::EVENT_A4;
+  reportConfigA4.reportConfigEutra.threshold1.choice = LteRrcSap::ThresholdEutra::THRESHOLD_RSRQ;
+  reportConfigA4.reportConfigEutra.threshold1.range = m_rrc->m_eventA4Threshold;
+  reportConfigA4.reportConfigEutra.hysteresis = 0;
+  reportConfigA4.reportConfigEutra.timeToTrigger = 0;
+  reportConfigA4.reportConfigEutra.triggerQuantity = LteRrcSap::ReportConfigEutra::RSRQ;
+  reportConfigA4.reportConfigEutra.reportQuantity = LteRrcSap::ReportConfigEutra::SAME_AS_TRIGGER_QUANTITY; 
+  reportConfigA4.reportConfigEutra.maxReportCells = LteRrcSap::MaxReportCells;
+  reportConfigA4.reportConfigEutra.reportInterval = LteRrcSap::ReportConfigEutra::MS480;
+  reportConfigA4.reportConfigEutra.reportAmount = 255;
+
+  LteRrcSap::MeasIdToAddMod measId[2];
+  measId[0].measId = 1;
+  measId[0].measObjectId = 1;
+  measId[0].reportConfigId = 1;
+  measId[1].measId = 2;
+  measId[1].measObjectId = 1;
+  measId[1].reportConfigId = 2;
+
+  LteRrcSap::MeasConfig measConfig;
+  measConfig.measObjectToAddModList.push_back (measObject);
+  measConfig.reportConfigToAddModList.push_back (reportConfigA2);
+  measConfig.reportConfigToAddModList.push_back (reportConfigA4);
+  measConfig.measIdToAddModList.push_back (measId[0]);
+  measConfig.measIdToAddModList.push_back (measId[1]);
+  measConfig.haveQuantityConfig = true;
+  measConfig.quantityConfig.filterCoefficientRSRP = 4; // default = fc4 (See TS 36.331)
+  measConfig.quantityConfig.filterCoefficientRSRQ = 4; // default = fc4 (See TS 36.331)
+  measConfig.haveMeasGapConfig = false;
+  measConfig.haveSmeasure = false;
+  measConfig.haveSpeedStatePars = false;
+
+  return measConfig;
 }
 
 LteRrcSap::RadioResourceConfigDedicated
@@ -1233,7 +1468,27 @@ LteEnbRrc::GetTypeId (void)
                    UintegerValue (40),  
                    MakeUintegerAccessor (&LteEnbRrc::SetSrsPeriodicity, 
                                          &LteEnbRrc::GetSrsPeriodicity),
-                   MakeUintegerChecker<uint32_t> ())   
+                   MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("ConnectionTimeoutDuration",
+                   "After a RA attempt, if no RRC Connection Request is received before this time, the UE context is destroyed. Must account for reception of RAR and transmission of RRC CONNECTION REQUEST over UL GRANT.",
+                   TimeValue (MilliSeconds (15)),  
+                   MakeTimeAccessor (&LteEnbRrc::m_connectionTimeoutDuration),
+                   MakeTimeChecker ())
+    .AddAttribute ("ConnectionRejectedTimeoutDuration",
+                   "Time to wait between sending a RRC CONNECTION REJECT and destroying the UE context",
+                   TimeValue (MilliSeconds (30)),  
+                   MakeTimeAccessor (&LteEnbRrc::m_connectionRejectedTimeoutDuration),
+                   MakeTimeChecker ())
+    .AddAttribute ("HandoverJoiningTimeoutDuration",
+                   "After accepting a handover request, if no RRC Connection Reconfiguration Completed is received before this time, the UE context is destroyed. Must account for reception of X2 HO REQ ACK by source eNB, transmission of the Handover Command, non-contention-based random access and reception of the RRC Connection Reconfiguration Completed message.",
+                   TimeValue (MilliSeconds (200)),  
+                   MakeTimeAccessor (&LteEnbRrc::m_handoverJoiningTimeoutDuration),
+                   MakeTimeChecker ())
+    .AddAttribute ("HandoverLeavingTimeoutDuration",
+                   "After issuing a Handover Command, if neither RRC Connection Reestablishment nor X2 UE Context Release has been previously received, the UE context is destroyed.",
+                   TimeValue (MilliSeconds (500)),  
+                   MakeTimeAccessor (&LteEnbRrc::m_handoverLeavingTimeoutDuration),
+                   MakeTimeChecker ())
    .AddAttribute ("AdmitHandoverRequest",
                    "Whether to admit an X2 handover request from another eNB",
                    BooleanValue (true),  
@@ -1243,7 +1498,27 @@ LteEnbRrc::GetTypeId (void)
                    "Whether to admit a connection request from a Ue",
                    BooleanValue (true),  
                    MakeBooleanAccessor (&LteEnbRrc::m_admitRrcConnectionRequest),
-                   MakeBooleanChecker ()) 
+                   MakeBooleanChecker ())
+    .AddAttribute ("EventA2Threshold",
+                   "Threshold of the event A2 (Serving becomes worse than threshold)",
+                   UintegerValue (34),
+                   MakeUintegerAccessor (&LteEnbRrc::m_eventA2Threshold),
+                   MakeUintegerChecker<uint8_t> ())
+    .AddAttribute ("EventA4Threshold",
+                   "Threshold of the event A4 (Neighbour becomes better than threshold)",
+                   UintegerValue (0),
+                   MakeUintegerAccessor (&LteEnbRrc::m_eventA4Threshold),
+                   MakeUintegerChecker<uint8_t> ())
+    .AddAttribute ("ServingCellHandoverThreshold",
+                   "If serving cell is worse than this threshold, neighbour cells are consider for Handover",
+                   UintegerValue (15),
+                   MakeUintegerAccessor (&LteEnbRrc::m_servingCellHandoverThreshold),
+                   MakeUintegerChecker<uint8_t> ())
+    .AddAttribute ("NeighbourCellHandoverOffset",
+                   "Minimum offset between serving and best neighbour cell to trigger the Handover",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&LteEnbRrc::m_neighbourCellHandoverOffset),
+                   MakeUintegerChecker<uint8_t> ())
     .AddTraceSource ("NewUeContext",
                      "trace fired upon creation of a new UE context",
                      MakeTraceSourceAccessor (&LteEnbRrc::m_newUeContextTrace))
@@ -1259,6 +1534,9 @@ LteEnbRrc::GetTypeId (void)
     .AddTraceSource ("HandoverEndOk",
                      "trace fired upon successful termination of a handover procedure",
                      MakeTraceSourceAccessor (&LteEnbRrc::m_handoverEndOkTrace))
+    .AddTraceSource ("RecvMeasurementReport",
+                     "trace fired when measurement report is received",
+                     MakeTraceSourceAccessor (&LteEnbRrc::m_recvMeasurementReportTrace))
   ;
   return tid;
 }
@@ -1403,9 +1681,37 @@ void
 LteEnbRrc::ConnectionTimeout (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
+  NS_ASSERT_MSG (GetUeManager (rnti)->GetState () == UeManager::INITIAL_RANDOM_ACCESS, 
+                 "ConnectionTimeout in unexpected state " << ToString (GetUeManager (rnti)->GetState ()));
   RemoveUe (rnti);
 }
 
+void
+LteEnbRrc::ConnectionRejectedTimeout (uint16_t rnti)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  NS_ASSERT_MSG (GetUeManager (rnti)->GetState () == UeManager::CONNECTION_REJECTED,
+                 "ConnectionTimeout in unexpected state " << ToString (GetUeManager (rnti)->GetState ()));
+  RemoveUe (rnti);
+}
+
+void
+LteEnbRrc::HandoverJoiningTimeout (uint16_t rnti)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  NS_ASSERT_MSG (GetUeManager (rnti)->GetState () == UeManager::HANDOVER_JOINING, 
+                 "HandoverJoiningTimeout in unexpected state " << ToString (GetUeManager (rnti)->GetState ()));
+  RemoveUe (rnti);
+}
+
+void
+LteEnbRrc::HandoverLeavingTimeout (uint16_t rnti)
+{
+  NS_LOG_FUNCTION (this << rnti);
+  NS_ASSERT_MSG (GetUeManager (rnti)->GetState () == UeManager::HANDOVER_LEAVING, 
+                 "HandoverLeavingTimeout in unexpected state " << ToString (GetUeManager (rnti)->GetState ()));
+  RemoveUe (rnti);
+}
 
 void
 LteEnbRrc::SendHandoverRequest (uint16_t rnti, uint16_t cellId)
@@ -1635,6 +1941,7 @@ LteEnbRrc::DoRecvUeContextRelease (EpcX2SapUser::UeContextReleaseParams params)
   NS_LOG_LOGIC ("newEnbUeX2apId = " << params.newEnbUeX2apId);
 
   uint16_t rnti = params.oldEnbUeX2apId;
+  GetUeManager (rnti)->RecvUeContextRelease (params);
   RemoveUe (rnti);
 }
 
@@ -1716,7 +2023,7 @@ LteEnbRrc::AddUe (UeManager::State state)
   NS_LOG_FUNCTION (this);
   bool found = false;
   uint16_t rnti;
-  for (rnti = m_lastAllocatedRnti; 
+  for (rnti = m_lastAllocatedRnti + 1; 
        (rnti != m_lastAllocatedRnti - 1) && (!found);
        ++rnti)
     {
@@ -1790,6 +2097,21 @@ LteEnbRrc::GetRlcType (EpsBearer bearer)
 }
 
 
+void
+LteEnbRrc::AddX2Neighbour (uint16_t cellId)
+{
+  NS_LOG_FUNCTION (cellId);
+  NS_ASSERT_MSG (m_neighbourRelationTable.find (cellId) == m_neighbourRelationTable.end (),
+                 "There is already an entry in the Neighbour Relation Table for cellId " << cellId);
+
+  Ptr<NeighbourRelation> neighbourRelation = CreateObject <NeighbourRelation> ();
+  neighbourRelation->m_physCellId = cellId;
+  neighbourRelation->m_noRemove = true;
+  neighbourRelation->m_noHo = true;
+  neighbourRelation->m_noX2 = false;
+  neighbourRelation->m_detectedAsNeighbour = false;
+  m_neighbourRelationTable[cellId] = neighbourRelation;
+}
 
 
 // from 3GPP TS 36.213 table 8.2-1 UE Specific SRS Periodicity
@@ -1914,7 +2236,7 @@ LteEnbRrc::GetLogicalChannelPriority (EpsBearer bearer)
 void
 LteEnbRrc::SendSystemInformation ()
 {
-  NS_LOG_FUNCTION (this);
+//   NS_LOG_FUNCTION (this);
   // for simplicity, we use the same periodicity for all sibs
   // note that in real systems the periodicy of each sibs could be different
   LteRrcSap::SystemInformation si;

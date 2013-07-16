@@ -338,15 +338,26 @@ static ns3::GlobalValue g_srsPeriodicity ("srsPeriodicity",
                                                ns3::UintegerValue (80),
                                                ns3::MakeUintegerChecker<uint16_t> ());
 
+static ns3::GlobalValue g_outdoorUeMinSpeed ("outdoorUeMinSpeed",
+                                   "Minimum speed value of macor UE with random waypoint model [m/s].",
+                                   ns3::DoubleValue (0.0),
+                                   ns3::MakeDoubleChecker<double> ());
+
+static ns3::GlobalValue g_outdoorUeMaxSpeed ("outdoorUeMaxSpeed",
+                                   "Maximum speed value of macor UE with random waypoint model [m/s].",
+                                   ns3::DoubleValue (0.0),
+                                   ns3::MakeDoubleChecker<double> ());
+
 int
 main (int argc, char *argv[])
 {
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
   // arguments, so that the user is allowed to override these settings 
-  Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds(1)));
-  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue(1000000));
-  
+  Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (1)));
+  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
+  Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue (10 * 1024));
+
   CommandLine cmd;
   cmd.Parse (argc, argv);
   ConfigStore inputConfig;
@@ -411,11 +422,15 @@ main (int argc, char *argv[])
   uint16_t numBearersPerUe = uintegerValue.Get ();
   GlobalValue::GetValueByName ("srsPeriodicity", uintegerValue);
   uint16_t srsPeriodicity = uintegerValue.Get ();
+  GlobalValue::GetValueByName ("outdoorUeMinSpeed", doubleValue);
+  uint16_t outdoorUeMinSpeed = doubleValue.Get ();
+  GlobalValue::GetValueByName ("outdoorUeMaxSpeed", doubleValue);
+  uint16_t outdoorUeMaxSpeed = doubleValue.Get ();
 
   Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
   Box macroUeBox;
-
+  double ueZ = 1.5;
   if (nMacroEnbSites > 0)
     {
       uint32_t currentSite = nMacroEnbSites -1;
@@ -433,12 +448,12 @@ main (int argc, char *argv[])
                         (nMacroEnbSitesX + areaMarginFactor)*interSiteDistance, 
                         -areaMarginFactor*interSiteDistance, 
                         (nMacroEnbSitesY -1)*interSiteDistance*sqrt(0.75) + areaMarginFactor*interSiteDistance,
-                        1.0, 2.0);
+                        ueZ, ueZ);
     }
   else
     {
       // still need the box to place femtocell blocks
-      macroUeBox = Box (0, 150, 0, 150, 1.0, 2.0);
+      macroUeBox = Box (0, 150, 0, 150, ueZ, ueZ);
     }
   
   FemtocellBlockAllocator blockAllocator (macroUeBox, nApartmentsX, nFloors);
@@ -463,7 +478,7 @@ main (int argc, char *argv[])
   macroUes.Create (nMacroUes);
 
   MobilityHelper mobility;
-  mobility.SetMobilityModel ("ns3::BuildingsMobilityModel");
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
 
   Ptr <LteHelper> lteHelper = CreateObject<LteHelper> ();
@@ -495,6 +510,7 @@ main (int argc, char *argv[])
   // Macro eNBs in 3-sector hex grid
   
   mobility.Install (macroEnbs);
+  BuildingsHelper::Install (macroEnbs);
   Ptr<LteHexGridEnbTopologyHelper> lteHexGridEnbTopologyHelper = CreateObject<LteHexGridEnbTopologyHelper> ();
   lteHexGridEnbTopologyHelper->SetLteHelper (lteHelper);
   lteHexGridEnbTopologyHelper->SetAttribute ("InterSiteDistance", DoubleValue (interSiteDistance));
@@ -510,12 +526,18 @@ main (int argc, char *argv[])
   lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (macroEnbBandwidth));
   NetDeviceContainer macroEnbDevs = lteHexGridEnbTopologyHelper->SetPositionAndInstallEnbDevice (macroEnbs);
 
+  if (epc)
+    {
+      // this enables handover for macro eNBs
+      lteHelper->AddX2Interface (macroEnbs);
+    }
   
   // HomeEnbs randomly indoor
   
   Ptr<PositionAllocator> positionAlloc = CreateObject<RandomRoomPositionAllocator> ();
   mobility.SetPositionAllocator (positionAlloc);
   mobility.Install (homeEnbs);
+  BuildingsHelper::Install (homeEnbs);
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (homeEnbTxPowerDbm));
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   lteHelper->SetEnbDeviceAttribute ("DlEarfcn", UintegerValue (homeEnbDlEarfcn));
@@ -523,40 +545,75 @@ main (int argc, char *argv[])
   lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (homeEnbBandwidth));
   lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (homeEnbBandwidth));
   NetDeviceContainer homeEnbDevs  = lteHelper->InstallEnbDevice (homeEnbs);
-  
-
-  // macro Ues 
-  NS_LOG_LOGIC ("randomly allocating macro UEs in " << macroUeBox);
-  positionAlloc = CreateObject<RandomBoxPositionAllocator> ();
-  Ptr<UniformRandomVariable> xVal = CreateObject<UniformRandomVariable> ();
-  xVal->SetAttribute ("Min", DoubleValue (macroUeBox.xMin));
-  xVal->SetAttribute ("Max", DoubleValue (macroUeBox.xMax));
-  positionAlloc->SetAttribute ("X", PointerValue (xVal));
-  Ptr<UniformRandomVariable> yVal = CreateObject<UniformRandomVariable> ();
-  yVal->SetAttribute ("Min", DoubleValue (macroUeBox.yMin));
-  yVal->SetAttribute ("Max", DoubleValue (macroUeBox.yMax));
-  positionAlloc->SetAttribute ("Y", PointerValue (yVal));
-  Ptr<UniformRandomVariable> zVal = CreateObject<UniformRandomVariable> ();
-  zVal->SetAttribute ("Min", DoubleValue (macroUeBox.zMin));
-  zVal->SetAttribute ("Max", DoubleValue (macroUeBox.zMax));
-  positionAlloc->SetAttribute ("Z", PointerValue (zVal));
-  mobility.SetPositionAllocator (positionAlloc);
-  mobility.Install (macroUes);
-  NetDeviceContainer macroUeDevs = lteHelper->InstallUeDevice (macroUes);
 
 
   // home UEs located in the same apartment in which there are the Home eNBs
   positionAlloc = CreateObject<SameRoomPositionAllocator> (homeEnbs);
   mobility.SetPositionAllocator (positionAlloc);
   mobility.Install (homeUes);
+  BuildingsHelper::Install (homeUes);
   NetDeviceContainer homeUeDevs = lteHelper->InstallUeDevice (homeUes);
+
+  // macro Ues
+  NS_LOG_LOGIC ("randomly allocating macro UEs in " << macroUeBox << " speedMin " << outdoorUeMinSpeed << " speedMax " << outdoorUeMaxSpeed);
+  if (outdoorUeMaxSpeed!=0.0)
+    {
+      mobility.SetMobilityModel ("ns3::SteadyStateRandomWaypointMobilityModel");
+      
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MinX", DoubleValue (macroUeBox.xMin));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MinY", DoubleValue (macroUeBox.yMin));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MaxX", DoubleValue (macroUeBox.xMax));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MaxY", DoubleValue (macroUeBox.yMax));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::Z", DoubleValue (ueZ));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MaxSpeed", DoubleValue (outdoorUeMaxSpeed));
+      Config::SetDefault ("ns3::SteadyStateRandomWaypointMobilityModel::MinSpeed", DoubleValue (outdoorUeMinSpeed));
+
+      // this is not used since SteadyStateRandomWaypointMobilityModel
+      // takes care of initializing the positions;  however we need to
+      // reset it since the previously used PositionAllocator
+      // (SameRoom) will cause an error when used with homeDeploymentRatio=0
+      positionAlloc = CreateObject<RandomBoxPositionAllocator> ();
+      mobility.SetPositionAllocator (positionAlloc);
+      mobility.Install (macroUes);
+      
+      // forcing initialization so we don't have to wait for Nodes to
+      // start before positions are assigned (which is needed to
+      // output node positions to file and to make AttachToClosestEnb work)
+      for (NodeContainer::Iterator it = macroUes.Begin ();
+           it != macroUes.End ();
+           ++it)
+        {
+          (*it)->Initialize ();
+        }
+    }
+    else
+    {
+      positionAlloc = CreateObject<RandomBoxPositionAllocator> ();
+      Ptr<UniformRandomVariable> xVal = CreateObject<UniformRandomVariable> ();
+      xVal->SetAttribute ("Min", DoubleValue (macroUeBox.xMin));
+      xVal->SetAttribute ("Max", DoubleValue (macroUeBox.xMax));
+      positionAlloc->SetAttribute ("X", PointerValue (xVal));
+      Ptr<UniformRandomVariable> yVal = CreateObject<UniformRandomVariable> ();
+      yVal->SetAttribute ("Min", DoubleValue (macroUeBox.yMin));
+      yVal->SetAttribute ("Max", DoubleValue (macroUeBox.yMax));
+      positionAlloc->SetAttribute ("Y", PointerValue (yVal));
+      Ptr<UniformRandomVariable> zVal = CreateObject<UniformRandomVariable> ();
+      zVal->SetAttribute ("Min", DoubleValue (macroUeBox.zMin));
+      zVal->SetAttribute ("Max", DoubleValue (macroUeBox.zMax));
+      positionAlloc->SetAttribute ("Z", PointerValue (zVal));
+      mobility.SetPositionAllocator (positionAlloc);
+      mobility.Install (macroUes);
+    }
+  BuildingsHelper::Install (macroUes);
+
+  NetDeviceContainer macroUeDevs = lteHelper->InstallUeDevice (macroUes);
 
   Ipv4Address remoteHostAddr;
   NodeContainer ues;
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
   Ipv4InterfaceContainer ueIpIfaces;
-   Ptr<Node> remoteHost;
-   NetDeviceContainer ueDevs;
+  Ptr<Node> remoteHost;
+  NetDeviceContainer ueDevs;
   if (epc)
     {
       NS_LOG_LOGIC ("setting up internet and remote host");
@@ -616,12 +673,11 @@ main (int argc, char *argv[])
       lteHelper->Attach (*ueDevIt, *enbDevIt);
     }
 
-    
 
   if (epc)
     {
       NS_LOG_LOGIC ("setting up applications");
-    
+
       // Install and start applications on UEs and remote host
       uint16_t dlPort = 10000;
       uint16_t ulPort = 20000;
@@ -643,7 +699,6 @@ main (int argc, char *argv[])
           startTimeSeconds->SetAttribute ("Max", DoubleValue (0.110));
         }
 
-     
       for (uint32_t u = 0; u < ues.GetN (); ++u)
         {
           Ptr<Node> ue = ues.Get (u);
@@ -660,7 +715,7 @@ main (int argc, char *argv[])
               ApplicationContainer serverApps;
 
               if (useUdp)
-                {              
+                {
                   if (epcDl)
                     {
                       NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
@@ -671,15 +726,15 @@ main (int argc, char *argv[])
                       serverApps.Add (dlPacketSinkHelper.Install (ue));
                     }
                   if (epcUl)
-                    {      
+                    {
                       NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
                       UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
                       clientApps.Add (ulClientHelper.Install (ue));
                       PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", 
                                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
                       serverApps.Add (ulPacketSinkHelper.Install (remoteHost));  
-                    }            
-                }                    
+                    }
+                }
               else // use TCP
                 {
                   if (epcDl)
@@ -772,8 +827,6 @@ main (int argc, char *argv[])
       remHelper->SetAttribute ("Z", DoubleValue (1.5));
       remHelper->Install ();
       // simulation will stop right after the REM has been generated
-
-
     }
   else
     {
