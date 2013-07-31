@@ -50,6 +50,34 @@ class EpcEnbS1SapProvider;
 class LteUeRrc;
 class LteEnbRrc;
 
+
+/**
+ * Neighbour Relation between two eNBs (serving eNB and neighbour eNB)
+ * See XXXXX for more info
+ */
+class NeighbourRelation : public Object
+{
+public:
+  uint16_t  m_physCellId;
+  bool      m_noRemove;
+  bool      m_noHo;
+  bool      m_noX2;
+  bool      m_detectedAsNeighbour;
+};
+
+/**
+ * Measurements reported by a UE for a cellId
+ * The values are quantized according 3GPP TS XXXXX
+ */
+class UeMeasure : public Object
+{
+public:
+  uint16_t  m_cellId;
+  uint8_t   m_rsrp;
+  uint8_t   m_rsrq;
+};
+
+
 /**
  * Manages all the radio bearer information possessed by the ENB RRC for a single UE
  *
@@ -224,7 +252,13 @@ public:
    * \param params the SN STATUS
    */
   void RecvSnStatusTransfer (EpcX2SapUser::SnStatusTransferParams params);
-  
+ 
+  /** 
+   * Take the necessary actions in response to the reception of an X2 UE CONTEXT RELEASE message
+   * 
+   * \param params the SN STATUS
+   */
+  void RecvUeContextRelease (EpcX2SapUser::UeContextReleaseParams params); 
 
   // methods forwarded from RRC SAP
   void CompleteSetupUe (LteEnbRrcSapProvider::CompleteSetupUeParameters params);
@@ -315,6 +349,13 @@ private:
    */
   LteRrcSap::RadioResourceConfigDedicated BuildRadioResourceConfigDedicated ();
 
+  /** 
+   * 
+   * \return a MeasConfig struct built based on the
+   * current configuration
+   */
+  LteRrcSap::MeasConfig BuildMeasConfig ();
+
 
   /** 
    * 
@@ -391,7 +432,16 @@ private:
   uint16_t m_targetCellId;
   std::list<uint8_t> m_drbsToBeStarted;
   bool m_needTransmissionModeConfiguration;
+
   EventId m_connectionTimeout;
+  EventId m_connectionRejectedTimeout;
+  EventId m_handoverJoiningTimeout;
+  EventId m_handoverLeavingTimeout;
+
+  Ptr<UeMeasure> m_servingCellMeasures;
+  //       cellid
+  std::map<uint16_t, Ptr<UeMeasure> > m_neighbourCellMeasures;
+
 };
 
 
@@ -567,6 +617,29 @@ public:
   void ConnectionTimeout (uint16_t rnti);
 
   /** 
+   * Method triggered a while after sending RRC Connection Rejected
+   * 
+   * \param rnti the T-C-RNTI whose timeout expired
+   */
+  void ConnectionRejectedTimeout (uint16_t rnti);
+
+  /** 
+   * Method triggered when a UE is expected to join the cell for a handover 
+   * but does not do so in a reasonable time
+   * 
+   * \param rnti the C-RNTI whose timeout expired
+   */
+  void HandoverJoiningTimeout (uint16_t rnti);
+
+  /** 
+   * Method triggered when a UE is expected to leave a cell for a handover
+   * but no feedback is received in a reasonable time
+   * 
+   * \param rnti the C-RNTI whose timeout expired
+   */
+  void HandoverLeavingTimeout (uint16_t rnti);
+
+  /** 
    * Send a HandoverRequest through the X2 SAP interface
    * 
    * This method will trigger a handover which is started by the RRC
@@ -651,7 +724,15 @@ private:
   TypeId GetRlcType (EpsBearer bearer);
 
 
+
 public:
+
+  /** 
+   * Add a neighbour with an X2 interface
+   *
+   * \param cellid neighbouring cell id
+   */
+  void AddX2Neighbour (uint16_t cellId);
 
   /** 
    * 
@@ -765,8 +846,23 @@ private:
   uint16_t m_lastAllocatedConfigurationIndex;
   bool m_reconfigureUes;
 
+  // Handover related attributes
   bool m_admitHandoverRequest;
   bool m_admitRrcConnectionRequest;
+  uint8_t m_eventA2Threshold;
+  uint8_t m_eventA4Threshold;
+  uint8_t m_servingCellHandoverThreshold;
+  uint8_t m_neighbourCellHandoverOffset;
+
+  // timeouts
+  Time m_connectionTimeoutDuration;
+  Time m_connectionRejectedTimeoutDuration;
+  Time m_handoverJoiningTimeoutDuration;
+  Time m_handoverLeavingTimeoutDuration;  
+
+  //       cellid
+  std::map<uint16_t, Ptr<NeighbourRelation> > m_neighbourRelationTable;
+
 
   //             cellid    rnti   
   TracedCallback<uint16_t, uint16_t> m_newUeContextTrace;
@@ -778,6 +874,9 @@ private:
   TracedCallback<uint64_t, uint16_t, uint16_t, uint16_t> m_handoverStartTrace;
   //             imsi      cellid    rnti    
   TracedCallback<uint64_t, uint16_t, uint16_t> m_handoverEndOkTrace;
+
+  //             imsi      cellid    rnti
+  TracedCallback<uint64_t, uint16_t, uint16_t, LteRrcSap::MeasurementReport> m_recvMeasurementReportTrace;
 
 };
 

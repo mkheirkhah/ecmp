@@ -503,17 +503,17 @@ The simulator provide natively three fading traces generated according to the co
    Excerpt of the fading trace included in the simulator for an urban  scenario (speed of 3 kmph).
 
 
-Buildings Mobility Model
-------------------------
+Mobility Model with Buildings 
+-----------------------------
 
-We now explain by examples how to use the buildings model (in particular, the ``BuildingMobilityModel`` and the ``BuildingPropagationModel`` classes) in an ns-3 simulation program to setup an LTE simulation scenario that includes buildings and indoor nodes.
+We now explain by examples how to use the buildings model (in particular, the ``MobilityBuildingInfo`` and the ``BuildingPropagationModel`` classes) in an ns-3 simulation program to setup an LTE simulation scenario that includes buildings and indoor nodes.
 
 
 .. highlight:: none
 
 #. Header files to be included::
 
-    #include <ns3/buildings-mobility-model.h>
+    #include <ns3/mobility-building-info.h>
     #include <ns3/buildings-propagation-loss-model.h>
     #include <ns3/building.h>
 
@@ -535,7 +535,9 @@ It is to be noted that using other means to configure the frequency used by the 
 #. Mobility model selection::
 
     MobilityHelper mobility;
-    mobility.SetMobilityModel ("ns3::BuildingsMobilityModel");
+    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel"); // use any mobility model
+
+It is to be noted that any mobility model can be used; however, based on the information at the time of this writing, only the ones defined in the building module are designed for considering the constraints introduced by the buildings.
 
 #. Building creation::
 
@@ -559,16 +561,17 @@ It is to be noted that using other means to configure the frequency used by the 
 
     ueNodes.Create (2);
     mobility.Install (ueNodes);
+    BuildingsHelper::Install (ueNodes);
     NetDeviceContainer ueDevs;
     ueDevs = lteHelper->InstallUeDevice (ueNodes);
-    Ptr<BuildingsMobilityModel> mm0 = enbNodes.Get (0)->GetObject<BuildingsMobilityModel> ();
-    Ptr<BuildingsMobilityModel> mm1 = enbNodes.Get (1)->GetObject<BuildingsMobilityModel> ();   
+    Ptr<ConstantPositionMobilityModel> mm0 = enbNodes.Get (0)->GetObject<ConstantPositionMobilityModel> ();
+    Ptr<ConstantPositionMobilityModel> mm1 = enbNodes.Get (1)->GetObject<ConstantPositionMobilityModel> ();
     mm0->SetPosition (Vector (5.0, 5.0, 1.5));
     mm1->SetPosition (Vector (30.0, 40.0, 1.5));
 
-This positions the node on the scenario. Note that, in this example, node 0 will be in the building, and node 1 will be out of the building. Note that this alone is not sufficient to setup the topology correctly. What is left to be done is to issue the following command after we have placed all nodes in the simulation::
+This installs the building mobility informations to the nodes and positions the node on the scenario. Note that, in this example, node 0 will be in the building, and node 1 will be out of the building. Note that this alone is not sufficient to setup the topology correctly. What is left to be done is to issue the following command after we have placed all nodes in the simulation::
 
-      BuildingsHelper::MakeMobilityModelConsistent ();
+    BuildingsHelper::MakeMobilityModelConsistent ();
 
 This command will go through the lists of all nodes and of all buildings, determine for each user if it is indoor or outdoor, and if indoor it will also determine the building in which the user is located and the corresponding floor and number inside the building.
 
@@ -921,9 +924,12 @@ be done explicitly within the simulation program like this::
 where ``enbNodes`` is a ``NodeContainer`` that contains the two eNBs
 between which the X2 interface is to be configured.
 
-Handover event needs to be scheduled explicitly within the simulation
-program, as the current RRC model does not support the automatic
-trigger of handover based on UE measurement. The ``LteHelper``
+
+Manual handover trigger
+***********************
+
+Handover event can be triggered "manually" within the simulation
+program by scheduling an  explicit handover event. The ``LteHelper``
 provides a convenient method for the scheduling of a handover
 event. As an example, let us assume that ``ueLteDevs``` is a
 ``NetDeviceContainer`` that contains the UE that is to be handed over,
@@ -939,6 +945,44 @@ scheduled like this::
 
 Note that the UE needs to be already connected to the source eNB,
 otherwise the simulation will terminate with an error message.
+
+
+Automatic handover trigger
+**************************
+
+Handover procedure can be triggered "automatically" by the serving eNB of 
+the UE. It is also known as the source eNB in the handover procedure. In
+order to control when the handover procedure is initiated, you can configure
+the parameters of the handover algorithm in your simulation program 
+through the ns-3 attributes of the eNB RRC entity::
+
+
+  Config::SetDefault ("ns3::LteEnbRrc::ServingCellHandoverThreshold",
+                      UintegerValue (30));
+
+  Config::SetDefault ("ns3::LteEnbRrc::NeighbourCellHandoverOffset",
+                      UintegerValue (1));
+
+
+The UE measurements are used in the automatic handover algorithm. You can
+configure the parameters of the UE measurements in your simulation program
+through the ns-3 attributes of the eNB RRC entity. You can set the thresholds
+of events A2 and A4::
+
+
+  Config::SetDefault ("ns3::LteEnbRrc::EventA2Threshold",
+                      UintegerValue (32));
+
+  Config::SetDefault ("ns3::LteEnbRrc::EventA4Threshold",
+                      UintegerValue (2));
+
+
+You can find more info about events A2 and A4 in Subsections 5.5.4.3 and 5.5.4.5
+of [TS36331]_.
+
+
+Handover traces
+***************
 
 The RRC model, in particular the ``LteEnbRrc`` and ``LteUeRrc``
 objects, provide some useful traces which can be hooked up to some

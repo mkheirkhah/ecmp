@@ -458,7 +458,7 @@ RrcConnectionReconfigurationTestCase::DoRun (void)
 
   msg.measConfig.haveMeasGapConfig = true;
   msg.measConfig.measGapConfig.type = LteRrcSap::MeasGapConfig::SETUP;
-  msg.measConfig.measGapConfig.gapOffsetChoice = LteRrcSap::MeasGapConfig::gp0;
+  msg.measConfig.measGapConfig.gapOffsetChoice = LteRrcSap::MeasGapConfig::GP0;
   msg.measConfig.measGapConfig.gapOffsetValue = 21;
 
   msg.measConfig.haveSmeasure = true;
@@ -481,11 +481,64 @@ RrcConnectionReconfigurationTestCase::DoRun (void)
 
   msg.measConfig.measIdToRemoveList.push_back (4);
   msg.measConfig.measIdToRemoveList.push_back (18);
- 
-  /// \todo Test the following:
-  // std::list<MeasObjectToAddMod> measObjectToAddModList;
-  // std::list<ReportConfigToAddMod> reportConfigToAddModList;
-  // std::list<MeasIdToAddMod> measIdToAddModList;
+
+  // Set measObjectToAddModList
+  LteRrcSap::MeasObjectToAddMod measObjectToAddMod;
+  measObjectToAddMod.measObjectId = 3;
+  measObjectToAddMod.measObjectEutra.carrierFreq = 21;
+  measObjectToAddMod.measObjectEutra.allowedMeasBandwidth = 15;
+  measObjectToAddMod.measObjectEutra.presenceAntennaPort1 = true;
+  measObjectToAddMod.measObjectEutra.neighCellConfig = 3;
+  measObjectToAddMod.measObjectEutra.offsetFreq = -12;
+  measObjectToAddMod.measObjectEutra.cellsToRemoveList.push_back (5);
+  measObjectToAddMod.measObjectEutra.cellsToRemoveList.push_back (2);
+  measObjectToAddMod.measObjectEutra.blackCellsToRemoveList.push_back (1);
+  measObjectToAddMod.measObjectEutra.haveCellForWhichToReportCGI = true;
+  measObjectToAddMod.measObjectEutra.cellForWhichToReportCGI = 250;
+  LteRrcSap::CellsToAddMod cellsToAddMod;
+  cellsToAddMod.cellIndex = 20;
+  cellsToAddMod.physCellId = 14;
+  cellsToAddMod.cellIndividualOffset = 22;
+  measObjectToAddMod.measObjectEutra.cellsToAddModList.push_back (cellsToAddMod);
+  LteRrcSap::BlackCellsToAddMod blackCellsToAddMod;
+  blackCellsToAddMod.cellIndex = 18;
+  blackCellsToAddMod.physCellIdRange.start = 128;
+  blackCellsToAddMod.physCellIdRange.haveRange = true;
+  blackCellsToAddMod.physCellIdRange.range = 128;
+  measObjectToAddMod.measObjectEutra.blackCellsToAddModList.push_back (blackCellsToAddMod);
+  msg.measConfig.measObjectToAddModList.push_back (measObjectToAddMod);
+
+  // Set reportConfigToAddModList
+  LteRrcSap::ReportConfigToAddMod reportConfigToAddMod;
+  reportConfigToAddMod.reportConfigId = 22;
+  reportConfigToAddMod.reportConfigEutra.triggerType = LteRrcSap::ReportConfigEutra::EVENT;
+  reportConfigToAddMod.reportConfigEutra.eventId = LteRrcSap::ReportConfigEutra::EVENT_A2;
+  reportConfigToAddMod.reportConfigEutra.threshold1.choice = LteRrcSap::ThresholdEutra::THRESHOLD_RSRP;
+  reportConfigToAddMod.reportConfigEutra.threshold1.range = 15;
+  reportConfigToAddMod.reportConfigEutra.threshold2.choice = LteRrcSap::ThresholdEutra::THRESHOLD_RSRQ;
+  reportConfigToAddMod.reportConfigEutra.threshold2.range = 10;
+  reportConfigToAddMod.reportConfigEutra.reportOnLeave = true;
+  reportConfigToAddMod.reportConfigEutra.a3Offset = -25;
+  reportConfigToAddMod.reportConfigEutra.hysteresis = 18;
+  reportConfigToAddMod.reportConfigEutra.timeToTrigger = 100;
+  reportConfigToAddMod.reportConfigEutra.purpose = LteRrcSap::ReportConfigEutra::REPORT_STRONGEST_CELLS;
+  reportConfigToAddMod.reportConfigEutra.triggerQuantity = LteRrcSap::ReportConfigEutra::RSRQ;
+  reportConfigToAddMod.reportConfigEutra.reportQuantity = LteRrcSap::ReportConfigEutra::SAME_AS_TRIGGER_QUANTITY;
+  reportConfigToAddMod.reportConfigEutra.maxReportCells = 5;
+  reportConfigToAddMod.reportConfigEutra.reportInterval = LteRrcSap::ReportConfigEutra::MIN60;
+  reportConfigToAddMod.reportConfigEutra.reportAmount = 16; 
+  msg.measConfig.reportConfigToAddModList.push_back (reportConfigToAddMod);
+
+  // Set measIdToAddModList
+  LteRrcSap::MeasIdToAddMod measIdToAddMod,measIdToAddMod2;
+  measIdToAddMod.measId = 7;
+  measIdToAddMod.measObjectId = 6;
+  measIdToAddMod.reportConfigId = 5;
+  measIdToAddMod2.measId = 4;
+  measIdToAddMod2.measObjectId = 8;
+  measIdToAddMod2.reportConfigId = 12;
+  msg.measConfig.measIdToAddModList.push_back (measIdToAddMod);
+  msg.measConfig.measIdToAddModList.push_back (measIdToAddMod2);
 
   msg.haveMobilityControlInfo = true;
   msg.mobilityControlInfo.targetPhysCellId = 4;

@@ -46,7 +46,7 @@ class LteEnbPhy;
 class SpectrumChannel;
 class EpcHelper;
 class PropagationLossModel;
-
+class SpectrumPropagationLossModel;
 
 /**
  * Creation and configuration of LTE entities
@@ -97,6 +97,12 @@ public:
    * \param type the type of scheduler to be used for the eNBs
    */
   void SetSchedulerType (std::string type);
+
+  /**
+   *
+   * \return the scheduler type
+   */
+  std::string GetSchedulerType () const; 
 
   /**
    * set an attribute for the scheduler to be created
@@ -422,6 +428,8 @@ private:
 
   std::string m_fadingModelType;
   ObjectFactory m_fadingModelFactory;
+  Ptr<SpectrumPropagationLossModel> m_fadingModule;
+  bool m_fadingStreamsAssigned;
 
   Ptr<PhyStatsCalculator> m_phyStats;
   Ptr<PhyTxStatsCalculator> m_phyTxStats;
