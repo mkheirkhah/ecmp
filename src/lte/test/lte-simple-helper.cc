@@ -149,6 +149,8 @@ LteSimpleHelper::InstallSingleEnbDevice (Ptr<Node> n)
   m_enbMac = CreateObject<LteTestMac> ();
   m_enbMac->SetDevice (enbDev);
 
+  m_enbRrc->SetDevice (enbDev);
+
   enbDev->SetReceiveCallback (MakeCallback (&LteTestMac::Receive, m_enbMac));
 
   // Connect SAPs: RRC <-> PDCP <-> RLC <-> MAC
