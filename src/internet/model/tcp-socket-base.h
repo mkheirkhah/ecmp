@@ -36,6 +36,8 @@
 #include "tcp-tx-buffer.h"
 #include "tcp-rx-buffer.h"
 #include "rtt-estimator.h"
+#include "ns3/ipv4-routing-protocol.h"
+#include "ns3/ipv6-routing-protocol.h"
 
 namespace ns3 {
 
@@ -720,7 +722,8 @@ protected:
   Time              m_persistTimeout;  //!< Time between sending 1-byte probes
   Time              m_cnTimeout;       //!< Timeout for connection retry
   RttHistory_t      m_history;         //!< List of sent packet
-
+  Ptr<Ipv4Route>    m_routev4;
+  Ptr<Ipv6Route>    m_routev6;
   // Connections to other layers of TCP/IP
   Ipv4EndPoint*       m_endPoint;   //!< the IPv4 endpoint
   Ipv6EndPoint*       m_endPoint6;  //!< the IPv6 endpoint

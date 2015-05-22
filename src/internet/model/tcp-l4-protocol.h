@@ -30,6 +30,9 @@
 #include "ns3/object-factory.h"
 #include "ip-l4-protocol.h"
 #include "ns3/net-device.h"
+#include "ns3/ipv4-route.h"
+#include "ns3/ipv6-route.h"
+
 
 namespace ns3 {
 
@@ -235,9 +238,9 @@ private:
 private:
   friend class TcpSocketBase;
   void SendPacket (Ptr<Packet>, const TcpHeader &,
-                   Ipv4Address, Ipv4Address, Ptr<NetDevice> oif = 0);
+                   Ipv4Address, Ipv4Address, Ptr<NetDevice> oif = 0, Ptr<Ipv4Route> route = 0);
   void SendPacket (Ptr<Packet>, const TcpHeader &,
-                   Ipv6Address, Ipv6Address, Ptr<NetDevice> oif = 0);
+                   Ipv6Address, Ipv6Address, Ptr<NetDevice> oif = 0, Ptr<Ipv6Route> route = 0);
 
   /**
    * \brief Copy constructor

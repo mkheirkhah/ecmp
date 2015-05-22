@@ -1757,12 +1757,12 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   if (m_endPoint != 0)
     {
       m_tcp->SendPacket (p, header, m_endPoint->GetLocalAddress (),
-                         m_endPoint->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint->GetPeerAddress (), m_boundnetdevice, m_routev4);
     }
   else
     {
       m_tcp->SendPacket (p, header, m_endPoint6->GetLocalAddress (),
-                         m_endPoint6->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint6->GetPeerAddress (), m_boundnetdevice, m_routev6);
     }
   if (flags & TcpHeader::ACK)
     { // If sending an ACK, cancel the delay ACK as well
@@ -1848,6 +1848,7 @@ TcpSocketBase::SetupEndpoint ()
     }
   NS_LOG_LOGIC ("Route exists");
   m_endPoint->SetLocalAddress (route->GetSource ());
+  m_routev4 = route;
   return 0;
 }
 
@@ -1878,6 +1879,7 @@ TcpSocketBase::SetupEndpoint6 ()
     }
   NS_LOG_LOGIC ("Route exists");
   m_endPoint6->SetLocalAddress (route->GetSource ());
+  m_routev6 = route;
   return 0;
 }
 
@@ -2038,12 +2040,12 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
   if (m_endPoint)
     {
       m_tcp->SendPacket (p, header, m_endPoint->GetLocalAddress (),
-                         m_endPoint->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint->GetPeerAddress (), m_boundnetdevice, m_routev4);
     }
   else
     {
       m_tcp->SendPacket (p, header, m_endPoint6->GetLocalAddress (),
-                         m_endPoint6->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint6->GetPeerAddress (), m_boundnetdevice, m_routev6);
     }
 
   // update the history of sequence numbers used to calculate the RTT
@@ -2404,12 +2406,12 @@ TcpSocketBase::PersistTimeout ()
   if (m_endPoint != 0)
     {
       m_tcp->SendPacket (p, tcpHeader, m_endPoint->GetLocalAddress (),
-                         m_endPoint->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint->GetPeerAddress (), m_boundnetdevice, m_routev4);
     }
   else
     {
       m_tcp->SendPacket (p, tcpHeader, m_endPoint6->GetLocalAddress (),
-                         m_endPoint6->GetPeerAddress (), m_boundnetdevice);
+                         m_endPoint6->GetPeerAddress (), m_boundnetdevice, m_routev6);
     }
   NS_LOG_LOGIC ("Schedule persist timeout at time "
                 << Simulator::Now ().GetSeconds () << " to expire at time "
