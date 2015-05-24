@@ -83,7 +83,7 @@ main (int argc, char *argv[])
       c.Get(i)->AggregateObject(loc);
 
       if (i == 0)
-        loc->SetPosition(Vector(0, 5, 0));
+        loc->SetPosition(Vector(1, 5, 0));
       else if (i == 1 || i == 2 || i == 3 || i == 4)
         {
           y += 2;
@@ -95,8 +95,9 @@ main (int argc, char *argv[])
           loc->SetPosition(Vector(20, y, 0));
         }
       else if (i == 7)
-        loc->SetPosition(Vector(25, 5, 0));
+        loc->SetPosition(Vector(23, 5, 0));
     }
+
 
   InternetStackHelper internet;
   internet.Install (c);
@@ -211,6 +212,8 @@ main (int argc, char *argv[])
 
   AnimationInterface anim("ecmp");
   anim.SetMaxPktsPerTraceFile(100000000);
+  for (uint32_t i = 1; i < 7; i++)
+        anim.UpdateNodeColor(c.Get(i), 0, 128, 0);
   anim.EnablePacketMetadata(true);
 
   NS_LOG_INFO ("Run Simulation.");
