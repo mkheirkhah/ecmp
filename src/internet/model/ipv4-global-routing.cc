@@ -53,10 +53,10 @@ Ipv4GlobalRouting::GetTypeId (void)
                   "Equal-Cost Multi-Path Routing mode",
                    EnumValue(ECMP_NONE),
                    MakeEnumAccessor(&Ipv4GlobalRouting::m_ecmpMode),
-                   MakeEnumChecker(ECMP_NONE, "ECMP_NONE",      // NO ECMP
-                                   ECMP_HASH, "ECMP_HASH",      // Per-Flow ECMP
-                                   ECMP_RANDOM, "ECMP_RANDOM",  // Per-Packet ECMP
-                                   ECMP_RoundRobin, "ECMP_RoundRobin"))         // Round-Roubin ECMP
+                   MakeEnumChecker(ECMP_NONE, "ECMP_NONE",
+                                   ECMP_HASH, "ECMP_HASH",
+                                   ECMP_RANDOM, "ECMP_RANDOM",
+                                   ECMP_RoundRobin, "ECMP_RoundRobin"))
     .AddAttribute ("RespondToInterfaceEvents",
                    "Set to true if you want to dynamically recompute the global routes upon Interface notification events (up/down, or add/remove address)",
                    BooleanValue (false),
@@ -72,9 +72,8 @@ Ipv4GlobalRouting::Ipv4GlobalRouting ()
 
 {
   NS_LOG_FUNCTION (this);
-
   m_rand = CreateObject<UniformRandomVariable> ();
-  Hasher hasher = Hasher();
+  hasher = Hasher();
 }
 
 Ipv4GlobalRouting::~Ipv4GlobalRouting ()
@@ -151,14 +150,14 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
 {
   NS_LOG_FUNCTION(header);
   Ptr<Node> node = m_ipv4->GetObject<Node>();
-  uint32_t node_id = node->GetId();
+  //uint32_t node_id = node->GetId();
 
   hasher.clear();
   std::ostringstream oss;
   oss << header.GetSource()
       << header.GetDestination()
-      << header.GetProtocol()
-      << node_id;
+      << header.GetProtocol();
+      //<< node_id;
 
   switch (header.GetProtocol())
     {
@@ -196,6 +195,7 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
     }
   default:
     {
+      //If TCP queries routing without protocol number set, this would be triggered!
       //NS_FATAL_ERROR("Udp or Tcp header not found " << (int) header.GetProtocol());
       break;
     }
@@ -294,74 +294,43 @@ Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPa
     }
   if (allRoutes.size() > 0) // if route(s) is found
     {
-      // pick up one of the routes uniformly at random if random
-      // ECMP routing is enabled, or always select the first route
-      // consistently if random ECMP routing is disabled
-      uint32_t selectIndex;
+      uint32_t selectIndex = 0;
       switch (m_ecmpMode)
         {
-      case ECMP_RANDOM:
+      case ECMP_NONE:       // No ECMP
+        break;
+      case ECMP_RANDOM:     // Per-Packet ECMP
         selectIndex = m_rand->GetInteger(0, allRoutes.size() - 1);
         break;
-      case ECMP_HASH:
+      case ECMP_HASH:       // Per-Flow ECMP
         selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
         break;
-      case ECMP_RoundRobin:
-        if (host)
+      case ECMP_RoundRobin: // Round-Robin ECMP
+        if (host) // Hosts do Round-Robin ECMP when RouteOutput is called.
           {
-            uint32_t nextInterface = GetNextInterface(m_lastInterfaceUsed);
+            uint32_t nextInterfaceToUse = GetNextInterface(m_lastInterfaceUsed);
             for (uint32_t i = 0; i < allRoutes.size(); i++)
               {
                 Ipv4RoutingTableEntry* route = allRoutes.at(i);
                 uint32_t interfaceIdx = route->GetInterface();
-//                int32_t ifIndex = m_ipv4->GetNetDevice(interfaceIdx)->GetIfIndex();
-//                std::cout << "interfaceIdx: " << interfaceIdx << " NetDevice_ifIndex: " << ifIndex << " nextInterface; " << interface << std::endl;
-                if (interfaceIdx == nextInterface)
+                if (interfaceIdx == nextInterfaceToUse)
                   {
                     selectIndex = i;
                     m_lastInterfaceUsed = interfaceIdx;
                     break;
                   }
               }
-            std::cout << "Host: selectIndex: " << selectIndex<< "NewInterface: " << nextInterface << " totalInterface: "<< m_ipv4->GetNInterfaces() << " TotalRoutes: " << allRoutes.size() << " LastInterfaceUsed: "<< m_lastInterfaceUsed <<   std::endl;
+            NS_LOG_DEBUG("Host-based ECMP -> selectIndex: " << selectIndex
+                << " NextInterfaceToUse: " << nextInterfaceToUse
+                << " TotalInterfaces: "   << m_ipv4->GetNInterfaces()
+                << " TotalRoutes: "       << allRoutes.size()
+                << " LastInterfaceUsed: " << m_lastInterfaceUsed);
           }
-        else
-            selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
-        break;
-      case ECMP_NONE:
-        selectIndex = 0;
+        else      // Routers do Hashed-based ECMP when RouteInput is called.
+          selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
         break;
         }
 
-//      if (m_ecmpMode == ECMP_RANDOM)
-//        {
-//          NS_FATAL_ERROR("At the moment this should not be run");
-//          selectIndex = m_rand->GetInteger(0, allRoutes.size() - 1);
-//        }
-//      else if (m_flowEcmpRouting && allRoutes.size() > 1)
-//        {
-//
-//          selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
-//
-////          Ipv4RoutingTableEntry* route = allRoutes.at(selectIndex);
-////          Ptr<NetDevice> NIC = m_ipv4->GetNetDevice(route->GetInterface());
-//          //Ptr<Node> node = m_ipv4->GetObject("ns3::Node");
-////          if (NIC->GetNode()->GetId() > 4 && NIC->GetNode()->GetId() <= 11)
-////            {
-////              for (uint32_t i = 0; i < allRoutes.size(); i++)
-////                {
-////                  Ipv4RoutingTableEntry* route = allRoutes.at(i);
-////                  NS_LOG_UNCOND(route->GetGateway ());
-////                }
-//          //NS_LOG_UNCOND("");
-////            }
-////          if (NIC->GetNode()->GetId() == 4/* && NIC->GetNode()->GetId() <= 11*/)
-////            NS_LOG_UNCOND("Node("<< NIC->GetNode()->GetId() << ") LookupGlobal() -> selectIndex for ECMP is " << selectIndex << " AllRoute: " << allRoutes.size() <<" FiveTuple:" << GetTupleValue(header, ipPayload));
-//        }
-//      else
-//        {
-//          selectIndex = 0;
-//        }
       Ipv4RoutingTableEntry* route = allRoutes.at(selectIndex);
       // create a Ipv4Route object from the selected routing table entry
       rtentry = Create<Ipv4Route>();

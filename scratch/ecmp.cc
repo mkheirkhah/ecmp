@@ -1,7 +1,3 @@
-// This script illustrates the behavior of equal-cost multipath routing 
-// (ECMP) with Ipv4 global routing, across three equal-cost paths
-
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -34,13 +30,13 @@ main (int argc, char *argv[])
   // Bind ()s at run-time, via command-line arguments
   CommandLine cmd;
   cmd.AddValue ("EcmpMode", "EcmpMode: (0 none, 1 random, 2 flow, 3 Round_Robin)", ecmpMode);
-  cmd.AddValue ("socket", "Socket: (0 UDP, 1 TCP)", socket);
+  cmd.AddValue ("Socket", "Socket: (0 UDP, 1 TCP)", socket);
   cmd.Parse (argc, argv);
 
   switch (ecmpMode)
     {
       case 0:
-        break;  //no ECMP
+        break;
       case 1:
         Config::SetDefault ("ns3::Ipv4GlobalRouting::EcmpMode", StringValue ("ECMP_RANDOM"));
         break;
@@ -48,14 +44,12 @@ main (int argc, char *argv[])
         Config::SetDefault ("ns3::Ipv4GlobalRouting::EcmpMode", StringValue ("ECMP_HASH"));
         break;  
       case 3:
-        Config::SetDefault ("ns3::Ipv4GlobalRouting::EcmpMode", StringValue ("ECMP_RR"));
+        Config::SetDefault ("ns3::Ipv4GlobalRouting::EcmpMode", StringValue ("ECMP_RoundRobin"));
         break;
       default:
         NS_FATAL_ERROR ("Illegal command value for EcmpMode: " << ecmpMode);
         break;
     }
-
-  // Allow the user to override any of the defaults and the above
 
   NS_LOG_INFO ("Create nodes.");
   NodeContainer c;
@@ -184,11 +178,10 @@ main (int argc, char *argv[])
       for (uint32_t i = 0; i < 10; i++)
         {
           apps.Add(onoff.Install(c.Get(0)));
-          //apps.Add (onoffApp.Install (c.Get (0)));
         }
 
       apps.Start(Seconds(0.0));
-      apps.Stop(Seconds(2.0));
+      apps.Stop(Seconds(1.0));
 
       PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), port)));
       sink.Install(c.Get(7));
