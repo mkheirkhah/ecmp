@@ -56,7 +56,7 @@ Ipv4GlobalRouting::GetTypeId (void)
                    MakeEnumChecker(ECMP_NONE, "ECMP_NONE",      // NO ECMP
                                    ECMP_HASH, "ECMP_HASH",      // Per-Flow ECMP
                                    ECMP_RANDOM, "ECMP_RANDOM",  // Per-Packet ECMP
-                                   ECMP_RR, "ECMP_RR"))         // Round-Roubin ECMP
+                                   ECMP_RoundRobin, "ECMP_RoundRobin"))         // Round-Roubin ECMP
     .AddAttribute ("RespondToInterfaceEvents",
                    "Set to true if you want to dynamically recompute the global routes upon Interface notification events (up/down, or add/remove address)",
                    BooleanValue (false),
@@ -75,8 +75,6 @@ Ipv4GlobalRouting::Ipv4GlobalRouting ()
 
   m_rand = CreateObject<UniformRandomVariable> ();
   Hasher hasher = Hasher();
-  //Hasher hasher = Hasher(Create<Hash::Function::Fnv1a> ());
-  //uint32_t hash = Hasher.GetHash32 (data);
 }
 
 Ipv4GlobalRouting::~Ipv4GlobalRouting ()
@@ -162,10 +160,6 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
       << header.GetProtocol()
       << node_id;
 
-//  uint64_t fiveTuple = header.GetSource().Get()
-//                     + header.GetDestination().Get()
-//                     + header.GetProtocol();
-
   switch (header.GetProtocol())
     {
   case UDP_PROT_NUMBER:
@@ -181,9 +175,6 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
 
       oss << udpHeader.GetDestinationPort()
           << udpHeader.GetSourcePort();
-
-//      fiveTuple += udpHeader.GetSourcePort();
-//      fiveTuple += udpHeader.GetDestinationPort();
 
       break;
     }
@@ -201,28 +192,14 @@ Ipv4GlobalRouting::GetTupleValue(const Ipv4Header &header, Ptr<const Packet> ipP
       oss << tcpHeader.GetDestinationPort()
           << tcpHeader.GetSourcePort();
 
-//      fiveTuple += (uint32_t)tcpHeader.GetSourcePort();
-//      fiveTuple += (uint32_t)tcpHeader.GetDestinationPort();
-
       break;
     }
   default:
     {
-      NS_FATAL_ERROR("Udp or Tcp header not found " << (int) header.GetProtocol());
+      //NS_FATAL_ERROR("Udp or Tcp header not found " << (int) header.GetProtocol());
       break;
     }
     }
-
-//  hasher.clear();
-//  TcpHeader tcpHeader;
-//  ipPayload->PeekHeader(tcpHeader);
-//  std::ostringstream oss;
-//  oss << tcpHeader.GetDestinationPort()
-//      << tcpHeader.GetSourcePort()
-//      << header.GetSource()
-//      << header.GetDestination()
-//      << header.GetProtocol()
-//      << node_id;
 
   std::string data = oss.str();
   uint32_t hash = hasher.GetHash32(data);
@@ -329,7 +306,7 @@ Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPa
       case ECMP_HASH:
         selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));
         break;
-      case ECMP_RR:
+      case ECMP_RoundRobin:
         if (host)
           {
             uint32_t nextInterface = GetNextInterface(m_lastInterfaceUsed);
@@ -346,7 +323,7 @@ Ipv4GlobalRouting::LookupGlobal(const Ipv4Header &header, Ptr<const Packet> ipPa
                     break;
                   }
               }
-            std::cout << "Host: NewInterface: " << nextInterface << " totalInterface: "<< m_ipv4->GetNInterfaces() << " TotalRoutes: " << allRoutes.size() << " LastInterfaceUsed: "<< m_lastInterfaceUsed <<   std::endl;
+            std::cout << "Host: selectIndex: " << selectIndex<< "NewInterface: " << nextInterface << " totalInterface: "<< m_ipv4->GetNInterfaces() << " TotalRoutes: " << allRoutes.size() << " LastInterfaceUsed: "<< m_lastInterfaceUsed <<   std::endl;
           }
         else
             selectIndex = (GetTupleValue(header, ipPayload) % (allRoutes.size()));

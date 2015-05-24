@@ -1,19 +1,6 @@
 // This script illustrates the behavior of equal-cost multipath routing 
 // (ECMP) with Ipv4 global routing, across three equal-cost paths
-//
-// Network topology:
-//
-//           n2
-//          /  \ all links 
-//         /    \  point-to-point
-//  n0---n1--n3--n5----n6
-//         \    /
-//          \  /
-//           n4
-//
-// - multiple UDP flows from n0 to n6
-// - Tracing of queues and packet receptions to file "ecmp-global-routing.tr"
-// - pcap traces on nodes n2, n3, and n4
+
 
 #include <iostream>
 #include <fstream>
@@ -36,6 +23,7 @@ int
 main (int argc, char *argv[])
 {
   uint32_t ecmpMode = 2;
+  uint32_t socket = 0;
 
   LogComponentEnable("Ipv4GlobalRouting", LOG_DEBUG);
   LogComponentEnable("Ipv4GlobalRouting", LOG_ERROR);
@@ -46,6 +34,7 @@ main (int argc, char *argv[])
   // Bind ()s at run-time, via command-line arguments
   CommandLine cmd;
   cmd.AddValue ("EcmpMode", "EcmpMode: (0 none, 1 random, 2 flow, 3 Round_Robin)", ecmpMode);
+  cmd.AddValue ("socket", "Socket: (0 UDP, 1 TCP)", socket);
   cmd.Parse (argc, argv);
 
   switch (ecmpMode)
@@ -104,15 +93,15 @@ main (int argc, char *argv[])
       else if (i == 1 || i == 2 || i == 3 || i == 4)
         {
           y += 2;
-          loc->SetPosition(Vector(5, y, 0));
+          loc->SetPosition(Vector(10, y, 0));
         }
-      else if (i == 5 || i == 6){
-          y -=2;
-        loc->SetPosition(Vector(10, y, 0));
-      }
+      else if (i == 5 || i == 6)
+        {
+          y -= 2;
+          loc->SetPosition(Vector(20, y, 0));
+        }
       else if (i == 7)
-        loc->SetPosition(Vector(15, 5, 0));
-
+        loc->SetPosition(Vector(25, 5, 0));
     }
 
   InternetStackHelper internet;
@@ -184,25 +173,43 @@ main (int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   NS_LOG_INFO ("Create Applications.");
-  uint16_t port = 9;   // Discard port (RFC 863)
-  OnOffHelper onoff ("ns3::UdpSocketFactory",
-                     InetSocketAddress (Ipv4Address ("10.6.7.2"), port));
-  onoff.SetConstantRate (DataRate ("100kbps"));
-  onoff.SetAttribute ("PacketSize", UintegerValue (500));
-
-  ApplicationContainer apps;
-  for (uint32_t i = 0; i < 10; i++)
+  if (socket == 0)
     {
-      apps.Add (onoff.Install (c.Get (0)));
-    //apps.Add (onoffApp.Install (c.Get (0)));
+      uint16_t port = 9;   // Discard port (RFC 863)
+      OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address("10.5.7.2"), port));
+      onoff.SetConstantRate(DataRate("100kbps"));
+      onoff.SetAttribute("PacketSize", UintegerValue(500));
+
+      ApplicationContainer apps;
+      for (uint32_t i = 0; i < 10; i++)
+        {
+          apps.Add(onoff.Install(c.Get(0)));
+          //apps.Add (onoffApp.Install (c.Get (0)));
+        }
+
+      apps.Start(Seconds(0.0));
+      apps.Stop(Seconds(2.0));
+
+      PacketSinkHelper sink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), port)));
+      sink.Install(c.Get(7));
+  }
+  else if (socket == 1)
+    {
+      uint16_t port = 1500;
+      BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address("10.6.7.2"), port));
+
+      ApplicationContainer sourceApps;
+      for (uint32_t i = 0; i < 5; i++)
+        {
+          sourceApps.Add(source.Install(c.Get(0)));
+        }
+
+      sourceApps.Start(Seconds(0.0));
+      sourceApps.Stop(Seconds(1.0));
+
+      PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+      ApplicationContainer sinkApps = sink.Install(c.Get(7));
     }
-
-  apps.Start (Seconds (1.0));
-  apps.Stop (Seconds (5.0));
-
-  PacketSinkHelper sink ("ns3::UdpSocketFactory",
-                         Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
-  sink.Install (c.Get (7));
 
   // Trace the right-most (second) interface on nodes 2, 3, and 4
 //  p2p.EnablePcap ("ecmp-global-routing", 2, 2);
@@ -210,6 +217,7 @@ main (int argc, char *argv[])
 //  p2p.EnablePcap ("ecmp-global-routing", 4, 2);
 
   AnimationInterface anim("ecmp");
+  anim.SetMaxPktsPerTraceFile(100000000);
   anim.EnablePacketMetadata(true);
 
   NS_LOG_INFO ("Run Simulation.");

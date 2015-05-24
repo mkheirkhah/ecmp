@@ -45,7 +45,7 @@ typedef enum
   ECMP_NONE,
   ECMP_RANDOM,
   ECMP_HASH,
-  ECMP_RR
+  ECMP_RoundRobin
 }EcmpMode_t;
 
 /**
@@ -242,10 +242,6 @@ protected:
 private:
   uint32_t m_lastInterfaceUsed;
   EcmpMode_t m_ecmpMode;
-  /// Set to true if packets are randomly routed among ECMP; set to false for using only one route consistently
-  bool m_randomEcmpRouting;
-  /// Set to true if flows are randomly routed among ECMP; set to false for using only one route consistently
-  bool m_flowEcmpRouting;
   /// Set to true if this interface should respond to interface events by globallly recomputing routes 
   bool m_respondToInterfaceEvents;
   /// A uniform random number generator for randomly routing packets among ECMP 
