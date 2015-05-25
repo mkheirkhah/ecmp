@@ -621,6 +621,8 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
 
   if (route == 0)
     {
+      //TODO The following line need to be removed! Perhaps entire block is not needed.
+      NS_FATAL_ERROR("THIS SHOULD NOT BE CALLED NOW");
       Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
       if (ipv4 != 0)
         {

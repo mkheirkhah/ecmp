@@ -1917,6 +1917,52 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Set the sequence number and send SYN+ACK
   m_rxBuffer->SetNextRxSequence (h.GetSequenceNumber () + SequenceNumber32 (1));
 
+  //TODO I guess a better way to write this is possible!
+  if (m_endPoint)
+    {
+      Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
+      if (ipv4 != 0)
+        {
+          Ipv4Header header;
+          header.SetDestination(m_endPoint->GetPeerAddress());
+          Socket::SocketErrno errno_;
+          if (ipv4->GetRoutingProtocol() != 0)
+            {
+              m_routev4 = ipv4->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, m_boundnetdevice, errno_);
+            }
+          else
+            {
+              NS_LOG_ERROR("No IPV4 Routing Protocol");
+              m_routev4 = 0;
+            }
+        }
+      else
+        NS_FATAL_ERROR("Trying to use Tcp on a node without an Ipv4 interface");
+    }
+  else if (m_endPoint6)
+    {
+      Ptr<Ipv6> ipv6 = m_node->GetObject<Ipv6>();
+      if (ipv6 != 0)
+        {
+          Ipv6Header header;
+          header.SetDestinationAddress(m_endPoint6->GetPeerAddress());
+          header.SetSourceAddress(m_endPoint6->GetLocalAddress());
+          header.SetNextHeader(m_tcp->PROT_NUMBER);
+          Socket::SocketErrno errno_;
+          if (ipv6->GetRoutingProtocol() != 0)
+            {
+              m_routev6 = ipv6->GetRoutingProtocol()->RouteOutput(Ptr<Packet>(), header, m_boundnetdevice, errno_);
+            }
+          else
+            {
+              NS_LOG_ERROR("No IPV4 Routing Protocol");
+              m_routev6 = 0;
+            }
+        }
+      else
+        NS_FATAL_ERROR("Trying to use Tcp on a node without an Ipv6 interface");
+    }
+
   SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);
 }
 
