@@ -36,8 +36,8 @@
 #include "tcp-tx-buffer.h"
 #include "tcp-rx-buffer.h"
 #include "rtt-estimator.h"
-#include "ns3/ipv4-routing-protocol.h"
-#include "ns3/ipv6-routing-protocol.h"
+#include "ns3/ipv4-route.h"
+#include "ns3/ipv6-route.h"
 
 namespace ns3 {
 
@@ -271,7 +271,7 @@ protected:
   void CompleteFork (Ptr<Packet> p, const TcpHeader& tcpHeader, const Address& fromAddress, const Address& toAddress);
 
 
-  void FindRoute();
+
   // Helper functions: Transfer operation
 
   /**
@@ -722,8 +722,6 @@ protected:
   Time              m_persistTimeout;  //!< Time between sending 1-byte probes
   Time              m_cnTimeout;       //!< Timeout for connection retry
   RttHistory_t      m_history;         //!< List of sent packet
-  Ptr<Ipv4Route>    m_routev4;
-  Ptr<Ipv6Route>    m_routev6;
   // Connections to other layers of TCP/IP
   Ipv4EndPoint*       m_endPoint;   //!< the IPv4 endpoint
   Ipv6EndPoint*       m_endPoint6;  //!< the IPv6 endpoint
@@ -766,6 +764,8 @@ protected:
   uint32_t m_timestampToEcho;     //!< Timestamp to echo
 
   EventId m_sendPendingDataEvent; //!< micro-delay event to send pending data
+  Ptr<Ipv4Route>    m_routev4;
+  Ptr<Ipv6Route>    m_routev6;
 };
 
 } // namespace ns3

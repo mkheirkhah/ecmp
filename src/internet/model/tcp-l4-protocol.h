@@ -33,7 +33,6 @@
 #include "ns3/ipv4-route.h"
 #include "ns3/ipv6-route.h"
 
-
 namespace ns3 {
 
 class Node;

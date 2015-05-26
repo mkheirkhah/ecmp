@@ -30,8 +30,6 @@
 #include "ns3/ipv4.h"
 #include "ns3/ipv6.h"
 #include "ns3/ipv4-interface-address.h"
-#include "ns3/ipv4-route.h"
-#include "ns3/ipv6-route.h"
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv6-routing-protocol.h"
 #include "ns3/simulation-singleton.h"
@@ -182,7 +180,9 @@ TcpSocketBase::TcpSocketBase (void)
     m_sndScaleFactor (0),
     m_rcvScaleFactor (0),
     m_timestampEnabled (true),
-    m_timestampToEcho (0)
+    m_timestampToEcho (0),
+    m_routev4(0),
+    m_routev6(0)
 
 {
   NS_LOG_FUNCTION (this);
@@ -225,7 +225,9 @@ TcpSocketBase::TcpSocketBase (const TcpSocketBase& sock)
     m_sndScaleFactor (sock.m_sndScaleFactor),
     m_rcvScaleFactor (sock.m_rcvScaleFactor),
     m_timestampEnabled (sock.m_timestampEnabled),
-    m_timestampToEcho (sock.m_timestampToEcho)
+    m_timestampToEcho (sock.m_timestampToEcho),
+    m_routev4(0),
+    m_routev6(0)
 
 {
   NS_LOG_FUNCTION (this);
@@ -1917,7 +1919,7 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Set the sequence number and send SYN+ACK
   m_rxBuffer->SetNextRxSequence (h.GetSequenceNumber () + SequenceNumber32 (1));
 
-  //TODO I guess a better way to write this is possible!
+  // Find a route for this socket
   if (m_endPoint)
     {
       Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();

@@ -603,47 +603,25 @@ void
 TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
                            Ipv4Address saddr, Ipv4Address daddr, Ptr<NetDevice> oif, Ptr<Ipv4Route> route)
 {
-  NS_LOG_LOGIC(
-      "TcpL4Protocol " << this << " sending seq " << outgoing.GetSequenceNumber () << " ack " << outgoing.GetAckNumber () << " flags " << std::hex << (int)outgoing.GetFlags () << std::dec << " data size " << packet->GetSize ());
-  NS_LOG_FUNCTION(this << packet << saddr << daddr << oif);
+  NS_LOG_LOGIC ("TcpL4Protocol " << this
+                                 << " sending seq " << outgoing.GetSequenceNumber ()
+                                 << " ack " << outgoing.GetAckNumber ()
+                                 << " flags " << std::hex << (int)outgoing.GetFlags () << std::dec
+                                 << " data size " << packet->GetSize ());
+  NS_LOG_FUNCTION (this << packet << saddr << daddr << oif);
   // XXX outgoingHeader cannot be logged
 
   TcpHeader outgoingHeader = outgoing;
   /** \todo UrgentPointer */
   /* outgoingHeader.SetUrgentPointer (0); */
-  if (Node::ChecksumEnabled())
+  if(Node::ChecksumEnabled ())
     {
-      outgoingHeader.EnableChecksums();
+      outgoingHeader.EnableChecksums ();
     }
-  outgoingHeader.InitializeChecksum(saddr, daddr, PROT_NUMBER);
+  outgoingHeader.InitializeChecksum (saddr, daddr, PROT_NUMBER);
 
-  packet->AddHeader(outgoingHeader);
+  packet->AddHeader (outgoingHeader);
 
-  if (route == 0)
-    {
-      //TODO The following line need to be removed! Perhaps entire block is not needed.
-      NS_FATAL_ERROR("THIS SHOULD NOT BE CALLED NOW");
-      Ptr<Ipv4> ipv4 = m_node->GetObject<Ipv4>();
-      if (ipv4 != 0)
-        {
-          Ipv4Header header;
-          header.SetDestination(daddr);
-          header.SetProtocol(PROT_NUMBER);
-          Socket::SocketErrno errno_;
-          //Ptr<Ipv4Route> route;
-          if (ipv4->GetRoutingProtocol() != 0)
-            {
-              route = ipv4->GetRoutingProtocol()->RouteOutput(packet, header, oif, errno_);
-            }
-          else
-            {
-              NS_LOG_ERROR("No IPV4 Routing Protocol");
-              route = 0;
-            }
-        }
-      else
-        NS_FATAL_ERROR("Trying to use Tcp on a node without an Ipv4 interface");
-    }
   m_downTarget(packet, saddr, daddr, PROT_NUMBER, route);
 }
 
@@ -651,50 +629,29 @@ void
 TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
                            Ipv6Address saddr, Ipv6Address daddr, Ptr<NetDevice> oif, Ptr<Ipv6Route> route)
 {
-  NS_LOG_LOGIC(
-      "TcpL4Protocol " << this << " sending seq " << outgoing.GetSequenceNumber () << " ack " << outgoing.GetAckNumber () << " flags " << std::hex << (int)outgoing.GetFlags () << std::dec << " data size " << packet->GetSize ());
-  NS_LOG_FUNCTION(this << packet << saddr << daddr << oif);
+  NS_LOG_LOGIC ("TcpL4Protocol " << this
+                                 << " sending seq " << outgoing.GetSequenceNumber ()
+                                 << " ack " << outgoing.GetAckNumber ()
+                                 << " flags " << std::hex << (int)outgoing.GetFlags () << std::dec
+                                 << " data size " << packet->GetSize ());
+  NS_LOG_FUNCTION (this << packet << saddr << daddr << oif);
   // XXX outgoingHeader cannot be logged
 
-  if (daddr.IsIpv4MappedAddress())
+  if (daddr.IsIpv4MappedAddress ())
     {
-      return (SendPacket(packet, outgoing, saddr.GetIpv4MappedAddress(), daddr.GetIpv4MappedAddress(), oif));
+      return (SendPacket (packet, outgoing, saddr.GetIpv4MappedAddress(), daddr.GetIpv4MappedAddress(), oif));
     }
   TcpHeader outgoingHeader = outgoing;
   /** \todo UrgentPointer */
   /* outgoingHeader.SetUrgentPointer (0); */
-  if (Node::ChecksumEnabled())
+  if(Node::ChecksumEnabled ())
     {
-      outgoingHeader.EnableChecksums();
+      outgoingHeader.EnableChecksums ();
     }
-  outgoingHeader.InitializeChecksum(saddr, daddr, PROT_NUMBER);
+  outgoingHeader.InitializeChecksum (saddr, daddr, PROT_NUMBER);
 
-  packet->AddHeader(outgoingHeader);
+  packet->AddHeader (outgoingHeader);
 
-  if (route == 0)
-    {
-      Ptr<Ipv6L3Protocol> ipv6 = m_node->GetObject<Ipv6L3Protocol>();
-      if (ipv6 != 0)
-        {
-          Ipv6Header header;
-          header.SetDestinationAddress(daddr);
-          header.SetSourceAddress(saddr);
-          header.SetNextHeader(PROT_NUMBER);
-          Socket::SocketErrno errno_;
-          //Ptr<Ipv6Route> route;
-          if (ipv6->GetRoutingProtocol() != 0)
-            {
-              route = ipv6->GetRoutingProtocol()->RouteOutput(packet, header, oif, errno_);
-            }
-          else
-            {
-              NS_LOG_ERROR("No IPV6 Routing Protocol");
-              route = 0;
-            }
-        }
-      else
-        NS_FATAL_ERROR("Trying to use Tcp on a node without an Ipv6 interface");
-    }
   m_downTarget6(packet, saddr, daddr, PROT_NUMBER, route);
 }
 
